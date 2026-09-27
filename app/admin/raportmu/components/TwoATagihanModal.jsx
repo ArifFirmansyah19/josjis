@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Check, ChevronDown, Loader2, MessageCircle, X } from "lucide-react";
-
+import { EXCEL_ENGINE_URL } from "@/lib/excel-engine";
 import html2canvas from "html2canvas";
 
 const DISPLAY_COLUMNS = [
@@ -253,7 +253,7 @@ export default function TwoATagihanModal({ open, onClose, file }) {
 
       const base64 = btoa(binary);
 
-      const response = await fetch("http://127.0.0.1:8765/raportmu/port-unit", {
+      const response = await fetch(`${EXCEL_ENGINE_URL}/raportmu/port-unit`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

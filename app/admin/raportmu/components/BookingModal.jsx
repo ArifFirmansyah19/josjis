@@ -3,6 +3,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { EXCEL_ENGINE_URL } from "@/lib/excel-engine";
 
 import {
   CheckCircle2,
@@ -13,8 +14,6 @@ import {
   X,
 } from "lucide-react";
 import * as XLSX from "xlsx";
-
-const ENGINE_URL = "http://127.0.0.1:8765";
 
 const BRANCHES = ["Jambi Kuamang Kuning 1", "Jambi Kuamang Kuning 2"];
 
@@ -246,16 +245,19 @@ export default function BookingModal({ open, onClose, file }) {
     try {
       const encodedFile = await fileToBase64(file);
 
-      const response = await fetch(`${ENGINE_URL}/raportmu/booking/options`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${EXCEL_ENGINE_URL}/raportmu/booking/options`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileName: file.name,
+            file: encodedFile,
+          }),
         },
-        body: JSON.stringify({
-          fileName: file.name,
-          file: encodedFile,
-        }),
-      });
+      );
 
       const data = await response.json();
 
@@ -299,18 +301,21 @@ export default function BookingModal({ open, onClose, file }) {
     try {
       const encodedFile = await fileToBase64(file);
 
-      const response = await fetch(`${ENGINE_URL}/raportmu/booking/process`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      const response = await fetch(
+        `${EXCEL_ENGINE_URL}/raportmu/booking/process`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            fileName: file.name,
+            file: encodedFile,
+            branch,
+            name,
+          }),
         },
-        body: JSON.stringify({
-          fileName: file.name,
-          file: encodedFile,
-          branch,
-          name,
-        }),
-      });
+      );
 
       const data = await response.json();
 

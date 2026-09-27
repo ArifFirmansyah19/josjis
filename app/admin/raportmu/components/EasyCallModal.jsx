@@ -2,6 +2,8 @@
 
 "use client";
 
+import { EXCEL_ENGINE_URL } from "@/lib/excel-engine";
+
 import { Download, Loader2, MessageCircle, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
@@ -425,7 +427,7 @@ export default function EasyCallModal({ open, onClose, file }) {
 
       const base64 = btoa(binary);
 
-      const response = await fetch("http://127.0.0.1:8765/raportmu/easy-call", {
+      const response = await fetch(`${EXCEL_ENGINE_URL}/raportmu/easy-call`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
