@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@keyframes pageFlip {
+  0% {
+    opacity: 0;
+    transform: perspective(1400px) rotateY(-18deg);
+    transform-origin: left center;
+  }
+
+  100% {
+    opacity: 1;
+    transform: perspective(1400px) rotateY(0deg);
+    transform-origin: left center;
+  }
+}
+
+.page-flip {
+  animation: pageFlip 0.45s ease-out;
+  backface-visibility: hidden;
+}
