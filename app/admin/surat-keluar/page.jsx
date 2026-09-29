@@ -1,66 +1,98 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 
 import DashboardLayout from "@/components/DashboardLayout";
 
+import SuratKeluarToolbar from "./components/SuratKeluarToolbar";
 import SuratKeluarBook from "./components/SuratKeluarBook";
 import SuratKeluarForm from "./components/SuratKeluarForm";
-import SuratKeluarToolbar from "./components/SuratKeluarToolbar";
+import SuratKeluarNumberSettings from "./components/SuratKeluarNumberSettings";
+import SuratKeluarDetailModal from "./components/SuratKeluarDetailModal";
 
 import {
   getSuratKeluarData,
-  saveSuratKeluarData,
-} from "./services/suratKeluarStorage";
+  createSuratKeluar,
+  updateSuratKeluar,
+  deleteSuratKeluar,
+} from "./services/suratKeluarSupabase";
 
 import { exportSuratKeluarPdf } from "./services/suratKeluarPdf";
 
 const ROWS_PER_PAGE = 10;
 
-const EMPTY_DATA = {
-  "JKK 1": [],
-  "JKK 2": [],
-};
-
 export default function SuratKeluarPage() {
   const [unit, setUnit] = useState("JKK 1");
-  const [data, setData] = useState(EMPTY_DATA);
+  const [tahun, setTahun] = useState(new Date().getFullYear());
+
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const [page, setPage] = useState(1);
 
   const [formOpen, setFormOpen] = useState(false);
+  const [numberSettingsOpen, setNumberSettingsOpen] = useState(false);
+
   const [editingRecord, setEditingRecord] = useState(null);
 
-  const records = data[unit] || [];
+  // Record yang sedang dilihat pada popup detail
+  const [viewingRecord, setViewingRecord] = useState(null);
 
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(records.length / ROWS_PER_PAGE));
   }, [records.length]);
 
-  /*
-   * Ambil data awal dari localStorage
-   */
+  async function loadData() {
+    setLoading(true);
+    setError("");
+
+    try {
+      const kodeUnit = unit === "JKK 1" ? "JKK1" : "JKK2";
+
+      const result = await getSuratKeluarData(kodeUnit, tahun);
+
+      setRecords(result);
+
+      /*
+       * Setelah data dimuat:
+       * selalu buka halaman terakhir.
+       */
+      const nextTotalPages = Math.max(
+        1,
+        Math.ceil(result.length / ROWS_PER_PAGE),
+      );
+
+      setPage(nextTotalPages);
+    } catch (err) {
+      console.error(err);
+
+      setError(
+        err?.message || "Gagal mengambil data Surat Keluar dari database.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   useEffect(() => {
-    const savedData = getSuratKeluarData();
+    loadData();
+  }, [unit, tahun]);
 
-    setData({
-      "JKK 1": Array.isArray(savedData?.["JKK 1"]) ? savedData["JKK 1"] : [],
-      "JKK 2": Array.isArray(savedData?.["JKK 2"]) ? savedData["JKK 2"] : [],
-    });
-  }, []);
+  function handleUnitChange(nextUnit) {
+    setUnit(nextUnit);
+    setPage(1);
 
-  /*
-   * Setiap pindah unit, selalu buka halaman terakhir.
-   * Kalau belum ada data, halaman 1.
-   */
-  useEffect(() => {
-    setPage(totalPages);
-  }, [unit, totalPages]);
+    // Tutup popup jika sedang terbuka
+    setViewingRecord(null);
+  }
 
-  function persist(nextData) {
-    setData(nextData);
-    saveSuratKeluarData(nextData);
+  function handleTahunChange(nextYear) {
+    setTahun(nextYear);
+    setPage(1);
+
+    // Tutup popup jika sedang terbuka
+    setViewingRecord(null);
   }
 
   function handleAdd() {
@@ -71,6 +103,13 @@ export default function SuratKeluarPage() {
   function handleEdit(record) {
     setEditingRecord(record);
     setFormOpen(true);
+
+    // Kalau edit dibuka dari tempat lain, tutup detail
+    setViewingRecord(null);
+  }
+
+  function handleView(record) {
+    setViewingRecord(record);
   }
 
   function handleCloseForm() {
@@ -78,149 +117,166 @@ export default function SuratKeluarPage() {
     setEditingRecord(null);
   }
 
-  function handleSave(formData) {
-    const currentRecords = data[unit] || [];
+  function handleCloseDetail() {
+    setViewingRecord(null);
+  }
 
-    let nextRecords;
+  async function handleSave(formData) {
+    try {
+      setError("");
 
-    /*
-     * EDIT
-     */
-    if (editingRecord) {
-      nextRecords = currentRecords.map((record) => {
-        if (record.id !== editingRecord.id) {
-          return record;
-        }
+      const kodeUnit = unit === "JKK 1" ? "JKK1" : "JKK2";
 
-        return {
-          ...record,
+      if (editingRecord) {
+        await updateSuratKeluar({
+          id: editingRecord.id,
           tanggal: formData.tanggal,
           keterangan: formData.keterangan,
           tujuan: formData.tujuan,
+        });
+      } else {
+        await createSuratKeluar({
+          kodeUnit,
+          tanggal: formData.tanggal,
+          keterangan: formData.keterangan,
+          tujuan: formData.tujuan,
+        });
+      }
 
-          // Pertahankan metadata sumber jika record berasal
-          // dari halaman lain seperti BAST.
-          sumber: record.sumber || "MANUAL",
-          sumberId: record.sumberId || null,
-        };
-      });
-    } else {
-      /*
-       * TAMBAH MANUAL
-       */
-      const newRecord = {
-        id: `SK-${Date.now()}`,
-        unit,
-        tanggal: formData.tanggal,
-        keterangan: formData.keterangan,
-        tujuan: formData.tujuan,
+      handleCloseForm();
 
-        // Metadata internal.
-        // Tidak ditampilkan di tabel maupun PDF.
-        sumber: "MANUAL",
-        sumberId: null,
-      };
+      await loadData();
+    } catch (err) {
+      console.error(err);
 
-      nextRecords = [...currentRecords, newRecord];
+      setError(err?.message || "Gagal menyimpan Surat Keluar.");
     }
-
-    const nextData = {
-      ...data,
-      [unit]: nextRecords,
-    };
-
-    persist(nextData);
-
-    /*
-     * Setelah tambah/edit, buka halaman terakhir.
-     */
-    const nextTotalPages = Math.max(
-      1,
-      Math.ceil(nextRecords.length / ROWS_PER_PAGE),
-    );
-
-    setPage(nextTotalPages);
-
-    handleCloseForm();
   }
 
-  function handleDelete(id) {
+  async function handleDelete(id) {
     const record = records.find((item) => item.id === id);
 
     if (!record) return;
 
-    const confirmed = window.confirm("Hapus pencatatan surat keluar ini?");
+    const nomor = String(record.nomor_urut).padStart(3, "0");
+
+    const confirmed = window.confirm(
+      `Hapus pencatatan surat nomor ${nomor}?\n\nNomor tersebut tidak akan digunakan kembali.`,
+    );
 
     if (!confirmed) return;
 
-    const nextRecords = records.filter((item) => item.id !== id);
+    try {
+      setError("");
 
-    const nextData = {
-      ...data,
-      [unit]: nextRecords,
-    };
+      await deleteSuratKeluar(id);
 
-    persist(nextData);
+      // Kalau yang dihapus sedang terbuka di detail
+      if (viewingRecord?.id === id) {
+        setViewingRecord(null);
+      }
 
-    const nextTotalPages = Math.max(
-      1,
-      Math.ceil(nextRecords.length / ROWS_PER_PAGE),
-    );
+      await loadData();
+    } catch (err) {
+      console.error(err);
 
-    setPage(Math.min(page, nextTotalPages));
-  }
-
-  function handleUnitChange(nextUnit) {
-    setUnit(nextUnit);
+      setError(err?.message || "Gagal menghapus surat.");
+    }
   }
 
   function handleExport() {
     exportSuratKeluarPdf({
       unit,
+      tahun,
       records,
     });
   }
 
   return (
     <DashboardLayout>
-      <div className="space-y-6">
-        {/* Header halaman */}
+      <div className="space-y-5">
+        {/* =====================================================
+            HEADER
+            ===================================================== */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
             Surat Keluar
           </h1>
 
           <p className="mt-1 text-sm text-zinc-500">
-            Buku register surat keluar JKK 1 dan JKK 2.
+            Buku register surat keluar resmi JKK 1 dan JKK 2.
           </p>
         </div>
 
-        {/* Toolbar */}
+        {/* =====================================================
+            TOOLBAR
+            ===================================================== */}
         <SuratKeluarToolbar
           unit={unit}
+          tahun={tahun}
           onUnitChange={handleUnitChange}
+          onTahunChange={handleTahunChange}
           onAdd={handleAdd}
+          onSettings={() => setNumberSettingsOpen(true)}
           onExport={handleExport}
         />
 
-        {/* Buku */}
+        {/* =====================================================
+            ERROR
+            ===================================================== */}
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* =====================================================
+            BUKU SURAT KELUAR
+            ===================================================== */}
         <SuratKeluarBook
           unit={unit}
+          tahun={tahun}
           records={records}
           page={page}
           totalPages={totalPages}
           rowsPerPage={ROWS_PER_PAGE}
+          loading={loading}
           onPageChange={setPage}
+          onView={handleView}
           onEdit={handleEdit}
           onDelete={handleDelete}
         />
 
-        {/* Form */}
+        {/* =====================================================
+            FORM TAMBAH / EDIT
+            ===================================================== */}
         <SuratKeluarForm
           open={formOpen}
           editingRecord={editingRecord}
+          selectedYear={tahun}
           onClose={handleCloseForm}
           onSave={handleSave}
+        />
+
+        {/* =====================================================
+            PENGATURAN NOMOR
+            ===================================================== */}
+        <SuratKeluarNumberSettings
+          open={numberSettingsOpen}
+          unit={unit}
+          tahun={tahun}
+          onClose={() => setNumberSettingsOpen(false)}
+          onSaved={async () => {
+            await loadData();
+          }}
+        />
+
+        {/* =====================================================
+            DETAIL SURAT
+            ===================================================== */}
+        <SuratKeluarDetailModal
+          record={viewingRecord}
+          onClose={handleCloseDetail}
         />
       </div>
     </DashboardLayout>

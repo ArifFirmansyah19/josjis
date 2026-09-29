@@ -20,9 +20,12 @@ import {
 
 import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
+import { supabase } from "@/lib/supabase";
 
-const STORAGE_KEY = "josjis_pengajuan_lembur_mka";
-const MASTER_KEY = "josjis_pegawai_unit";
+/* =========================================================
+   KONSTANTA
+========================================================= */
+
 const RETENTION_DAYS = 42;
 
 const MONTHS = [
@@ -58,6 +61,7 @@ const UNIT_INFO = {
     name: "Jambi Kuamang Kuning 1",
     workUnit: "KCP KUAMANG KUNING 1",
   },
+
   JKK2: {
     code: "11081B",
     name: "Jambi Kuamang Kuning 2",
@@ -85,24 +89,9 @@ const NATIONAL_HOLIDAYS_2026 = {
   "2026-12-25": "Hari Raya Natal",
 };
 
-const DEFAULT_MASTER = {
-  JKK1: {
-    supervisor: {
-      name: "",
-      nip: "",
-      position: "",
-    },
-    mka: [],
-  },
-  JKK2: {
-    supervisor: {
-      name: "",
-      nip: "",
-      position: "",
-    },
-    mka: [],
-  },
-};
+/* =========================================================
+   HELPER
+========================================================= */
 
 function pad(value) {
   return String(value).padStart(2, "0");
@@ -137,128 +126,16 @@ function getDefaultStartTime(value) {
   return "16:30";
 }
 
-/* =========================================================
-   RETENTION DATA
-========================================================= */
-
-function cleanOldData(data) {
-  if (!Array.isArray(data)) {
-    return [];
-  }
-
+function getRetentionLimit() {
   const today = new Date();
+
   today.setHours(0, 0, 0, 0);
 
   const limit = new Date(today);
+
   limit.setDate(limit.getDate() - RETENTION_DAYS);
 
-  return data.filter((item) => {
-    if (!item?.date) {
-      return false;
-    }
-
-    const itemDate = new Date(`${item.date}T00:00:00`);
-
-    if (Number.isNaN(itemDate.getTime())) {
-      return false;
-    }
-
-    return itemDate >= limit;
-  });
-}
-
-/* =========================================================
-   MASTER PEGAWAI UNIT
-========================================================= */
-
-function readMaster() {
-  if (typeof window === "undefined") {
-    return DEFAULT_MASTER;
-  }
-
-  try {
-    const saved = localStorage.getItem(MASTER_KEY);
-
-    if (!saved) {
-      return DEFAULT_MASTER;
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return {
-      JKK1: {
-        supervisor: {
-          ...DEFAULT_MASTER.JKK1.supervisor,
-          ...(parsed?.JKK1?.supervisor || {}),
-        },
-        mka: Array.isArray(parsed?.JKK1?.mka) ? parsed.JKK1.mka : [],
-      },
-
-      JKK2: {
-        supervisor: {
-          ...DEFAULT_MASTER.JKK2.supervisor,
-          ...(parsed?.JKK2?.supervisor || {}),
-        },
-        mka: Array.isArray(parsed?.JKK2?.mka) ? parsed.JKK2.mka : [],
-      },
-    };
-  } catch {
-    return DEFAULT_MASTER;
-  }
-}
-
-/* =========================================================
-   LOCAL STORAGE — LEMBUR
-========================================================= */
-
-function readOvertime() {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY);
-
-    if (!saved) {
-      return [];
-    }
-
-    const parsed = JSON.parse(saved);
-
-    if (!Array.isArray(parsed)) {
-      return [];
-    }
-
-    const cleaned = cleanOldData(parsed);
-
-    if (cleaned.length !== parsed.length) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
-    }
-
-    return cleaned;
-  } catch {
-    return [];
-  }
-}
-
-function writeOvertime(data) {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  const cleaned = cleanOldData(data);
-
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(cleaned));
-}
-
-function updateOvertimeStorage(setOvertime, updater) {
-  setOvertime((current) => {
-    const next = typeof updater === "function" ? updater(current) : updater;
-
-    writeOvertime(next);
-
-    return cleanOldData(next);
-  });
+  return dateKey(limit);
 }
 
 /* =========================================================
@@ -293,6 +170,7 @@ function CalendarDay({ date, selected, today, holiday, hasOvertime, onClick }) {
   }
 
   const key = dateKey(date);
+
   const isSunday = date.getDay() === 0;
   const isSaturday = date.getDay() === 6;
 
@@ -382,6 +260,7 @@ function CalendarDay({ date, selected, today, holiday, hasOvertime, onClick }) {
 
 /* =========================================================
    SPKL
+   VISUAL DIPERTAHANKAN DARI KODE AWAL USER
 ========================================================= */
 
 function SpklPage({ date, records, master, unit }) {
@@ -391,27 +270,24 @@ function SpklPage({ date, records, master, unit }) {
 
   const mkaList = Array.isArray(master?.mka) ? master.mka : [];
 
+  const branchManager = master?.branchManager || {};
+
   const sortedRecords = [...records].sort((a, b) =>
-    (a.startTime || "").localeCompare(b.startTime || ""),
+    (a.jam_mulai || "").localeCompare(b.jam_mulai || ""),
   );
 
   const workRows =
     sortedRecords.length > 0
       ? sortedRecords.map((record, index) => {
-          const mka = mkaList.find(
-            (person) =>
-              person.id === record.mkaId ||
-              person.nip === record.mkaNip ||
-              person.name === record.mkaName,
-          );
+          const mka = mkaList.find((person) => person.id === record.mka_id);
 
           return {
             no: index + 1,
-            nip: mka?.nip || record.mkaNip || "-",
-            name: mka?.name || record.mkaName || "-",
+            nip: mka?.nip || "-",
+            name: mka?.name || "-",
             position: mka?.position || "MKA",
-            time: `${record.startTime || "-"} - ${record.endTime || "-"}`,
-            work: record.reason || "-",
+            time: `${record.jam_mulai || "-"} - ${record.jam_selesai || "-"}`,
+            work: record.pekerjaan || "-",
           };
         })
       : mkaList.map((mka, index) => ({
@@ -438,6 +314,7 @@ function SpklPage({ date, records, master, unit }) {
         ];
 
   const dateObject = new Date(`${date}T00:00:00`);
+
   const weekday = WEEKDAYS[dateObject.getDay()];
 
   return (
@@ -567,9 +444,11 @@ function SpklPage({ date, records, master, unit }) {
         <div className="spkl-manager-sign" />
         <div className="spkl-manager-sign" />
 
-        <div className="spkl-manager-name">Doni Iswanto</div>
+        <div className="spkl-manager-name">{branchManager.name || "-"}</div>
 
-        <div className="spkl-manager-position">Branch Manager</div>
+        <div className="spkl-manager-position">
+          {branchManager.position || "Branch Manager"}
+        </div>
       </div>
     </section>
   );
@@ -592,9 +471,27 @@ export default function PengajuanLemburMkaPage() {
 
   const [calendarYear, setCalendarYear] = useState(todayDate.getFullYear());
 
+  const [unitId, setUnitId] = useState(null);
+
   const [overtime, setOvertime] = useState([]);
 
-  const [master, setMaster] = useState(DEFAULT_MASTER);
+  const [master, setMaster] = useState({
+    supervisor: {
+      name: "",
+      nip: "",
+      position: "",
+      id: null,
+    },
+
+    mka: [],
+
+    branchManager: {
+      name: "",
+      nip: "",
+      position: "Branch Manager",
+      id: null,
+    },
+  });
 
   const [modal, setModal] = useState(null);
 
@@ -610,28 +507,182 @@ export default function PengajuanLemburMkaPage() {
     reason: "",
   });
 
+  const [loading, setLoading] = useState(true);
+
+  const [saving, setSaving] = useState(false);
+
+  const [error, setError] = useState("");
+
+  const currentUnit = activeUnit?.value || "JKK1";
+
+  const currentUnitInfo = UNIT_INFO[currentUnit] || UNIT_INFO.JKK1;
+
   /* =========================================================
-     LOAD DATA — HANYA SAAT HALAMAN DIBUKA
+     LOAD MASTER + LEMBUR
   ========================================================= */
 
   useEffect(() => {
-    setMaster(readMaster());
-    setOvertime(readOvertime());
-  }, []);
+    let cancelled = false;
+
+    async function loadData() {
+      setLoading(true);
+      setError("");
+
+      try {
+        /* =====================================================
+           1. CARI UNIT BERDASARKAN KODE JKK1 / JKK2
+        ===================================================== */
+
+        const { data: unit, error: unitError } = await supabase
+          .from("unit")
+          .select("id, nama_unit, kode_unit, kode_legacy")
+          .eq("kode_unit", currentUnit)
+          .single();
+
+        if (unitError) {
+          throw unitError;
+        }
+
+        if (!unit) {
+          throw new Error(`Unit ${currentUnit} tidak ditemukan.`);
+        }
+
+        if (cancelled) return;
+
+        setUnitId(unit.id);
+
+        /* =====================================================
+           2. MASTER PEGAWAI UNIT
+        ===================================================== */
+
+        const { data: unitPegawai, error: pegawaiError } = await supabase
+          .from("pegawai")
+          .select("id, nama, nip, jabatan, jenis_pegawai, unit_id, aktif")
+          .eq("unit_id", unit.id)
+          .eq("aktif", true)
+          .order("nama", { ascending: true });
+
+        if (pegawaiError) {
+          throw pegawaiError;
+        }
+
+        const pengawas =
+          unitPegawai?.find((item) => item.jenis_pegawai === "PENGAWAS") ||
+          null;
+
+        const mkaList =
+          unitPegawai?.filter((item) => item.jenis_pegawai === "MKA") || [];
+
+        /* =====================================================
+           3. BRANCH MANAGER GLOBAL
+              unit_id NULL
+        ===================================================== */
+
+        const { data: branchManagers, error: bmError } = await supabase
+          .from("pegawai")
+          .select("id, nama, nip, jabatan, jenis_pegawai, unit_id, aktif")
+          .eq("jenis_pegawai", "BRANCH_MANAGER")
+          .eq("aktif", true)
+          .is("unit_id", null)
+          .order("nama", { ascending: true });
+
+        if (bmError) {
+          throw bmError;
+        }
+
+        const branchManager = branchManagers?.[0] || null;
+
+        /* =====================================================
+           4. MASTER
+        ===================================================== */
+
+        const nextMaster = {
+          supervisor: {
+            id: pengawas?.id || null,
+            name: pengawas?.nama || "",
+            nip: pengawas?.nip || "",
+            position: pengawas?.jabatan || "",
+          },
+
+          mka: mkaList.map((item) => ({
+            id: item.id,
+            name: item.nama || "",
+            nip: item.nip || "",
+            position: item.jabatan || "MKA",
+          })),
+
+          branchManager: {
+            id: branchManager?.id || null,
+            name: branchManager?.nama || "",
+            nip: branchManager?.nip || "",
+            position: branchManager?.jabatan || "Branch Manager",
+          },
+        };
+
+        if (!cancelled) {
+          setMaster(nextMaster);
+        }
+
+        /* =====================================================
+           5. DATA LEMBUR 42 HARI
+        ===================================================== */
+
+        const retentionLimit = getRetentionLimit();
+
+        const { data: lemburData, error: lemburError } = await supabase
+          .from("lembur_mka")
+          .select(
+            `
+              id,
+              unit_id,
+              mka_id,
+              pengawas_id,
+              tanggal,
+              jam_mulai,
+              jam_selesai,
+              pekerjaan,
+              created_at,
+              updated_at
+            `,
+          )
+          .eq("unit_id", unit.id)
+          .gte("tanggal", retentionLimit)
+          .order("tanggal", {
+            ascending: true,
+          })
+          .order("jam_mulai", {
+            ascending: true,
+          });
+
+        if (lemburError) {
+          throw lemburError;
+        }
+
+        if (!cancelled) {
+          setOvertime(lemburData || []);
+        }
+      } catch (loadError) {
+        console.error(loadError);
+
+        if (!cancelled) {
+          setError(loadError?.message || "Gagal membaca data lembur.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentUnit]);
 
   /* =========================================================
-     MASTER BERUBAH SAAT UNIT AKTIF BERUBAH
-  ========================================================= */
-
-  useEffect(() => {
-    setMaster(readMaster());
-  }, [activeUnit?.value]);
-
-  /* =========================================================
-     UKURAN PREVIEW
-     
-     Mengikuti lebar container sebenarnya.
-     Tidak menggunakan 100vw.
+     UKUR PREVIEW
   ========================================================= */
 
   useEffect(() => {
@@ -660,14 +711,6 @@ export default function PengajuanLemburMkaPage() {
     };
   }, [previewOpen]);
 
-  const currentUnit = activeUnit?.value || "JKK1";
-
-  const currentMaster = master[currentUnit] || DEFAULT_MASTER[currentUnit];
-
-  const currentMkaList = Array.isArray(currentMaster?.mka)
-    ? currentMaster.mka
-    : [];
-
   /* =========================================================
      DATA BULAN
   ========================================================= */
@@ -675,25 +718,24 @@ export default function PengajuanLemburMkaPage() {
   const monthRecords = useMemo(() => {
     return overtime
       .filter((item) => {
-        const date = new Date(`${item.date}T00:00:00`);
+        const date = new Date(`${item.tanggal}T00:00:00`);
 
         return (
-          item.unit === currentUnit &&
           date.getFullYear() === calendarYear &&
           date.getMonth() === calendarMonth
         );
       })
       .sort((a, b) => {
-        if (a.date !== b.date) {
-          return a.date.localeCompare(b.date);
+        if (a.tanggal !== b.tanggal) {
+          return a.tanggal.localeCompare(b.tanggal);
         }
 
-        return (a.startTime || "").localeCompare(b.startTime || "");
+        return (a.jam_mulai || "").localeCompare(b.jam_mulai || "");
       });
-  }, [overtime, currentUnit, calendarMonth, calendarYear]);
+  }, [overtime, calendarMonth, calendarYear]);
 
   const monthDates = useMemo(() => {
-    return [...new Set(monthRecords.map((item) => item.date))].sort();
+    return [...new Set(monthRecords.map((item) => item.tanggal))].sort();
   }, [monthRecords]);
 
   const calendarCells = useMemo(
@@ -703,9 +745,9 @@ export default function PengajuanLemburMkaPage() {
 
   const selectedRecords = useMemo(() => {
     return overtime
-      .filter((item) => item.unit === currentUnit && item.date === selectedDate)
-      .sort((a, b) => (a.startTime || "").localeCompare(b.startTime || ""));
-  }, [overtime, currentUnit, selectedDate]);
+      .filter((item) => item.tanggal === selectedDate)
+      .sort((a, b) => (a.jam_mulai || "").localeCompare(b.jam_mulai || ""));
+  }, [overtime, selectedDate]);
 
   /* =========================================================
      NAVIGASI BULAN
@@ -733,10 +775,13 @@ export default function PengajuanLemburMkaPage() {
 
   const goToday = () => {
     const date = new Date();
+
     const key = dateKey(date);
 
     setCalendarYear(date.getFullYear());
+
     setCalendarMonth(date.getMonth());
+
     setSelectedDate(key);
   };
 
@@ -747,9 +792,7 @@ export default function PengajuanLemburMkaPage() {
   const handleCalendarClick = (date) => {
     setSelectedDate(date);
 
-    const existing = overtime.filter(
-      (item) => item.unit === currentUnit && item.date === date,
-    );
+    const existing = overtime.filter((item) => item.tanggal === date);
 
     if (existing.length > 0) {
       setModal({
@@ -777,19 +820,19 @@ export default function PengajuanLemburMkaPage() {
   ========================================================= */
 
   const handleEdit = (record) => {
-    setSelectedDate(record.date);
+    setSelectedDate(record.tanggal);
 
     setForm({
-      startTime: record.startTime || getDefaultStartTime(record.date),
+      startTime: record.jam_mulai || getDefaultStartTime(record.tanggal),
 
-      endTime: record.endTime || "20:00",
+      endTime: record.jam_selesai || "20:00",
 
-      reason: record.reason || "",
+      reason: record.pekerjaan || "",
     });
 
     setModal({
       type: "edit",
-      date: record.date,
+      date: record.tanggal,
       recordId: record.id,
     });
   };
@@ -798,7 +841,7 @@ export default function PengajuanLemburMkaPage() {
      DELETE
   ========================================================= */
 
-  const handleDelete = (recordId) => {
+  const handleDelete = async (recordId) => {
     const target = overtime.find((item) => item.id === recordId);
 
     if (!target) {
@@ -806,26 +849,63 @@ export default function PengajuanLemburMkaPage() {
     }
 
     const confirmed = window.confirm(
-      `Hapus data lembur tanggal ${formatDateLong(target.date)}?`,
+      `Hapus data lembur tanggal ${formatDateLong(target.tanggal)}?`,
     );
 
     if (!confirmed) {
       return;
     }
 
-    updateOvertimeStorage(setOvertime, (current) =>
-      current.filter((item) => item.id !== recordId),
-    );
+    try {
+      setSaving(true);
+      setError("");
 
-    setModal(null);
+      const { error: deleteError } = await supabase
+        .from("lembur_mka")
+        .delete()
+        .eq("id", recordId);
+
+      if (deleteError) {
+        throw deleteError;
+      }
+
+      setOvertime((current) => current.filter((item) => item.id !== recordId));
+
+      setModal(null);
+    } catch (deleteError) {
+      console.error(deleteError);
+
+      setError(deleteError?.message || "Gagal menghapus data lembur.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* =========================================================
      SUBMIT FORM
   ========================================================= */
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault();
+
+    if (!unitId) {
+      window.alert("Unit belum berhasil dibaca.");
+      return;
+    }
+
+    if (!master?.mka || master.mka.length === 0) {
+      window.alert(
+        "MKA aktif untuk unit ini belum tersedia di Master Pegawai.",
+      );
+      return;
+    }
+
+    if (!master?.supervisor?.id) {
+      window.alert(
+        "Pengawas aktif untuk unit ini belum tersedia di Master Pegawai.",
+      );
+      return;
+    }
 
     if (!form.startTime || !form.endTime) {
       return;
@@ -837,84 +917,128 @@ export default function PengajuanLemburMkaPage() {
       return;
     }
 
-    /* =========================
-       EDIT
-    ========================= */
-
-    if (modal?.type === "edit") {
-      updateOvertimeStorage(setOvertime, (current) =>
-        current.map((item) =>
-          item.id === modal.recordId
-            ? {
-                ...item,
-                startTime: form.startTime,
-                endTime: form.endTime,
-                reason: form.reason.trim(),
-              }
-            : item,
-        ),
-      );
-
-      setModal(null);
+    if (!form.reason.trim()) {
+      window.alert("Pekerjaan wajib diisi.");
 
       return;
     }
 
-    /* =========================
-       TAMBAH
-    ========================= */
+    try {
+      setSaving(true);
+      setError("");
 
-    const mkaList = currentMkaList;
+      /* =====================================================
+         EDIT
+      ===================================================== */
 
-    const timestamp = Date.now();
+      if (modal?.type === "edit") {
+        const { data: updated, error: updateError } = await supabase
+          .from("lembur_mka")
+          .update({
+            jam_mulai: form.startTime,
 
-    const recordsToAdd = mkaList.map((mka, index) => ({
-      id: `${timestamp}-${index}`,
+            jam_selesai: form.endTime,
 
-      date: modal.date,
+            pekerjaan: form.reason.trim(),
 
-      unit: currentUnit,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", modal.recordId)
+          .select()
+          .single();
 
-      mkaId: mka.id || mka.nip || `${currentUnit}-${index}`,
+        if (updateError) {
+          throw updateError;
+        }
 
-      mkaNip: mka.nip || "",
+        setOvertime((current) =>
+          current.map((item) =>
+            item.id === modal.recordId
+              ? {
+                  ...item,
+                  ...updated,
+                }
+              : item,
+          ),
+        );
 
-      mkaName: mka.name || "",
+        setModal(null);
 
-      startTime: form.startTime,
+        return;
+      }
 
-      endTime: form.endTime,
+      /* =====================================================
+         CEK SATU LEMBUR PER TANGGAL
+      ===================================================== */
 
-      reason: form.reason.trim(),
+      const { data: existing, error: existingError } = await supabase
+        .from("lembur_mka")
+        .select("id")
+        .eq("unit_id", unitId)
+        .eq("tanggal", modal.date)
+        .maybeSingle();
 
-      createdAt: new Date().toISOString(),
-    }));
+      if (existingError) {
+        throw existingError;
+      }
 
-    const fallbackRecord =
-      mkaList.length === 0
-        ? [
-            {
-              id: `${timestamp}-0`,
-              date: modal.date,
-              unit: currentUnit,
-              mkaId: "",
-              mkaNip: "",
-              mkaName: "",
-              startTime: form.startTime,
-              endTime: form.endTime,
-              reason: form.reason.trim(),
-              createdAt: new Date().toISOString(),
-            },
-          ]
-        : [];
+      if (existing) {
+        window.alert("Tanggal tersebut sudah memiliki pengajuan lembur.");
 
-    updateOvertimeStorage(setOvertime, (current) => [
-      ...current,
-      ...recordsToAdd,
-      ...fallbackRecord,
-    ]);
+        setModal(null);
 
-    setModal(null);
+        return;
+      }
+
+      /* =====================================================
+         TAMBAH
+         SATU MKA AKTIF PER UNIT
+      ===================================================== */
+
+      const mka = master.mka[0];
+
+      const { data: inserted, error: insertError } = await supabase
+        .from("lembur_mka")
+        .insert({
+          unit_id: unitId,
+
+          mka_id: mka.id,
+
+          pengawas_id: master.supervisor.id,
+
+          tanggal: modal.date,
+
+          jam_mulai: form.startTime,
+
+          jam_selesai: form.endTime,
+
+          pekerjaan: form.reason.trim(),
+        })
+        .select()
+        .single();
+
+      if (insertError) {
+        throw insertError;
+      }
+
+      setOvertime((current) =>
+        [...current, inserted].sort((a, b) => {
+          if (a.tanggal !== b.tanggal) {
+            return a.tanggal.localeCompare(b.tanggal);
+          }
+
+          return (a.jam_mulai || "").localeCompare(b.jam_mulai || "");
+        }),
+      );
+
+      setModal(null);
+    } catch (submitError) {
+      console.error(submitError);
+
+      setError(submitError?.message || "Gagal menyimpan data lembur.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   /* =========================================================
@@ -922,9 +1046,9 @@ export default function PengajuanLemburMkaPage() {
   ========================================================= */
 
   const getRecordsForDate = (date) => {
-    return overtime.filter(
-      (item) => item.unit === currentUnit && item.date === date,
-    );
+    return overtime
+      .filter((item) => item.tanggal === date)
+      .sort((a, b) => (a.jam_mulai || "").localeCompare(b.jam_mulai || ""));
   };
 
   /* =========================================================
@@ -947,7 +1071,9 @@ export default function PengajuanLemburMkaPage() {
 
       const fileName = `SPKL ${MONTHS[
         calendarMonth
-      ].toUpperCase()} ${calendarYear} - ARIF CHANDRA FIRMANSYAH.pdf`;
+      ].toUpperCase()} ${calendarYear} - ${
+        master?.mka?.[0]?.name || "MKA"
+      }.pdf`;
 
       await html2PDF(area, {
         jsPDF: {
@@ -975,8 +1101,8 @@ export default function PengajuanLemburMkaPage() {
           windowHeight: 794,
         },
       });
-    } catch (error) {
-      console.error(error);
+    } catch (pdfError) {
+      console.error(pdfError);
 
       window.alert(
         "PDF belum dapat dibuat. Pastikan package jspdf-html2canvas sudah terpasang.",
@@ -999,7 +1125,7 @@ export default function PengajuanLemburMkaPage() {
 
     document.title = `SPKL ${MONTHS[
       calendarMonth
-    ].toUpperCase()} ${calendarYear} - ARIF CHANDRA FIRMANSYAH`;
+    ].toUpperCase()} ${calendarYear}`;
 
     window.print();
 
@@ -1015,14 +1141,17 @@ export default function PengajuanLemburMkaPage() {
   const previewScale = previewWidth > 0 ? Math.min(1, previewWidth / 1123) : 1;
 
   const previewPageWidth = 1123 * previewScale;
+
   const previewPageHeight = 794 * previewScale;
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-[1500px] space-y-5">
-        {/* =================================================
-            HEADER
-        ================================================= */}
+        {/* HEADER */}
 
         <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
           <div>
@@ -1073,9 +1202,15 @@ export default function PengajuanLemburMkaPage() {
           </div>
         </div>
 
-        {/* =================================================
-            CALENDAR
-        ================================================= */}
+        {/* ERROR */}
+
+        {error && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            {error}
+          </div>
+        )}
+
+        {/* CALENDAR */}
 
         <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
           <div className="flex flex-col gap-3 border-b border-zinc-200 bg-zinc-50/80 p-4 sm:p-5 md:flex-row md:items-center md:justify-between">
@@ -1124,8 +1259,6 @@ export default function PengajuanLemburMkaPage() {
             </div>
           </div>
 
-          {/* LEGEND */}
-
           <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 border-b border-zinc-200 px-4 py-3 text-xs font-medium text-zinc-500 sm:px-5">
             <div className="flex items-center gap-2">
               <span className="h-3 w-3 rounded bg-red-100 ring-1 ring-red-200" />
@@ -1147,8 +1280,6 @@ export default function PengajuanLemburMkaPage() {
               Ada lembur
             </div>
           </div>
-
-          {/* CALENDAR */}
 
           <div className="flex justify-center px-3 py-5 sm:px-5 sm:py-6">
             <div className="w-full max-w-[590px] overflow-hidden rounded-xl border border-zinc-200 shadow-sm">
@@ -1201,28 +1332,28 @@ export default function PengajuanLemburMkaPage() {
           </div>
         </section>
 
-        {/* =================================================
-            MONTHLY TABLE
-        ================================================= */}
+        {/* MONTHLY TABLE */}
 
         <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
           <div className="border-b border-zinc-200 p-4 sm:p-5">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-lg font-bold text-zinc-900">
-                Data Lembur {MONTHS[calendarMonth]} {calendarYear}
-              </h2>
+            <h2 className="text-lg font-bold text-zinc-900">
+              Data Lembur {MONTHS[calendarMonth]} {calendarYear}
+            </h2>
 
-              <p className="text-sm text-zinc-500">
-                Seluruh pengajuan lembur pada unit{" "}
-                <span className="font-semibold text-zinc-700">
-                  {UNIT_INFO[currentUnit]?.name || currentUnit}
-                </span>
-                .
-              </p>
-            </div>
+            <p className="text-sm text-zinc-500">
+              Seluruh pengajuan lembur pada unit{" "}
+              <span className="font-semibold text-zinc-700">
+                {currentUnitInfo.name}
+              </span>
+              .
+            </p>
           </div>
 
-          {monthRecords.length === 0 ? (
+          {loading ? (
+            <div className="p-10 text-center text-sm text-zinc-500">
+              Memuat data...
+            </div>
+          ) : monthRecords.length === 0 ? (
             <div className="p-10 text-center text-sm text-zinc-500">
               Belum ada data lembur pada bulan ini.
             </div>
@@ -1245,15 +1376,15 @@ export default function PengajuanLemburMkaPage() {
                   {monthRecords.map((record) => (
                     <tr key={record.id} className="transition hover:bg-zinc-50">
                       <td className="whitespace-nowrap px-4 py-3 font-semibold text-zinc-800">
-                        {formatDateShort(record.date)}
+                        {formatDateShort(record.tanggal)}
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3 text-zinc-600">
-                        {record.startTime} - {record.endTime}
+                        {record.jam_mulai} - {record.jam_selesai}
                       </td>
 
                       <td className="px-4 py-3 text-zinc-600">
-                        {record.reason || "-"}
+                        {record.pekerjaan || "-"}
                       </td>
 
                       <td className="px-4 py-3">
@@ -1270,7 +1401,8 @@ export default function PengajuanLemburMkaPage() {
                           <button
                             type="button"
                             onClick={() => handleDelete(record.id)}
-                            className="rounded-lg p-2 text-red-500 hover:bg-red-50 hover:text-red-700"
+                            disabled={saving}
+                            className="rounded-lg p-2 text-red-500 hover:bg-red-50 hover:text-red-700 disabled:opacity-50"
                             title="Hapus"
                           >
                             <Trash2 size={16} />
@@ -1287,7 +1419,7 @@ export default function PengajuanLemburMkaPage() {
       </div>
 
       {/* =====================================================
-          FORM MODAL
+          FORM / EDIT MODAL
       ===================================================== */}
 
       {modal?.type === "form" || modal?.type === "edit" ? (
@@ -1315,7 +1447,20 @@ export default function PengajuanLemburMkaPage() {
 
             <form onSubmit={handleSubmit} className="space-y-5 p-5">
               <div className="rounded-xl bg-zinc-50 p-4 text-sm text-zinc-600">
-                MKA dan Pengawas otomatis menggunakan Master Pegawai Unit.
+                <div>
+                  <span className="font-semibold">Unit:</span>{" "}
+                  {currentUnitInfo.name}
+                </div>
+
+                <div className="mt-1">
+                  <span className="font-semibold">MKA:</span>{" "}
+                  {master.mka?.map((item) => item.name).join(", ") || "-"}
+                </div>
+
+                <div className="mt-1">
+                  <span className="font-semibold">Pengawas:</span>{" "}
+                  {master.supervisor?.name}
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -1388,9 +1533,14 @@ export default function PengajuanLemburMkaPage() {
 
                 <button
                   type="submit"
-                  className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-800"
+                  disabled={saving}
+                  className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {modal.type === "edit" ? "Simpan Perubahan" : "Ajukan Lembur"}
+                  {saving
+                    ? "Menyimpan..."
+                    : modal.type === "edit"
+                      ? "Simpan Perubahan"
+                      : "Ajukan Lembur"}
                 </button>
               </div>
             </form>
@@ -1426,69 +1576,76 @@ export default function PengajuanLemburMkaPage() {
             </div>
 
             <div className="divide-y divide-zinc-100">
-              {selectedRecords.map((record, index) => (
-                <div key={record.id} className="p-5">
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
-                        {index + 1}
-                      </span>
+              {selectedRecords.map((record, index) => {
+                const mka = master.mka.find(
+                  (item) => item.id === record.mka_id,
+                );
 
-                      <div>
-                        <div className="font-bold text-zinc-900">
-                          Pengajuan lembur
+                return (
+                  <div key={record.id} className="p-5">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-700">
+                          {index + 1}
+                        </span>
+
+                        <div>
+                          <div className="font-bold text-zinc-900">
+                            {mka?.name}
+                          </div>
+
+                          <div className="text-xs text-zinc-500">
+                            {mka?.position} · Data dari Master Pegawai
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(record)}
+                          className="rounded-lg border border-zinc-200 p-2 text-zinc-600 hover:bg-zinc-50"
+                          title="Edit"
+                        >
+                          <Pencil size={15} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(record.id)}
+                          disabled={saving}
+                          className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                          title="Hapus"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      <div className="rounded-xl bg-zinc-50 p-3">
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                          Waktu
                         </div>
 
-                        <div className="text-xs text-zinc-500">
-                          Data petugas mengikuti Master Pegawai Unit
+                        <div className="mt-1 font-semibold text-zinc-800">
+                          {record.jam_mulai} - {record.jam_selesai}
+                        </div>
+                      </div>
+
+                      <div className="rounded-xl bg-zinc-50 p-3">
+                        <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                          Pekerjaan
+                        </div>
+
+                        <div className="mt-1 font-semibold text-zinc-800">
+                          {record.pekerjaan || "-"}
                         </div>
                       </div>
                     </div>
-
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleEdit(record)}
-                        className="rounded-lg border border-zinc-200 p-2 text-zinc-600 hover:bg-zinc-50"
-                        title="Edit"
-                      >
-                        <Pencil size={15} />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleDelete(record.id)}
-                        className="rounded-lg border border-red-200 p-2 text-red-600 hover:bg-red-50"
-                        title="Hapus"
-                      >
-                        <Trash2 size={15} />
-                      </button>
-                    </div>
                   </div>
-
-                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                    <div className="rounded-xl bg-zinc-50 p-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                        Waktu
-                      </div>
-
-                      <div className="mt-1 font-semibold text-zinc-800">
-                        {record.startTime} - {record.endTime}
-                      </div>
-                    </div>
-
-                    <div className="rounded-xl bg-zinc-50 p-3">
-                      <div className="text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                        Pekerjaan
-                      </div>
-
-                      <div className="mt-1 font-semibold text-zinc-800">
-                        {record.reason || "-"}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -1554,7 +1711,7 @@ export default function PengajuanLemburMkaPage() {
                       <SpklPage
                         date={date}
                         records={getRecordsForDate(date)}
-                        master={currentMaster}
+                        master={master}
                         unit={currentUnit}
                       />
                     </div>
@@ -1567,9 +1724,7 @@ export default function PengajuanLemburMkaPage() {
       ) : null}
 
       {/* =====================================================
-          HIDDEN FIXED-SIZE PDF AREA
-          
-          SELALU ADA DI DOM
+          HIDDEN PDF AREA
       ===================================================== */}
 
       <div
@@ -1582,17 +1737,15 @@ export default function PengajuanLemburMkaPage() {
             key={date}
             date={date}
             records={getRecordsForDate(date)}
-            master={currentMaster}
+            master={master}
             unit={currentUnit}
           />
         ))}
       </div>
 
       {/* =====================================================
-          STYLE
-          
-          CSS hanya untuk dokumen SPKL A4,
-          PDF hidden area, dan PRINT.
+          STYLE SPKL
+          SAMA DENGAN KODE AWAL
       ===================================================== */}
 
       <style jsx global>{`
@@ -1610,10 +1763,6 @@ export default function PengajuanLemburMkaPage() {
           font-size: 13px;
           line-height: 1.35;
         }
-
-        /* =========================
-           HEADER
-        ========================= */
 
         .spkl-header {
           width: 100%;
@@ -1657,10 +1806,6 @@ export default function PengajuanLemburMkaPage() {
           width: 100%;
         }
 
-        /* =========================
-           CONTENT
-        ========================= */
-
         .spkl-intro {
           margin: 11px 0 8px;
           font-size: 13.5px;
@@ -1697,10 +1842,6 @@ export default function PengajuanLemburMkaPage() {
           margin-top: 9px;
         }
 
-        /* =========================
-           TABLE
-        ========================= */
-
         .spkl-table {
           width: 100%;
           border-collapse: collapse;
@@ -1728,10 +1869,6 @@ export default function PengajuanLemburMkaPage() {
         .spkl-table td {
           min-height: 36px;
         }
-
-        /* =========================
-           WORKER TABLE
-        ========================= */
 
         .spkl-table-workers .col-no {
           width: 4%;
@@ -1764,10 +1901,6 @@ export default function PengajuanLemburMkaPage() {
         .spkl-table-workers .col-sign {
           width: 17%;
         }
-
-        /* =========================
-           SUPERVISOR TABLE
-        ========================= */
 
         .spkl-table-supervisor .col-no {
           width: 4%;
@@ -1805,19 +1938,11 @@ export default function PengajuanLemburMkaPage() {
           height: 42px;
         }
 
-        /* =========================
-           NOTE
-        ========================= */
-
         .spkl-note {
           margin-top: 5px;
           font-size: 10.5px;
           line-height: 1.25;
         }
-
-        /* =========================
-           APPROVAL
-        ========================= */
 
         .spkl-approval {
           width: 285px;
@@ -1858,10 +1983,6 @@ export default function PengajuanLemburMkaPage() {
           margin-top: 1px;
         }
 
-        /* =========================
-           HIDDEN PDF
-        ========================= */
-
         .spkl-hidden-pdf-area {
           position: fixed;
           left: -20000px;
@@ -1879,10 +2000,6 @@ export default function PengajuanLemburMkaPage() {
           transform: none !important;
           margin: 0 !important;
         }
-
-        /* =========================
-           PRINT
-        ========================= */
 
         @media print {
           @page {

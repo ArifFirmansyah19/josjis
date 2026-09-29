@@ -1,81 +1,98 @@
-/* eslint-disable react-hooks/set-state-in-effect */
 "use client";
 
-import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 
-const EMPTY_FORM = {
-  tanggal: "",
-  keterangan: "",
-  tujuan: "",
-};
+function getToday() {
+  return new Date().toISOString().slice(0, 10);
+}
 
 export default function SuratKeluarForm({
   open,
   editingRecord,
+  selectedYear,
   onClose,
   onSave,
 }) {
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [tanggal, setTanggal] = useState(getToday());
+  const [keterangan, setKeterangan] = useState("");
+  const [tujuan, setTujuan] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!open) return;
 
-    if (editingRecord) {
-      setForm({
-        tanggal: editingRecord.tanggal || "",
-        keterangan: editingRecord.keterangan || "",
-        tujuan: editingRecord.tujuan || "",
-      });
-    } else {
-      setForm(EMPTY_FORM);
-    }
+    setTanggal(editingRecord?.tanggal || getToday());
+    setKeterangan(editingRecord?.keterangan || "");
+    setTujuan(editingRecord?.tujuan || "");
+    setError("");
   }, [open, editingRecord]);
 
   if (!open) return null;
 
-  function handleSubmit(event) {
+  const isEdit = Boolean(editingRecord);
+
+  async function handleSubmit(event) {
     event.preventDefault();
 
-    if (!form.tanggal || !form.keterangan || !form.tujuan) {
+    if (!tanggal || !keterangan.trim() || !tujuan.trim()) {
+      setError("Tanggal, keterangan, dan tujuan wajib diisi.");
       return;
     }
 
-    onSave(form);
-  }
+    const year = Number(tanggal.slice(0, 4));
 
-  function updateField(field, value) {
-    setForm((current) => ({
-      ...current,
-      [field]: value,
-    }));
+    if (year !== selectedYear) {
+      setError(`Tanggal surat harus berada pada tahun ${selectedYear}.`);
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+
+    try {
+      await onSave({
+        tanggal,
+        keterangan: keterangan.trim(),
+        tujuan: tujuan.trim(),
+      });
+    } catch (err) {
+      setError(err?.message || "Gagal menyimpan surat.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/30 p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl">
-        <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-          <div>
-            <h3 className="text-base font-semibold text-zinc-900">
-              {editingRecord ? "Edit Pencatatan" : "Tambah Pencatatan"}
-            </h3>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+        <div className="border-b border-zinc-200 px-6 py-5">
+          <h2 className="text-lg font-semibold text-zinc-900">
+            {isEdit ? "Edit Surat Keluar" : "Tambah Surat Keluar"}
+          </h2>
 
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Isi data surat keluar
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
-          >
-            <X className="h-5 w-5" />
-          </button>
+          <p className="mt-1 text-sm text-zinc-500">
+            {isEdit
+              ? `Nomor ${String(editingRecord.nomor_urut).padStart(
+                  3,
+                  "0",
+                )} tidak akan berubah.`
+              : `Surat akan mendapatkan nomor otomatis untuk tahun ${selectedYear}.`}
+          </p>
         </div>
 
         <form onSubmit={handleSubmit}>
-          <div className="space-y-4 px-5 py-5">
+          <div className="space-y-5 px-6 py-6">
+            {isEdit && (
+              <div className="rounded-xl bg-zinc-50 px-4 py-3">
+                <p className="text-xs text-zinc-400">Nomor Surat</p>
+
+                <p className="mt-1 text-xl font-bold tabular-nums text-zinc-900">
+                  {String(editingRecord.nomor_urut).padStart(3, "0")}
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="mb-1.5 block text-sm font-medium text-zinc-700">
                 Tanggal
@@ -83,10 +100,10 @@ export default function SuratKeluarForm({
 
               <input
                 type="date"
-                value={form.tanggal}
-                onChange={(event) => updateField("tanggal", event.target.value)}
-                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-zinc-500 focus:ring-2 focus:ring-zinc-100"
-                required
+                value={tanggal}
+                onChange={(e) => setTanggal(e.target.value)}
+                disabled={saving}
+                className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
               />
             </div>
 
@@ -96,14 +113,12 @@ export default function SuratKeluarForm({
               </label>
 
               <textarea
-                value={form.keterangan}
-                onChange={(event) =>
-                  updateField("keterangan", event.target.value)
-                }
-                rows={3}
-                placeholder="Contoh: BAST Pengembalian"
-                className="w-full resize-none rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-100"
-                required
+                value={keterangan}
+                onChange={(e) => setKeterangan(e.target.value)}
+                rows={4}
+                disabled={saving}
+                placeholder="Masukkan keterangan surat..."
+                className="w-full resize-none rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
               />
             </div>
 
@@ -114,29 +129,37 @@ export default function SuratKeluarForm({
 
               <input
                 type="text"
-                value={form.tujuan}
-                onChange={(event) => updateField("tujuan", event.target.value)}
-                placeholder="Contoh: Kantor Cabang"
-                className="w-full rounded-xl border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-500 focus:ring-2 focus:ring-zinc-100"
-                required
+                value={tujuan}
+                onChange={(e) => setTujuan(e.target.value)}
+                disabled={saving}
+                placeholder="Contoh: Notaris / KCP / Debitur"
+                className="w-full rounded-xl border border-zinc-300 px-3 py-2.5 text-sm outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/10"
               />
             </div>
+
+            {error && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+                {error}
+              </div>
+            )}
           </div>
 
-          <div className="flex justify-end gap-2 border-t border-zinc-200 px-5 py-4">
+          <div className="flex justify-end gap-3 border-t border-zinc-200 bg-zinc-50 px-6 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-zinc-200 px-4 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50"
+              disabled={saving}
+              className="rounded-xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
             >
               Batal
             </button>
 
             <button
               type="submit"
-              className="rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800"
+              disabled={saving}
+              className="rounded-xl bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50"
             >
-              {editingRecord ? "Simpan Perubahan" : "Simpan"}
+              {saving ? "Menyimpan..." : "Simpan"}
             </button>
           </div>
         </form>

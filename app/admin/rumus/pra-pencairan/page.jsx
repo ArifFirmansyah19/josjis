@@ -132,6 +132,7 @@ export default function PraPencairanPage() {
 
     if (standardRule.serviceFeeType === "fixed") {
       serviceFee = standardRule.serviceFeeValue;
+
       serviceFeeRate = 0;
     } else {
       serviceFee = limit * standardRule.serviceFeeRate;
@@ -139,11 +140,17 @@ export default function PraPencairanPage() {
 
     const provision = limit * standardRule.provisionRate;
 
-    // Biaya notaris hanya ditampilkan jika pinjaman di atas Rp100 juta.
-    // Untuk saat ini nominal tetap Rp0.
+    /*
+     * Biaya notaris hanya ditampilkan
+     * jika pinjaman di atas Rp100 juta.
+     *
+     * Untuk saat ini nominal tetap Rp0.
+     */
     const notaryFee = limit > 100000000 ? 0 : 0;
 
-    // Biaya lainnya saat ini tetap Rp0.
+    /*
+     * Biaya lainnya saat ini tetap Rp0.
+     */
     const otherCost = 0;
 
     const totalFee = serviceFee + provision + notaryFee + otherCost;
@@ -175,26 +182,30 @@ export default function PraPencairanPage() {
   return (
     <DashboardLayout>
       <div className="mx-auto max-w-5xl space-y-6">
-        {/* HEADER */}
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-white">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white">
             <Calculator className="h-5 w-5" />
           </div>
 
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-zinc-900">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
               Kalkulator Pra Pencairan
             </h1>
 
-            <p className="mt-1 text-sm text-zinc-500">
+            <p className="mt-1 text-xs text-zinc-500 sm:text-sm">
               Hitung biaya layanan, provisi, dan total biaya pencairan.
             </p>
           </div>
         </div>
 
-        {/* INPUT */}
+        {/* =====================================================
+            INPUT
+        ===================================================== */}
         <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-100 px-5 py-4 sm:px-6">
+          <div className="border-b border-zinc-100 px-4 py-4 sm:px-6">
             <h2 className="text-base font-semibold text-zinc-900">
               Input Pencairan
             </h2>
@@ -204,7 +215,8 @@ export default function PraPencairanPage() {
             </p>
           </div>
 
-          <div className="grid gap-5 p-5 sm:grid-cols-2 sm:p-6">
+          <div className="grid gap-5 p-4 sm:grid-cols-2 sm:p-6">
+            {/* JENIS PINJAMAN */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-zinc-700">
                 Jenis Pinjaman
@@ -216,10 +228,12 @@ export default function PraPencairanPage() {
                 className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
               >
                 <option value="KUM">KUM</option>
+
                 <option value="KUR">KUR</option>
               </select>
             </div>
 
+            {/* LIMIT */}
             <div>
               <label className="mb-1.5 block text-sm font-medium text-zinc-700">
                 Limit Kredit
@@ -243,11 +257,13 @@ export default function PraPencairanPage() {
           </div>
         </section>
 
-        {/* WARNING */}
+        {/* =====================================================
+            WARNING
+        ===================================================== */}
         {calculation.limit > 0 && (
-          <section className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 sm:px-6">
+          <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 sm:px-6">
             <div className="text-sm font-semibold text-amber-900">
-              *BIAYA STANDAR KETENTUAN SEKARANG, BUKAN TERMASUK PROMO
+              BIAYA STANDAR KETENTUAN SEKARANG, BUKAN TERMASUK PROMO
             </div>
 
             <div className="mt-1 text-xs text-amber-700">
@@ -256,26 +272,28 @@ export default function PraPencairanPage() {
           </section>
         )}
 
-        {/* HASIL */}
+        {/* =====================================================
+            HASIL
+        ===================================================== */}
         <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-100 px-5 py-4 sm:px-6">
+          <div className="border-b border-zinc-100 px-4 py-4 sm:px-6">
             <h2 className="text-base font-semibold text-zinc-900">
               Hasil Perhitungan
             </h2>
           </div>
 
           {calculation.error ? (
-            <div className="p-5 sm:p-6">
+            <div className="p-4 sm:p-6">
               <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {calculation.error}
               </div>
             </div>
           ) : (
-            <div className="p-5 sm:p-6">
+            <div className="p-4 sm:p-6">
               <div className="space-y-1">
                 {/* BIAYA PROVISI */}
                 <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm text-zinc-500">Biaya Provisi</div>
 
                     {calculation.limit > 0 && calculation.rule && (
@@ -285,14 +303,14 @@ export default function PraPencairanPage() {
                     )}
                   </div>
 
-                  <span className="text-sm font-semibold text-zinc-900">
+                  <span className="shrink-0 text-sm font-semibold text-zinc-900">
                     {formatRupiah(calculation.provision)}
                   </span>
                 </div>
 
                 {/* BIAYA LAYANAN */}
                 <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm text-zinc-500">Biaya Layanan</div>
 
                     {calculation.limit > 0 &&
@@ -303,7 +321,7 @@ export default function PraPencairanPage() {
                       )}
                   </div>
 
-                  <span className="text-sm font-semibold text-zinc-900">
+                  <span className="shrink-0 text-sm font-semibold text-zinc-900">
                     {formatRupiah(calculation.serviceFee)}
                   </span>
                 </div>
@@ -311,7 +329,7 @@ export default function PraPencairanPage() {
                 {/* BIAYA NOTARIS */}
                 {calculation.limit > 100000000 && (
                   <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
-                    <div>
+                    <div className="min-w-0">
                       <div className="text-sm text-zinc-500">Biaya Notaris</div>
 
                       <div className="mt-0.5 text-xs text-zinc-400">
@@ -319,7 +337,7 @@ export default function PraPencairanPage() {
                       </div>
                     </div>
 
-                    <span className="text-sm font-semibold text-zinc-900">
+                    <span className="shrink-0 text-sm font-semibold text-zinc-900">
                       {formatRupiah(calculation.notaryFee)}
                     </span>
                   </div>
@@ -329,30 +347,30 @@ export default function PraPencairanPage() {
                 <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
                   <span className="text-sm text-zinc-500">Biaya Lainnya</span>
 
-                  <span className="text-sm font-semibold text-zinc-900">
+                  <span className="shrink-0 text-sm font-semibold text-zinc-900">
                     {formatRupiah(calculation.otherCost)}
                   </span>
                 </div>
 
-                {/* TOTAL BIAYA */}
+                {/* TOTAL */}
                 <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
                   <span className="text-sm font-medium text-zinc-700">
                     Total Biaya
                   </span>
 
-                  <span className="text-sm font-bold text-zinc-900">
+                  <span className="shrink-0 text-sm font-bold text-zinc-900">
                     {formatRupiah(calculation.totalFee)}
                   </span>
                 </div>
               </div>
 
               {/* TOTAL BIAYA UTAMA */}
-              <div className="mt-5 rounded-2xl bg-zinc-900 p-5 text-white">
+              <div className="mt-5 rounded-2xl bg-zinc-900 p-4 text-white sm:p-5">
                 <div className="text-xs font-medium text-zinc-400">
                   Total Biaya
                 </div>
 
-                <div className="mt-2 text-2xl font-bold tracking-tight">
+                <div className="mt-2 text-xl font-bold tracking-tight sm:text-2xl">
                   {formatRupiah(calculation.totalFee)}
                 </div>
               </div>
@@ -366,7 +384,7 @@ export default function PraPencairanPage() {
                   onChange={(event) =>
                     setInsuranceEnabled(event.target.checked)
                   }
-                  className="h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-200"
+                  className="h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-200"
                 />
 
                 <label
@@ -384,9 +402,11 @@ export default function PraPencairanPage() {
           )}
         </section>
 
-        {/* KETENTUAN STANDAR */}
+        {/* =====================================================
+            KETENTUAN STANDAR
+        ===================================================== */}
         <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <div className="border-b border-zinc-100 px-5 py-4 sm:px-6">
+          <div className="border-b border-zinc-100 px-4 py-4 sm:px-6">
             <h2 className="text-base font-semibold text-zinc-900">
               Ketentuan Standar
             </h2>
@@ -396,81 +416,129 @@ export default function PraPencairanPage() {
             </p>
           </div>
 
-          <div className="overflow-x-auto p-5 sm:p-6">
-            <table className="w-full min-w-[650px] text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200">
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Produk
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Limit
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Layanan
-                  </th>
-                  <th className="px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    Provisi
-                  </th>
-                </tr>
-              </thead>
+          {/* RESPONSIVE TABLE */}
+          <div className="p-4 sm:p-6">
+            <div className="overflow-hidden rounded-xl border border-zinc-100">
+              <table className="w-full table-fixed text-xs sm:text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 bg-zinc-50">
+                    <th className="w-[16%] px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:w-[15%] sm:px-3 sm:text-xs">
+                      Produk
+                    </th>
 
-              <tbody className="divide-y divide-zinc-100">
-                <tr>
-                  <td className="px-3 py-3 font-medium text-zinc-900">KUM</td>
-                  <td className="px-3 py-3 text-zinc-600">Rp1 - Rp100 juta</td>
-                  <td className="px-3 py-3 text-zinc-600">0,50%</td>
-                  <td className="px-3 py-3 text-zinc-600">0,50%</td>
-                </tr>
+                    <th className="w-[38%] px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:w-[40%] sm:px-3 sm:text-xs">
+                      Limit
+                    </th>
 
-                <tr>
-                  <td className="px-3 py-3 font-medium text-zinc-900">KUM</td>
-                  <td className="px-3 py-3 text-zinc-600">
-                    &gt;Rp100 - Rp250 juta
-                  </td>
-                  <td className="px-3 py-3 text-zinc-600">0,75%</td>
-                  <td className="px-3 py-3 text-zinc-600">0,50%</td>
-                </tr>
+                    <th className="w-[23%] px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:w-[22%] sm:px-3 sm:text-xs">
+                      Layanan
+                    </th>
 
-                <tr>
-                  <td className="px-3 py-3 font-medium text-zinc-900">KUM</td>
-                  <td className="px-3 py-3 text-zinc-600">
-                    &gt;Rp250 - Rp500 juta
-                  </td>
-                  <td className="px-3 py-3 text-zinc-600">1,00%</td>
-                  <td className="px-3 py-3 text-zinc-600">0,50%</td>
-                </tr>
+                    <th className="w-[23%] px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:w-[23%] sm:px-3 sm:text-xs">
+                      Provisi
+                    </th>
+                  </tr>
+                </thead>
 
-                <tr>
-                  <td className="px-3 py-3 font-medium text-zinc-900">KUR</td>
-                  <td className="px-3 py-3 text-zinc-600">s.d. Rp10 juta</td>
-                  <td className="px-3 py-3 text-zinc-600">Rp1</td>
-                  <td className="px-3 py-3 text-zinc-600">Rp0</td>
-                </tr>
+                <tbody className="divide-y divide-zinc-100">
+                  {/* KUM 1 */}
+                  <tr>
+                    <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
+                      KUM
+                    </td>
 
-                <tr>
-                  <td className="px-3 py-3 font-medium text-zinc-900">KUR</td>
-                  <td className="px-3 py-3 text-zinc-600">
-                    &gt;Rp10 - Rp100 juta
-                  </td>
-                  <td className="px-3 py-3 text-zinc-600">2,00%</td>
-                  <td className="px-3 py-3 text-zinc-600">Rp0</td>
-                </tr>
+                    <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
+                      Rp1 - Rp100 juta
+                    </td>
 
-                <tr>
-                  <td className="px-3 py-3 font-medium text-zinc-900">KUR</td>
-                  <td className="px-3 py-3 text-zinc-600">
-                    &gt;Rp100 - Rp500 juta
-                  </td>
-                  <td className="px-3 py-3 text-zinc-600">1,90%</td>
-                  <td className="px-3 py-3 text-zinc-600">Rp0</td>
-                </tr>
-              </tbody>
-            </table>
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">0,50%</td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">0,50%</td>
+                  </tr>
+
+                  {/* KUM 2 */}
+                  <tr>
+                    <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
+                      KUM
+                    </td>
+
+                    <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
+                      &gt;Rp100 - Rp250 juta
+                    </td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">0,75%</td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">0,50%</td>
+                  </tr>
+
+                  {/* KUM 3 */}
+                  <tr>
+                    <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
+                      KUM
+                    </td>
+
+                    <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
+                      &gt;Rp250 - Rp500 juta
+                    </td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">1,00%</td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">0,50%</td>
+                  </tr>
+
+                  {/* KUR 1 */}
+                  <tr>
+                    <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
+                      KUR
+                    </td>
+
+                    <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
+                      s.d. Rp10 juta
+                    </td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">Rp1</td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">Rp0</td>
+                  </tr>
+
+                  {/* KUR 2 */}
+                  <tr>
+                    <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
+                      KUR
+                    </td>
+
+                    <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
+                      &gt;Rp10 - Rp100 juta
+                    </td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">2,00%</td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">Rp0</td>
+                  </tr>
+
+                  {/* KUR 3 */}
+                  <tr>
+                    <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
+                      KUR
+                    </td>
+
+                    <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
+                      &gt;Rp100 - Rp500 juta
+                    </td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">1,90%</td>
+
+                    <td className="px-2 py-3 text-zinc-600 sm:px-3">Rp0</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
         </section>
 
-        {/* RESET */}
+        {/* =====================================================
+            RESET
+        ===================================================== */}
         <div className="flex justify-end">
           <button
             type="button"
