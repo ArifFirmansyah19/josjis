@@ -105,6 +105,7 @@ export default function PkSpouseSection({ pk, setPk, canEdit, locked }) {
             <h3 className="text-sm font-semibold text-zinc-900">
               Identitas Pasangan
             </h3>
+
             <p className="mt-1 text-xs text-zinc-500">
               Data pasangan hanya diperlukan untuk debitur dengan status
               MENIKAH.
@@ -118,6 +119,21 @@ export default function PkSpouseSection({ pk, setPk, canEdit, locked }) {
               onChange={(e) => updateField("nama_pasangan", e.target.value)}
               disabled={disabled}
               placeholder="Nama pasangan"
+            />
+
+            <PkInput
+              label="NIK Pasangan"
+              value={pk?.nik_pasangan || ""}
+              onChange={(e) =>
+                updateField(
+                  "nik_pasangan",
+                  e.target.value.replace(/\D/g, "").slice(0, 16),
+                )
+              }
+              disabled={disabled}
+              inputMode="numeric"
+              maxLength={16}
+              placeholder="16 digit NIK"
             />
 
             <PkInput
@@ -141,6 +157,7 @@ export default function PkSpouseSection({ pk, setPk, canEdit, locked }) {
             <h3 className="text-sm font-semibold text-zinc-900">
               Alamat Pasangan
             </h3>
+
             <p className="mt-1 text-xs text-zinc-500">
               Alamat pasangan dapat mengikuti alamat debitur atau diisi
               terpisah.

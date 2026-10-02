@@ -3,7 +3,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
 import {
   CheckCircle2,
   ClipboardCheck,
@@ -13,7 +12,6 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-
 import PkLoanSection from "@/components/pk/sections/PkLoanSection";
 import PkDebtorSection from "@/components/pk/sections/PkDebtorSection";
 import PkAddressSection from "@/components/pk/sections/PkAddressSection";
@@ -24,7 +22,6 @@ import PkDocumentsSection from "@/components/pk/sections/PkDocumentSection";
 import PkOrderSection from "@/components/pk/sections/PkOrderSection";
 import PkBastSection from "@/components/pk/sections/PkBastSection";
 import PkRelatedPartySection from "@/components/pk/PkRelatedPartySection";
-
 import { PK_ROLES, canModifySection } from "@/lib/permissions/pkPermissions";
 
 const SECTION_CONFIG = [
@@ -90,6 +87,7 @@ export default function PkDetailModal({
   saving = false,
   onLockSection,
   onCorrection,
+  notaries = [],
 }) {
   const [draft, setDraft] = useState(null);
   const [activeSection, setActiveSection] = useState("loan");
@@ -97,12 +95,6 @@ export default function PkDetailModal({
   const [showCorrection, setShowCorrection] = useState(false);
   const [saveError, setSaveError] = useState("");
 
-  /*
-   * Sinkronisasi data PK yang dipilih ke draft lokal modal.
-   *
-   * JSON stringify/parse digunakan supaya perubahan di setiap section
-   * tidak langsung mengubah object PK yang berasal dari parent.
-   */
   useEffect(() => {
     if (!pk) {
       setDraft(null);
@@ -116,11 +108,10 @@ export default function PkDetailModal({
     setSaveError("");
   }, [pk]);
 
-  /*
-   * Permission object.
-   */
   const permissions = useMemo(() => {
-    if (!draft) return null;
+    if (!draft) {
+      return null;
+    }
 
     return {
       role,
@@ -129,25 +120,10 @@ export default function PkDetailModal({
     };
   }, [role, draft, currentSgpId]);
 
-  /*
-   * Status debitur.
-   *
-   * Data utama menggunakan status_debitur.
-   * Alias statusDebitur tetap didukung agar kompatibel dengan data
-   * yang mungkin sudah dimapping di page.jsx.
-   */
   const debtorStatus = draft?.status_debitur || draft?.statusDebitur || "";
 
-  /*
-   * Section pasangan hanya tersedia untuk debitur MENIKAH.
-   */
   const isMarried = debtorStatus === "MENIKAH";
 
-  /*
-   * Daftar section yang benar-benar ditampilkan.
-   *
-   * Jika debitur bukan MENIKAH, section spouse dihilangkan.
-   */
   const visibleSections = useMemo(() => {
     if (isMarried) {
       return SECTION_CONFIG;
@@ -156,13 +132,6 @@ export default function PkDetailModal({
     return SECTION_CONFIG.filter((section) => section.key !== "spouse");
   }, [isMarried]);
 
-  /*
-   * Jika status debitur berubah dari MENIKAH ke status lain ketika
-   * sedang berada di section spouse, otomatis kembali ke section
-   * Data Debitur.
-   *
-   * Data pasangan di draft TIDAK dihapus.
-   */
   useEffect(() => {
     if (!isMarried && activeSection === "spouse") {
       setActiveSection("debtor");
@@ -188,9 +157,6 @@ export default function PkDetailModal({
       return false;
     }
 
-    /*
-     * Section spouse tidak boleh diedit jika status bukan MENIKAH.
-     */
     if (section === "spouse" && !isMarried) {
       return false;
     }
@@ -207,17 +173,11 @@ export default function PkDetailModal({
     });
   };
 
-  /*
-   * Kunci / buka kunci section.
-   */
   const handleLock = (section) => {
     if (!isAdmin || saving) {
       return;
     }
 
-    /*
-     * Jangan proses spouse jika status sudah bukan MENIKAH.
-     */
     if (section === "spouse" && !isMarried) {
       return;
     }
@@ -239,9 +199,6 @@ export default function PkDetailModal({
     });
   };
 
-  /*
-   * Simpan seluruh draft PK.
-   */
   const handleSave = async () => {
     if (!draft || saving) {
       return;
@@ -258,9 +215,6 @@ export default function PkDetailModal({
     }
   };
 
-  /*
-   * Submit permintaan perbaikan.
-   */
   const handleCorrectionSubmit = () => {
     const message = correctionMessage.trim();
 
@@ -280,15 +234,7 @@ export default function PkDetailModal({
     setShowCorrection(false);
   };
 
-  /*
-   * Render section aktif.
-   */
   const renderSection = () => {
-    /*
-     * Safety:
-     * jika spouse sedang aktif tetapi status bukan MENIKAH,
-     * jangan render section pasangan.
-     */
     if (activeSection === "spouse" && !isMarried) {
       return null;
     }
@@ -354,6 +300,7 @@ export default function PkDetailModal({
             setPk={setDraft}
             canEdit={editable}
             locked={locked}
+            notaries={notaries}
           />
         );
 
@@ -410,7 +357,6 @@ export default function PkDetailModal({
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5">
-      {/* Backdrop */}
       <button
         type="button"
         aria-label="Tutup modal"
@@ -418,9 +364,7 @@ export default function PkDetailModal({
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
       />
 
-      {/* Modal */}
       <div className="relative flex h-[94vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
-        {/* Header */}
         <div className="shrink-0 border-b border-zinc-200 bg-white px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -466,9 +410,7 @@ export default function PkDetailModal({
           </div>
         </div>
 
-        {/* Body */}
         <div className="flex min-h-0 flex-1">
-          {/* Sidebar Desktop */}
           <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-zinc-200 bg-zinc-50/70 p-3 lg:block">
             <div className="px-2 pb-2 pt-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
@@ -525,9 +467,7 @@ export default function PkDetailModal({
             )}
           </aside>
 
-          {/* Main */}
           <main className="min-w-0 flex-1 overflow-y-auto bg-[#f7f7f5]">
-            {/* Mobile Section Selector */}
             <div className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
               <select
                 value={activeSection}
@@ -544,7 +484,6 @@ export default function PkDetailModal({
             </div>
 
             <div className="space-y-5 p-4 sm:p-5 lg:p-6">
-              {/* Section Toolbar */}
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold text-zinc-900">
@@ -581,10 +520,8 @@ export default function PkDetailModal({
                 )}
               </div>
 
-              {/* Active Section */}
               {renderSection()}
 
-              {/* Save Error */}
               {saveError && (
                 <section className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
                   <p className="text-sm font-medium text-red-800">
@@ -595,7 +532,6 @@ export default function PkDetailModal({
                 </section>
               )}
 
-              {/* Correction */}
               {showCorrection && isAdmin && (
                 <section className="overflow-hidden rounded-2xl border border-amber-200 bg-white">
                   <div className="border-b border-amber-100 bg-amber-50/70 px-5 py-4">
@@ -644,7 +580,6 @@ export default function PkDetailModal({
           </main>
         </div>
 
-        {/* Footer */}
         <div className="shrink-0 border-t border-zinc-200 bg-white px-4 py-3 sm:px-5">
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs text-zinc-500">
@@ -673,7 +608,6 @@ export default function PkDetailModal({
                   className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <CheckCircle2 size={16} />
-
                   {saving ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>
               )}

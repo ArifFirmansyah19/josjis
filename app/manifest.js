@@ -1,12 +1,15 @@
 export default function manifest() {
   return {
     id: "/",
+
     name: "JOSJIS Sistem Integrasi Pendataan Mikro Kuamang Kuning",
     short_name: "JOSJIS",
+
     description: "Sistem Integrasi Pendataan Mikro Kuamang Kuning",
 
     start_url: "/",
     scope: "/",
+
     display: "standalone",
     orientation: "portrait-primary",
 
