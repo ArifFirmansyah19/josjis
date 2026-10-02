@@ -10,9 +10,7 @@ import {
   Clock3,
   FileCheck,
   FileSpreadsheet,
-  FileStack,
   FileText,
-  FolderKanban,
   Home,
   Landmark,
   LogOut,
@@ -20,10 +18,8 @@ import {
   Printer,
   Search,
   Settings,
-  ShieldCheck,
   Truck,
   Users,
-  WalletCards,
   X,
 } from "lucide-react";
 
@@ -45,7 +41,7 @@ const menuSections = [
   },
 
   {
-    title: "DATA",
+    title: "PROSES",
     items: [
       {
         label: "PK",
@@ -58,52 +54,10 @@ const menuSections = [
         icon: Landmark,
       },
       {
-        label: "Agunan Siap Notaris",
-        href: "/admin/agunan-siap-notaris",
-        icon: FileCheck,
-      },
-      {
         label: "Agunan Lunas",
         href: "/admin/agunan-lunas",
         icon: Archive,
       },
-    ],
-  },
-
-  {
-    title: "OPERASIONAL",
-    items: [
-      {
-        label: "Laporan Booking Harian",
-        href: "/admin/booking-harian",
-        icon: CalendarDays,
-      },
-      {
-        label: "Pengajuan Lembur MKA",
-        href: "/admin/pengajuan-lembur-mka",
-        icon: Clock3,
-      },
-      {
-        label: "RaportMU",
-        href: "/admin/raportmu",
-        icon: FileSpreadsheet,
-      },
-      {
-        label: "Kelola PDF",
-        href: "/admin/kelola-pdf",
-        icon: FileStack,
-      },
-      {
-        label: "Cetak Advis",
-        href: "/admin/cetak-advis",
-        icon: Printer,
-      },
-    ],
-  },
-
-  {
-    title: "PROSES",
-    items: [
       {
         label: "Pemeriksaan",
         href: "/admin/pemeriksaan",
@@ -120,19 +74,9 @@ const menuSections = [
         icon: Truck,
       },
       {
-        label: "Monitoring Status PK Final",
-        href: "/admin/monitoring-status-pk-final",
-        icon: FileCheck,
-      },
-      {
         label: "Pending Notaris",
         href: "/admin/pending-notaris",
         icon: FileCheck,
-      },
-      {
-        label: "Pengikatan",
-        href: "/admin/pengikatan",
-        icon: ShieldCheck,
       },
       {
         label: "BAST",
@@ -143,13 +87,39 @@ const menuSections = [
   },
 
   {
-    title: "DOKUMEN",
+    title: "LAPORAN & OPERASIONAL",
     items: [
       {
-        label: "Dokumen",
-        href: "/admin/dokumen",
-        icon: FolderKanban,
+        label: "RaportMU",
+        href: "/admin/raportmu",
+        icon: FileSpreadsheet,
       },
+      {
+        label: "Laporan Booking Harian",
+        href: "/admin/booking-harian",
+        icon: CalendarDays,
+      },
+      {
+        label: "Pengajuan Lembur MKA",
+        href: "/admin/pengajuan-lembur-mka",
+        icon: Clock3,
+      },
+      {
+        label: "Cetak Advis",
+        href: "/admin/cetak-advis",
+        icon: Printer,
+      },
+      {
+        label: "Kelola PDF",
+        href: "/admin/kelola-pdf",
+        icon: FileText,
+      },
+    ],
+  },
+
+  {
+    title: "SURAT",
+    items: [
       {
         label: "Surat Keluar",
         href: "/admin/surat-keluar",
@@ -159,7 +129,7 @@ const menuSections = [
   },
 
   {
-    title: "MASTER",
+    title: "MASTER DATA",
     items: [
       {
         label: "Pegawai Unit",
@@ -170,11 +140,6 @@ const menuSections = [
         label: "Notaris",
         href: "/admin/notaris",
         icon: Users,
-      },
-      {
-        label: "Ketentuan Biaya",
-        href: "/admin/ketentuan-biaya",
-        icon: WalletCards,
       },
       {
         label: "Loker",
@@ -209,14 +174,24 @@ const menuSections = [
         icon: Users,
       },
       {
-        label: "Perangkat",
-        href: "/admin/perangkat",
-        icon: ShieldCheck,
-      },
-      {
         label: "Audit Log",
         href: "/admin/audit-log",
         icon: Search,
+      },
+      {
+        label: "Backup & Export",
+        href: "/admin/backup",
+        icon: Archive,
+      },
+      {
+        label: "Template & Import",
+        href: "/admin/import-data",
+        icon: FileSpreadsheet,
+      },
+      {
+        label: "Pindah Cabang",
+        href: "/admin/pindah-cabang",
+        icon: Truck,
       },
       {
         label: "Pengaturan",
@@ -268,7 +243,7 @@ export default function Sidebar({ open, onClose }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900 lg:hidden"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 lg:hidden"
             aria-label="Tutup menu"
           >
             <X className="h-5 w-5" />
@@ -299,7 +274,10 @@ export default function Sidebar({ open, onClose }) {
                       onClick={onClose}
                       className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
                     >
-                      <Icon className="h-[18px] w-[18px]" strokeWidth={1.8} />
+                      <Icon
+                        className="h-[18px] w-[18px] shrink-0"
+                        strokeWidth={1.8}
+                      />
 
                       <span>{item.label}</span>
                     </Link>

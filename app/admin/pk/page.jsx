@@ -291,6 +291,392 @@ function canViewPk() {
 }
 
 /* =========================================================================
+   NORMALIZER SUPABASE
+========================================================================= */
+
+function nullableText(value) {
+  if (value === undefined || value === null) {
+    return null;
+  }
+
+  const text = String(value).trim();
+
+  return text === "" ? null : text;
+}
+
+function nullableNumber(value) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  const number = Number(value);
+
+  if (!Number.isFinite(number)) {
+    return null;
+  }
+
+  return number;
+}
+
+function nullableDate(value) {
+  if (value === undefined || value === null || value === "") {
+    return null;
+  }
+
+  return value;
+}
+
+function nullableBoolean(value) {
+  if (value === undefined || value === null || value === "") {
+    return false;
+  }
+
+  return Boolean(value);
+}
+
+/* =========================================================================
+   SUPABASE PAYLOAD
+   Hanya field yang memang ada pada public.pk.
+========================================================================= */
+
+function buildPkUpdatePayload(pk) {
+  if (!pk?.id) {
+    return null;
+  }
+
+  const payload = {};
+
+  /* -----------------------------------------------------------------------
+     IDENTITAS / PINJAMAN
+  ----------------------------------------------------------------------- */
+
+  if (pk.jenis_pengajuan_kredit !== undefined || pk.loanType !== undefined) {
+    payload.jenis_pengajuan_kredit = nullableText(
+      pk.jenis_pengajuan_kredit !== undefined
+        ? pk.jenis_pengajuan_kredit
+        : pk.loanType,
+    );
+  }
+
+  if (pk.nomor_aplikasi !== undefined || pk.applicationNumber !== undefined) {
+    payload.nomor_aplikasi = nullableText(
+      pk.nomor_aplikasi !== undefined
+        ? pk.nomor_aplikasi
+        : pk.applicationNumber,
+    );
+  }
+
+  if (pk.tanggal_aplikasi !== undefined || pk.applicationDate !== undefined) {
+    payload.tanggal_aplikasi = nullableDate(
+      pk.tanggal_aplikasi !== undefined
+        ? pk.tanggal_aplikasi
+        : pk.applicationDate,
+    );
+  }
+
+  if (pk.tanggal_pk !== undefined || pk.pkDate !== undefined) {
+    payload.tanggal_pk = nullableDate(
+      pk.tanggal_pk !== undefined ? pk.tanggal_pk : pk.pkDate,
+    );
+  }
+
+  if (pk.nomor_pk !== undefined || pk.pkNumber !== undefined) {
+    payload.nomor_pk = nullableText(
+      pk.nomor_pk !== undefined ? pk.nomor_pk : pk.pkNumber,
+    );
+  }
+
+  if (pk.cif !== undefined) {
+    payload.cif = nullableText(pk.cif);
+  }
+
+  if (pk.limit_kredit !== undefined || pk.limit !== undefined) {
+    payload.limit_kredit = nullableNumber(
+      pk.limit_kredit !== undefined ? pk.limit_kredit : pk.limit,
+    );
+  }
+
+  if (pk.jangka_waktu !== undefined || pk.tenor !== undefined) {
+    payload.jangka_waktu = nullableNumber(
+      pk.jangka_waktu !== undefined ? pk.jangka_waktu : pk.tenor,
+    );
+  }
+
+  if (pk.rekening_tabungan !== undefined || pk.savingsAccount !== undefined) {
+    payload.rekening_tabungan = nullableText(
+      pk.rekening_tabungan !== undefined
+        ? pk.rekening_tabungan
+        : pk.savingsAccount,
+    );
+  }
+
+  if (pk.rekening_kredit !== undefined || pk.loanAccount !== undefined) {
+    payload.rekening_kredit = nullableText(
+      pk.rekening_kredit !== undefined ? pk.rekening_kredit : pk.loanAccount,
+    );
+  }
+
+  /* -----------------------------------------------------------------------
+     DEBITUR
+  ----------------------------------------------------------------------- */
+
+  if (pk.nama_debitur !== undefined || pk.namaDebitur !== undefined) {
+    payload.nama_debitur = nullableText(
+      pk.nama_debitur !== undefined ? pk.nama_debitur : pk.namaDebitur,
+    );
+  }
+
+  if (pk.status_debitur !== undefined) {
+    payload.status_debitur = nullableText(pk.status_debitur);
+  }
+
+  if (
+    pk.penyebutan_debitur !== undefined ||
+    pk.penyebutanDebitur !== undefined
+  ) {
+    payload.penyebutan_debitur = nullableText(
+      pk.penyebutan_debitur !== undefined
+        ? pk.penyebutan_debitur
+        : pk.penyebutanDebitur,
+    );
+  }
+
+  if (pk.jenis_kelamin !== undefined) {
+    payload.jenis_kelamin = nullableText(pk.jenis_kelamin);
+  }
+
+  if (pk.nomor_ktp !== undefined || pk.nik !== undefined) {
+    payload.nomor_ktp = nullableText(
+      pk.nomor_ktp !== undefined ? pk.nomor_ktp : pk.nik,
+    );
+  }
+
+  if (pk.tanggal_expired_ktp !== undefined) {
+    payload.tanggal_expired_ktp = nullableDate(pk.tanggal_expired_ktp);
+  }
+
+  if (pk.tempat_lahir !== undefined) {
+    payload.tempat_lahir = nullableText(pk.tempat_lahir);
+  }
+
+  if (pk.tanggal_lahir !== undefined) {
+    payload.tanggal_lahir = nullableDate(pk.tanggal_lahir);
+  }
+
+  if (pk.profesi !== undefined) {
+    payload.profesi = nullableText(pk.profesi);
+  }
+
+  if (pk.nomor_handphone !== undefined || pk.nomorHp !== undefined) {
+    payload.nomor_handphone = nullableText(
+      pk.nomor_handphone !== undefined ? pk.nomor_handphone : pk.nomorHp,
+    );
+  }
+
+  /* -----------------------------------------------------------------------
+     ALAMAT DEBITUR
+  ----------------------------------------------------------------------- */
+
+  if (pk.alamat_jalan !== undefined) {
+    payload.alamat_jalan = nullableText(pk.alamat_jalan);
+  }
+
+  if (pk.rt !== undefined) {
+    payload.rt = nullableText(pk.rt);
+  }
+
+  if (pk.rw !== undefined) {
+    payload.rw = nullableText(pk.rw);
+  }
+
+  if (pk.alamat_desa_kelurahan !== undefined) {
+    payload.alamat_desa_kelurahan = nullableText(pk.alamat_desa_kelurahan);
+  }
+
+  if (pk.alamat_kecamatan !== undefined) {
+    payload.alamat_kecamatan = nullableText(pk.alamat_kecamatan);
+  }
+
+  if (pk.alamat_kabupaten !== undefined) {
+    payload.alamat_kabupaten = nullableText(pk.alamat_kabupaten);
+  }
+
+  /* -----------------------------------------------------------------------
+     DATA PASANGAN
+     
+     Data pasangan sengaja tetap disimpan walaupun status debitur
+     berubah dari MENIKAH ke status lain.
+     
+     Section pasangan hanya akan ditampilkan / disembunyikan oleh modal.
+  ----------------------------------------------------------------------- */
+
+  if (pk.nama_pasangan !== undefined) {
+    payload.nama_pasangan = nullableText(pk.nama_pasangan);
+  }
+
+  if (pk.nomor_handphone_pasangan !== undefined) {
+    payload.nomor_handphone_pasangan = nullableText(
+      pk.nomor_handphone_pasangan,
+    );
+  }
+
+  if (pk.alamat_pasangan_sama_debitur !== undefined) {
+    payload.alamat_pasangan_sama_debitur = nullableBoolean(
+      pk.alamat_pasangan_sama_debitur,
+    );
+  }
+
+  if (pk.alamat_pasangan_jalan !== undefined) {
+    payload.alamat_pasangan_jalan = nullableText(pk.alamat_pasangan_jalan);
+  }
+
+  if (pk.alamat_pasangan_rt !== undefined) {
+    payload.alamat_pasangan_rt = nullableText(pk.alamat_pasangan_rt);
+  }
+
+  if (pk.alamat_pasangan_rw !== undefined) {
+    payload.alamat_pasangan_rw = nullableText(pk.alamat_pasangan_rw);
+  }
+
+  if (pk.alamat_pasangan_desa_kelurahan !== undefined) {
+    payload.alamat_pasangan_desa_kelurahan = nullableText(
+      pk.alamat_pasangan_desa_kelurahan,
+    );
+  }
+
+  if (pk.alamat_pasangan_kecamatan !== undefined) {
+    payload.alamat_pasangan_kecamatan = nullableText(
+      pk.alamat_pasangan_kecamatan,
+    );
+  }
+
+  if (pk.alamat_pasangan_kabupaten !== undefined) {
+    payload.alamat_pasangan_kabupaten = nullableText(
+      pk.alamat_pasangan_kabupaten,
+    );
+  }
+
+  /* -----------------------------------------------------------------------
+     LOAN DETAIL
+  ----------------------------------------------------------------------- */
+
+  if (pk.tujuan_kredit !== undefined) {
+    payload.tujuan_kredit = nullableText(pk.tujuan_kredit);
+  }
+
+  if (pk.bunga_per_bulan !== undefined) {
+    payload.bunga_per_bulan = nullableNumber(pk.bunga_per_bulan);
+  }
+
+  if (pk.bunga_per_tahun !== undefined) {
+    payload.bunga_per_tahun = nullableNumber(pk.bunga_per_tahun);
+  }
+
+  if (pk.angsuran_kredit !== undefined) {
+    payload.angsuran_kredit = nullableNumber(pk.angsuran_kredit);
+  }
+
+  if (pk.tanggal_acuan_angsuran !== undefined) {
+    payload.tanggal_acuan_angsuran = nullableDate(pk.tanggal_acuan_angsuran);
+  }
+
+  /* -----------------------------------------------------------------------
+     BIAYA
+  ----------------------------------------------------------------------- */
+
+  const numericFields = [
+    "biaya_provisi",
+    "biaya_admin",
+    "biaya_provisi_rupiah",
+    "materai",
+    "premi_asuransi_jiwa",
+    "nilai_agunan_bangunan",
+    "biaya_premi_kebakaran",
+    "biaya_notaris",
+    "nilai_pengikatan",
+    "total_biaya",
+    "limit_kredit_sebelumnya",
+    "nominal_pelunasan_pinjaman_exist",
+    "biaya_blokir_bpkb",
+  ];
+
+  numericFields.forEach((field) => {
+    if (pk[field] !== undefined) {
+      payload[field] = nullableNumber(pk[field]);
+    }
+  });
+
+  /* -----------------------------------------------------------------------
+     ASURANSI / NOTARIS / DATA TAMBAHAN
+  ----------------------------------------------------------------------- */
+
+  const textFields = [
+    "pt_asuransi_jiwa",
+    "rekening_asuransi_jiwa",
+    "rekening_notaris",
+    "pt_asuransi_kendaraan",
+    "nomor_rekening_blokiran",
+    "klasifikasi_debitur",
+    "addendum_ke",
+    "nomor_bast",
+  ];
+
+  textFields.forEach((field) => {
+    if (pk[field] !== undefined) {
+      payload[field] = nullableText(pk[field]);
+    }
+  });
+
+  /* -----------------------------------------------------------------------
+     ADDENDUM
+  ----------------------------------------------------------------------- */
+
+  if (pk.tanggal_pk_add_pk_sebelumnya !== undefined) {
+    payload.tanggal_pk_add_pk_sebelumnya = nullableDate(
+      pk.tanggal_pk_add_pk_sebelumnya,
+    );
+  }
+
+  if (pk.limit_kredit_sebelumnya !== undefined) {
+    payload.limit_kredit_sebelumnya = nullableNumber(
+      pk.limit_kredit_sebelumnya,
+    );
+  }
+
+  if (pk.nominal_pelunasan_pinjaman_exist !== undefined) {
+    payload.nominal_pelunasan_pinjaman_exist = nullableNumber(
+      pk.nominal_pelunasan_pinjaman_exist,
+    );
+  }
+
+  /* -----------------------------------------------------------------------
+     STATUS
+  ----------------------------------------------------------------------- */
+
+  if (pk.status_pk !== undefined || pk.loanStatus !== undefined) {
+    payload.status_pk =
+      nullableText(pk.status_pk !== undefined ? pk.status_pk : pk.loanStatus) ||
+      "AKTIF";
+  }
+
+  /* -----------------------------------------------------------------------
+     NOTARIS
+  ----------------------------------------------------------------------- */
+
+  if (pk.notaris_id !== undefined) {
+    payload.notaris_id = pk.notaris_id || null;
+  }
+
+  /* -----------------------------------------------------------------------
+     UPDATED AT
+  ----------------------------------------------------------------------- */
+
+  payload.updated_at = new Date().toISOString();
+
+  return payload;
+}
+
+/* =========================================================================
    FILTER SELECT
 ========================================================================= */
 
@@ -354,37 +740,24 @@ function AgunanBadge({ value }) {
 
 export default function PkPage() {
   const { activeUnit } = useUnit();
-
-  /*
-   * activeUnit dari UnitContext:
-   *
-   * {
-   *   value: "JKK1",
-   *   code: "11081A",
-   *   name: "Jambi Kuamang Kuning 1"
-   * }
-   */
   const activeUnitUuid = getUnitUuid(activeUnit);
 
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState("");
+  const [successMessage, setSuccessMessage] = useState("");
 
   const [pkRows, setPkRows] = useState([]);
 
   const [search, setSearch] = useState("");
-
   const [productFilter, setProductFilter] = useState("SEMUA");
-
   const [mksFilter, setMksFilter] = useState("SEMUA");
-
   const [limitFilter, setLimitFilter] = useState("SEMUA");
-
   const [monthFilter, setMonthFilter] = useState("SEMUA");
-
   const [yearFilter, setYearFilter] = useState("SEMUA");
 
   const [selectedPk, setSelectedPk] = useState(null);
-
   const [modalMode, setModalMode] = useState("view");
 
   /* =========================================================================
@@ -392,21 +765,15 @@ export default function PkPage() {
   ========================================================================= */
 
   async function loadPkData() {
-    /*
-     * Jangan query kalau unit belum punya UUID.
-     */
     if (!activeUnitUuid) {
       setPkRows([]);
+
       setErrorMessage(
         `Unit ${activeUnit?.value || "-"} belum memiliki UUID database.`,
       );
+
       return;
     }
-
-    /*
-     * Pastikan yang masuk ke query benar-benar UUID.
-     */
-    console.log("JOSJIS PK - Unit:", activeUnit?.value, activeUnitUuid);
 
     setLoading(true);
     setErrorMessage("");
@@ -417,11 +784,11 @@ export default function PkPage() {
         return;
       }
 
-      /*
-       * ================================================================
-       * 1. PK
-       * ================================================================
-       */
+      console.log("JOSJIS PK - Unit:", activeUnit?.value, activeUnitUuid);
+
+      /* ================================================================
+         1. PK
+      ================================================================ */
 
       const pkResult = await supabase
         .from("pk")
@@ -437,19 +804,14 @@ export default function PkPage() {
 
       const rows = pkResult.data || [];
 
-      /*
-       * Tidak ada PK.
-       */
       if (!rows.length) {
         setPkRows([]);
         return;
       }
 
-      /*
-       * ================================================================
-       * 2. COMPLETENESS
-       * ================================================================
-       */
+      /* ================================================================
+         2. COMPLETENESS
+      ================================================================ */
 
       const pkIds = rows.map((row) => row.id).filter(Boolean);
 
@@ -482,166 +844,92 @@ export default function PkPage() {
         completenessRows.map((item) => [item.pk_id, item]),
       );
 
-      /*
-       * ================================================================
-       * 3. MASTER MKS
-       * ================================================================
-       */
+      /* ================================================================
+         3. MASTER MKS
+      ================================================================ */
 
-      let mksRows = [];
-
-      const mksResult = await supabase.from("mks").select("*");
+      const mksResult = await supabase
+        .from("mks")
+        .select("id, pegawai_id, kode_agen");
 
       if (mksResult.error) {
         console.warn("Master MKS gagal:", mksResult.error);
-      } else {
-        mksRows = mksResult.data || [];
       }
 
-      /*
-       * ================================================================
-       * 4. MASTER PEGAWAI
-       * ================================================================
-       */
+      const mksRows = mksResult.data || [];
 
-      let pegawaiRows = [];
+      /* ================================================================
+         4. MASTER PEGAWAI
+      ================================================================ */
 
       const pegawaiResult = await supabase.from("pegawai").select("*");
 
       if (pegawaiResult.error) {
         console.warn("Master pegawai gagal:", pegawaiResult.error);
-      } else {
-        pegawaiRows = pegawaiResult.data || [];
       }
 
-      /*
-       * ================================================================
-       * 5. MAP PEGAWAI
-       * ================================================================
-       */
+      const pegawaiRows = pegawaiResult.data || [];
+
+      /* ================================================================
+         5. MAP PEGAWAI
+      ================================================================ */
 
       const pegawaiMap = new Map();
 
       pegawaiRows.forEach((pegawai) => {
-        if (pegawai.id) {
-          pegawaiMap.set(pegawai.id, pegawai);
+        if (!pegawai?.id) {
+          return;
         }
+
+        pegawaiMap.set(pegawai.id, pegawai);
       });
 
-      /*
-       * ================================================================
-       * 6. MAP MKS
-       * ================================================================
-       */
+      /* ================================================================
+         6. MAP MKS
+      ================================================================ */
 
       const mksMap = new Map();
 
       mksRows.forEach((mks) => {
+        if (!mks?.id) {
+          return;
+        }
+
         const pegawai = mks.pegawai_id ? pegawaiMap.get(mks.pegawai_id) : null;
 
         const name =
-          mks.nama_mks ||
-          mks.nama ||
-          mks.nama_pegawai ||
-          mks.name ||
-          pegawai?.nama_pegawai ||
-          pegawai?.nama ||
-          pegawai?.name ||
-          "-";
+          pegawai?.nama_pegawai || pegawai?.nama || pegawai?.name || "-";
 
-        const code =
-          mks.kode_mks ||
-          mks.kode ||
-          mks.kode_pegawai ||
-          pegawai?.kode_pegawai ||
-          pegawai?.kode ||
-          "";
+        const code = mks.kode_agen || "";
 
-        /*
-         * Simpan berdasarkan id MKS.
-         */
-        if (mks.id) {
-          mksMap.set(mks.id, {
-            id: mks.id,
-            name,
-            code,
-          });
-        }
-
-        /*
-         * Kalau PK memakai pegawai_id sebagai mks_id.
-         */
-        if (mks.pegawai_id) {
-          mksMap.set(mks.pegawai_id, {
-            id: mks.pegawai_id,
-            name,
-            code,
-          });
-        }
+        mksMap.set(mks.id, {
+          id: mks.id,
+          name,
+          code,
+        });
       });
 
-      /*
-       * ================================================================
-       * 7. MAP PK
-       * ================================================================
-       */
+      /* ================================================================
+         7. MAP PK
+      ================================================================ */
 
       const mappedRows = rows.map((row) => {
         const completeness = completenessMap.get(row.id) || null;
 
         const mksId = row.mks_id || completeness?.mks_id || null;
 
-        const mks = mksMap.get(mksId) || {
-          id: mksId,
-          name: row.nama_mks || row.mks_name || row.mksName || "-",
-          code: row.kode_mks || row.mks_code || "",
-        };
+        const mks = mksId ? mksMap.get(mksId) : null;
 
-        /*
-         * Produk
-         */
-        const loanType =
-          row.jenis_pengajuan_kredit ||
-          row.jenis_kredit ||
-          row.jenis_pinjaman ||
-          row.produk ||
-          row.product ||
-          "";
+        const loanType = row.jenis_pengajuan_kredit || "";
 
-        /*
-         * Tanggal PK
-         */
-        const tanggalPk = row.tanggal_pk || row.tgl_pk || row.tanggalPk || null;
+        const tanggalPk = row.tanggal_pk || null;
 
-        /*
-         * Tanggal peminjaman
-         */
-        const tanggalPeminjaman =
-          row.tanggal_peminjaman ||
-          row.tgl_peminjaman ||
-          row.tanggal_pencairan ||
-          row.tgl_pencairan ||
-          row.tanggal_realisasi ||
-          null;
+        const tanggalPeminjaman = row.tanggal_aplikasi || null;
 
-        /*
-         * Tenor
-         */
-        const tenor = row.tenor || row.tenor_bulan || row.jangka_waktu || null;
+        const tenor = row.jangka_waktu ?? null;
 
-        /*
-         * Limit
-         */
-        const limit = row.limit_kredit ?? row.limit_pinjaman ?? row.limit ?? 0;
+        const limit = row.limit_kredit ?? 0;
 
-        /*
-         * Jumlah agunan.
-         *
-         * Jika field count sudah ada di PK,
-         * gunakan field tersebut.
-         *
-         * Kalau belum ada, sementara 0.
-         */
         const jumlahAgunan =
           row.jumlah_agunan ??
           row.total_agunan ??
@@ -652,18 +940,22 @@ export default function PkPage() {
         return {
           ...row,
 
-          id: row.id,
+          /* --------------------------------------------------------------
+             IDENTITAS UTAMA
+          -------------------------------------------------------------- */
 
+          id: row.id,
           unitId: row.unit_id,
 
           mksId,
+          mksName: mks?.name || "-",
+          mksAgentCode: mks?.code || "",
 
-          mksName: mks.name || "-",
-
-          mksAgentCode: mks.code || "",
+          /* --------------------------------------------------------------
+             ALIAS UI LAMA
+          -------------------------------------------------------------- */
 
           tanggalPk,
-
           tanggalPeminjaman,
 
           jenisPengajuanKredit: loanType,
@@ -673,6 +965,113 @@ export default function PkPage() {
           limitKredit: Number(limit || 0),
 
           jumlahAgunan,
+
+          /* --------------------------------------------------------------
+             ALIAS MODAL
+          -------------------------------------------------------------- */
+
+          loanType: row.jenis_pengajuan_kredit || "",
+
+          applicationNumber: row.nomor_aplikasi || "",
+
+          applicationDate: row.tanggal_aplikasi || "",
+
+          pkDate: row.tanggal_pk || "",
+
+          pkNumber: row.nomor_pk || "",
+
+          limit: row.limit_kredit ?? "",
+
+          cif: row.cif || "",
+
+          savingsAccount: row.rekening_tabungan || "",
+
+          loanAccount: row.rekening_kredit || "",
+
+          loanStatus: row.status_pk || "AKTIF",
+
+          /* --------------------------------------------------------------
+             DEBITUR
+          -------------------------------------------------------------- */
+
+          namaDebitur: row.nama_debitur || "",
+
+          nik: row.nomor_ktp || "",
+
+          nomorHp: row.nomor_handphone || "",
+
+          jenisKelamin: row.jenis_kelamin || "",
+
+          penyebutanDebitur: row.penyebutan_debitur || "",
+
+          /* --------------------------------------------------------------
+             DATA DEBITUR - DATABASE LANGSUNG
+          -------------------------------------------------------------- */
+
+          nomor_handphone: row.nomor_handphone || "",
+
+          jenis_kelamin: row.jenis_kelamin || "",
+
+          penyebutan_debitur: row.penyebutan_debitur || "",
+
+          /* --------------------------------------------------------------
+             ALAMAT DEBITUR
+          -------------------------------------------------------------- */
+
+          rt: row.rt || "",
+
+          rw: row.rw || "",
+
+          alamatJalan: row.alamat_jalan || "",
+
+          alamatDesaKelurahan: row.alamat_desa_kelurahan || "",
+
+          alamatKecamatan: row.alamat_kecamatan || "",
+
+          alamatKabupaten: row.alamat_kabupaten || "",
+
+          /* --------------------------------------------------------------
+             ALAMAT DEBITUR - DATABASE LANGSUNG
+          -------------------------------------------------------------- */
+
+          alamat_jalan: row.alamat_jalan || "",
+
+          alamat_desa_kelurahan: row.alamat_desa_kelurahan || "",
+
+          alamat_kecamatan: row.alamat_kecamatan || "",
+
+          alamat_kabupaten: row.alamat_kabupaten || "",
+
+          /* --------------------------------------------------------------
+             DATA PASANGAN
+             
+             Data ini tetap dimuat walaupun status bukan MENIKAH.
+             Modal yang menentukan kapan section-nya ditampilkan.
+          -------------------------------------------------------------- */
+
+          nama_pasangan: row.nama_pasangan || "",
+
+          nomor_handphone_pasangan: row.nomor_handphone_pasangan || "",
+
+          alamat_pasangan_sama_debitur:
+            row.alamat_pasangan_sama_debitur ?? false,
+
+          alamat_pasangan_jalan: row.alamat_pasangan_jalan || "",
+
+          alamat_pasangan_rt: row.alamat_pasangan_rt || "",
+
+          alamat_pasangan_rw: row.alamat_pasangan_rw || "",
+
+          alamat_pasangan_desa_kelurahan:
+            row.alamat_pasangan_desa_kelurahan || "",
+
+          alamat_pasangan_kecamatan: row.alamat_pasangan_kecamatan || "",
+
+          alamat_pasangan_kabupaten: row.alamat_pasangan_kabupaten || "",
+
+          /* --------------------------------------------------------------
+             COMPLETENESS
+          -------------------------------------------------------------- */
 
           statusKelengkapan: completeness?.status_kelengkapan || null,
 
@@ -696,9 +1095,10 @@ export default function PkPage() {
     }
   }
 
-  /*
-   * Reload ketika unit Topbar berubah.
-   */
+  /* =========================================================================
+     RELOAD KETIKA UNIT BERUBAH
+  ========================================================================= */
+
   useEffect(() => {
     loadPkData();
   }, [activeUnitUuid]);
@@ -741,7 +1141,7 @@ export default function PkPage() {
     const map = new Map();
 
     pkRows.forEach((pk) => {
-      const id = pk.mksId || pk.mksName || "TANPA_MKS";
+      const id = pk.mksId || "TANPA_MKS";
 
       if (!map.has(id)) {
         map.set(id, {
@@ -771,16 +1171,14 @@ export default function PkPage() {
     const query = normalizeText(search);
 
     return pkRows.filter((pk) => {
-      /*
-       * Proteksi unit di frontend.
-       */
       if (activeUnitUuid && pk.unitId && pk.unitId !== activeUnitUuid) {
         return false;
       }
 
-      /*
-       * SEARCH GLOBAL
-       */
+      /* --------------------------------------------------------------
+         GLOBAL SEARCH
+      -------------------------------------------------------------- */
+
       if (query) {
         const searchableText = [
           pk.id,
@@ -788,15 +1186,14 @@ export default function PkPage() {
           pk.nomor_aplikasi,
           pk.cif,
           pk.nama_debitur,
+          pk.nomor_ktp,
           pk.nik,
-          pk.nomor_rekening,
-          pk.loan_account,
+          pk.rekening_tabungan,
+          pk.rekening_kredit,
           pk.mksName,
           pk.mksAgentCode,
           pk.jenisPengajuanKredit,
-          pk.jenis_kredit,
-          pk.jenis_pinjaman,
-          pk.produk,
+          pk.jenis_pengajuan_kredit,
         ]
           .filter(Boolean)
           .join(" ");
@@ -806,9 +1203,10 @@ export default function PkPage() {
         }
       }
 
-      /*
-       * PRODUK
-       */
+      /* --------------------------------------------------------------
+         PRODUK
+      -------------------------------------------------------------- */
+
       if (
         productFilter !== "SEMUA" &&
         normalizeText(pk.jenisPengajuanKredit) !== normalizeText(productFilter)
@@ -816,20 +1214,22 @@ export default function PkPage() {
         return false;
       }
 
-      /*
-       * MKS
-       */
+      /* --------------------------------------------------------------
+         MKS
+      -------------------------------------------------------------- */
+
       if (mksFilter !== "SEMUA") {
-        const pkMksId = pk.mksId || pk.mksName || "TANPA_MKS";
+        const pkMksId = pk.mksId || "TANPA_MKS";
 
         if (pkMksId !== mksFilter) {
           return false;
         }
       }
 
-      /*
-       * LIMIT
-       */
+      /* --------------------------------------------------------------
+         LIMIT
+      -------------------------------------------------------------- */
+
       if (
         limitFilter !== "SEMUA" &&
         getLimitBucket(pk.limitKredit) !== limitFilter
@@ -837,9 +1237,10 @@ export default function PkPage() {
         return false;
       }
 
-      /*
-       * BULAN
-       */
+      /* --------------------------------------------------------------
+         BULAN
+      -------------------------------------------------------------- */
+
       if (
         monthFilter !== "SEMUA" &&
         getDateMonth(pk.tanggalPk) !== monthFilter
@@ -847,9 +1248,10 @@ export default function PkPage() {
         return false;
       }
 
-      /*
-       * TAHUN
-       */
+      /* --------------------------------------------------------------
+         TAHUN
+      -------------------------------------------------------------- */
+
       if (yearFilter !== "SEMUA" && getDateYear(pk.tanggalPk) !== yearFilter) {
         return false;
       }
@@ -872,16 +1274,26 @@ export default function PkPage() {
   ========================================================================= */
 
   function openDetail(pk) {
+    setSuccessMessage("");
+    setErrorMessage("");
+
     setModalMode("view");
     setSelectedPk(pk);
   }
 
   function openEdit(pk) {
+    setSuccessMessage("");
+    setErrorMessage("");
+
     setModalMode("edit");
     setSelectedPk(pk);
   }
 
   function closeModal() {
+    if (saving) {
+      return;
+    }
+
     setSelectedPk(null);
     setModalMode("view");
   }
@@ -890,36 +1302,335 @@ export default function PkPage() {
     setSelectedPk(null);
 
     /*
-     * Alur tambah PK lama tetap bisa
-     * dihubungkan ke sini.
-     */
+      Untuk sementara tetap mengikuti behavior lama.
+      Form tambah PK belum dibuat di PkDetailModal.
+    */
   }
 
-  function handleSave(updatedPk) {
+  /* =========================================================================
+     SAVE KE SUPABASE
+  ========================================================================= */
+
+  async function handleSave(updatedPk) {
     if (!updatedPk?.id) {
+      throw new Error("ID PK tidak ditemukan.");
+    }
+
+    if (saving) {
       return;
     }
 
-    setPkRows((current) =>
-      current.map((item) =>
-        item.id === updatedPk.id
-          ? {
-              ...item,
-              ...updatedPk,
-            }
-          : item,
-      ),
-    );
+    setSaving(true);
+    setErrorMessage("");
+    setSuccessMessage("");
 
-    setSelectedPk((current) =>
-      current?.id === updatedPk.id
-        ? {
-            ...current,
-            ...updatedPk,
+    try {
+      const payload = buildPkUpdatePayload(updatedPk);
+
+      if (!payload) {
+        throw new Error("Data PK tidak dapat diproses.");
+      }
+
+      console.log("JOSJIS PK UPDATE:", updatedPk.id, payload);
+
+      /* ================================================================
+         UPDATE DATABASE
+      ================================================================ */
+
+      const updateResult = await supabase
+        .from("pk")
+        .update(payload)
+        .eq("id", updatedPk.id)
+        .select("*")
+        .single();
+
+      if (updateResult.error) {
+        throw updateResult.error;
+      }
+
+      const savedRow = updateResult.data;
+
+      if (!savedRow) {
+        throw new Error(
+          "Supabase tidak mengembalikan data PK setelah disimpan.",
+        );
+      }
+
+      /* ================================================================
+         UPDATE UI SEMENTARA
+      ================================================================ */
+
+      setPkRows((current) =>
+        current.map((item) => {
+          if (item.id !== savedRow.id) {
+            return item;
           }
-        : current,
-    );
+
+          return {
+            ...item,
+            ...savedRow,
+
+            /* ----------------------------------------------------------
+               MKS tidak disentuh
+            ---------------------------------------------------------- */
+
+            mksId: item.mksId || savedRow.mks_id || null,
+
+            mksName: item.mksName || "-",
+
+            mksAgentCode: item.mksAgentCode || "",
+
+            /* ----------------------------------------------------------
+               ALIAS PINJAMAN
+            ---------------------------------------------------------- */
+
+            loanType: savedRow.jenis_pengajuan_kredit || "",
+
+            applicationNumber: savedRow.nomor_aplikasi || "",
+
+            applicationDate: savedRow.tanggal_aplikasi || "",
+
+            pkDate: savedRow.tanggal_pk || "",
+
+            pkNumber: savedRow.nomor_pk || "",
+
+            limit: savedRow.limit_kredit ?? "",
+
+            tenor: savedRow.jangka_waktu ?? "",
+
+            cif: savedRow.cif || "",
+
+            savingsAccount: savedRow.rekening_tabungan || "",
+
+            loanAccount: savedRow.rekening_kredit || "",
+
+            loanStatus: savedRow.status_pk || "AKTIF",
+
+            tanggalPk: savedRow.tanggal_pk || null,
+
+            tanggalPeminjaman: savedRow.tanggal_aplikasi || null,
+
+            jenisPengajuanKredit: savedRow.jenis_pengajuan_kredit || "",
+
+            limitKredit: Number(savedRow.limit_kredit || 0),
+
+            /* ----------------------------------------------------------
+               DEBITUR
+            ---------------------------------------------------------- */
+
+            namaDebitur: savedRow.nama_debitur || "",
+
+            nik: savedRow.nomor_ktp || "",
+
+            nomorHp: savedRow.nomor_handphone || "",
+
+            jenisKelamin: savedRow.jenis_kelamin || "",
+
+            penyebutanDebitur: savedRow.penyebutan_debitur || "",
+
+            nomor_handphone: savedRow.nomor_handphone || "",
+
+            jenis_kelamin: savedRow.jenis_kelamin || "",
+
+            penyebutan_debitur: savedRow.penyebutan_debitur || "",
+
+            /* ----------------------------------------------------------
+               ALAMAT DEBITUR
+            ---------------------------------------------------------- */
+
+            rt: savedRow.rt || "",
+
+            rw: savedRow.rw || "",
+
+            alamatJalan: savedRow.alamat_jalan || "",
+
+            alamatDesaKelurahan: savedRow.alamat_desa_kelurahan || "",
+
+            alamatKecamatan: savedRow.alamat_kecamatan || "",
+
+            alamatKabupaten: savedRow.alamat_kabupaten || "",
+
+            alamat_jalan: savedRow.alamat_jalan || "",
+
+            alamat_desa_kelurahan: savedRow.alamat_desa_kelurahan || "",
+
+            alamat_kecamatan: savedRow.alamat_kecamatan || "",
+
+            alamat_kabupaten: savedRow.alamat_kabupaten || "",
+
+            /* ----------------------------------------------------------
+               DATA PASANGAN
+            ---------------------------------------------------------- */
+
+            nama_pasangan: savedRow.nama_pasangan || "",
+
+            nomor_handphone_pasangan: savedRow.nomor_handphone_pasangan || "",
+
+            alamat_pasangan_sama_debitur:
+              savedRow.alamat_pasangan_sama_debitur ?? false,
+
+            alamat_pasangan_jalan: savedRow.alamat_pasangan_jalan || "",
+
+            alamat_pasangan_rt: savedRow.alamat_pasangan_rt || "",
+
+            alamat_pasangan_rw: savedRow.alamat_pasangan_rw || "",
+
+            alamat_pasangan_desa_kelurahan:
+              savedRow.alamat_pasangan_desa_kelurahan || "",
+
+            alamat_pasangan_kecamatan: savedRow.alamat_pasangan_kecamatan || "",
+
+            alamat_pasangan_kabupaten: savedRow.alamat_pasangan_kabupaten || "",
+          };
+        }),
+      );
+
+      /* ================================================================
+         UPDATE MODAL
+      ================================================================ */
+
+      setSelectedPk((current) => {
+        if (!current || current.id !== savedRow.id) {
+          return current;
+        }
+
+        return {
+          ...current,
+          ...savedRow,
+
+          /* ------------------------------------------------------------
+             MKS
+          ------------------------------------------------------------ */
+
+          mksId: current.mksId || savedRow.mks_id || null,
+
+          mksName: current.mksName || "-",
+
+          mksAgentCode: current.mksAgentCode || "",
+
+          /* ------------------------------------------------------------
+             PINJAMAN
+          ------------------------------------------------------------ */
+
+          loanType: savedRow.jenis_pengajuan_kredit || "",
+
+          applicationNumber: savedRow.nomor_aplikasi || "",
+
+          applicationDate: savedRow.tanggal_aplikasi || "",
+
+          pkDate: savedRow.tanggal_pk || "",
+
+          pkNumber: savedRow.nomor_pk || "",
+
+          limit: savedRow.limit_kredit ?? "",
+
+          tenor: savedRow.jangka_waktu ?? "",
+
+          cif: savedRow.cif || "",
+
+          savingsAccount: savedRow.rekening_tabungan || "",
+
+          loanAccount: savedRow.rekening_kredit || "",
+
+          loanStatus: savedRow.status_pk || "AKTIF",
+
+          /* ------------------------------------------------------------
+             DEBITUR
+          ------------------------------------------------------------ */
+
+          namaDebitur: savedRow.nama_debitur || "",
+
+          nik: savedRow.nomor_ktp || "",
+
+          nomorHp: savedRow.nomor_handphone || "",
+
+          jenisKelamin: savedRow.jenis_kelamin || "",
+
+          penyebutanDebitur: savedRow.penyebutan_debitur || "",
+
+          nomor_handphone: savedRow.nomor_handphone || "",
+
+          jenis_kelamin: savedRow.jenis_kelamin || "",
+
+          penyebutan_debitur: savedRow.penyebutan_debitur || "",
+
+          status_debitur: savedRow.status_debitur || "",
+
+          /* ------------------------------------------------------------
+             ALAMAT DEBITUR
+          ------------------------------------------------------------ */
+
+          rt: savedRow.rt || "",
+
+          rw: savedRow.rw || "",
+
+          alamat_jalan: savedRow.alamat_jalan || "",
+
+          alamat_desa_kelurahan: savedRow.alamat_desa_kelurahan || "",
+
+          alamat_kecamatan: savedRow.alamat_kecamatan || "",
+
+          alamat_kabupaten: savedRow.alamat_kabupaten || "",
+
+          alamatJalan: savedRow.alamat_jalan || "",
+
+          alamatDesaKelurahan: savedRow.alamat_desa_kelurahan || "",
+
+          alamatKecamatan: savedRow.alamat_kecamatan || "",
+
+          alamatKabupaten: savedRow.alamat_kabupaten || "",
+
+          /* ------------------------------------------------------------
+             DATA PASANGAN
+          ------------------------------------------------------------ */
+
+          nama_pasangan: savedRow.nama_pasangan || "",
+
+          nomor_handphone_pasangan: savedRow.nomor_handphone_pasangan || "",
+
+          alamat_pasangan_sama_debitur:
+            savedRow.alamat_pasangan_sama_debitur ?? false,
+
+          alamat_pasangan_jalan: savedRow.alamat_pasangan_jalan || "",
+
+          alamat_pasangan_rt: savedRow.alamat_pasangan_rt || "",
+
+          alamat_pasangan_rw: savedRow.alamat_pasangan_rw || "",
+
+          alamat_pasangan_desa_kelurahan:
+            savedRow.alamat_pasangan_desa_kelurahan || "",
+
+          alamat_pasangan_kecamatan: savedRow.alamat_pasangan_kecamatan || "",
+
+          alamat_pasangan_kabupaten: savedRow.alamat_pasangan_kabupaten || "",
+        };
+      });
+
+      setSuccessMessage("Data PK berhasil disimpan.");
+
+      /* ================================================================
+         LOAD ULANG DARI DATABASE
+         
+         Ini memastikan tampilan akhir benar-benar mengikuti Supabase.
+      ================================================================ */
+
+      await loadPkData();
+    } catch (error) {
+      console.error("Save PK error:", error);
+
+      const message = error?.message || "Data PK gagal disimpan.";
+
+      setErrorMessage(message);
+
+      throw error;
+    } finally {
+      setSaving(false);
+    }
   }
+
+  /* =========================================================================
+     SECTION ACTION
+  ========================================================================= */
 
   function handleLockSection(payload) {
     console.log("Lock section:", payload);
@@ -928,6 +1639,10 @@ export default function PkPage() {
   function handleCorrection(payload) {
     console.log("Correction:", payload);
   }
+
+  /* =========================================================================
+     RESET FILTER
+  ========================================================================= */
 
   function resetFilters() {
     setSearch("");
@@ -964,7 +1679,7 @@ export default function PkPage() {
             <button
               type="button"
               onClick={loadPkData}
-              disabled={loading}
+              disabled={loading || saving}
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
@@ -974,13 +1689,24 @@ export default function PkPage() {
             <button
               type="button"
               onClick={handleAdd}
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white transition hover:bg-zinc-800"
+              disabled={saving}
+              className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
             >
               <Plus size={14} />
               Tambah PK
             </button>
           </div>
         </div>
+
+        {/* ================================================================
+            SAVE SUCCESS
+        ================================================================ */}
+
+        {successMessage && (
+          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-medium text-emerald-700">
+            {successMessage}
+          </div>
+        )}
 
         {/* ================================================================
             UNIT AKTIF
@@ -1203,15 +1929,11 @@ export default function PkPage() {
                       onClick={() => openDetail(pk)}
                       className="group cursor-pointer border-b border-zinc-100 transition hover:bg-zinc-50 last:border-b-0"
                     >
-                      {/* TGL PK */}
-
                       <td className="px-3 py-3 align-middle">
                         <div className="whitespace-nowrap text-xs font-semibold text-zinc-800">
                           {formatDate(pk.tanggalPk)}
                         </div>
                       </td>
-
-                      {/* MKS */}
 
                       <td className="px-3 py-3 align-middle">
                         <div className="max-w-[130px] truncate text-xs font-bold text-zinc-800">
@@ -1225,21 +1947,19 @@ export default function PkPage() {
                         )}
                       </td>
 
-                      {/* DEBITUR */}
-
                       <td className="px-3 py-3 align-middle">
                         <div className="max-w-[230px] truncate text-xs font-semibold text-zinc-800">
                           {pk.nama_debitur || pk.namaDebitur || "-"}
                         </div>
 
-                        {(pk.cif || pk.nik) && (
+                        {(pk.cif || pk.nomor_ktp || pk.nik) && (
                           <div className="mt-0.5 truncate text-[9px] text-zinc-400">
-                            {pk.cif ? `CIF ${pk.cif}` : `NIK ${pk.nik}`}
+                            {pk.cif
+                              ? `CIF ${pk.cif}`
+                              : `NIK ${pk.nomor_ktp || pk.nik}`}
                           </div>
                         )}
                       </td>
-
-                      {/* TGL PEMINJAMAN */}
 
                       <td className="px-3 py-3 align-middle">
                         <div className="whitespace-nowrap text-xs text-zinc-700">
@@ -1247,13 +1967,9 @@ export default function PkPage() {
                         </div>
                       </td>
 
-                      {/* PRODUK */}
-
                       <td className="px-3 py-3 align-middle">
                         <ProductBadge value={pk.jenisPengajuanKredit} />
                       </td>
-
-                      {/* TENOR */}
 
                       <td className="px-3 py-3 text-center align-middle">
                         <span className="text-xs font-medium text-zinc-700">
@@ -1261,21 +1977,15 @@ export default function PkPage() {
                         </span>
                       </td>
 
-                      {/* AGUNAN */}
-
                       <td className="px-3 py-3 text-center align-middle">
                         <AgunanBadge value={pk.jumlahAgunan} />
                       </td>
-
-                      {/* LIMIT */}
 
                       <td className="px-3 py-3 text-right align-middle">
                         <div className="whitespace-nowrap text-xs font-bold text-zinc-800">
                           {formatCurrency(pk.limitKredit)}
                         </div>
                       </td>
-
-                      {/* ACTION */}
 
                       <td
                         className="px-3 py-3 align-middle"
@@ -1294,7 +2004,8 @@ export default function PkPage() {
                           <button
                             type="button"
                             onClick={() => openEdit(pk)}
-                            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-2.5 text-[10px] font-bold text-white transition hover:bg-zinc-800"
+                            disabled={saving}
+                            className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-zinc-900 px-2.5 text-[10px] font-bold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                           >
                             <Pencil size={13} />
                             Edit
@@ -1365,15 +2076,11 @@ export default function PkPage() {
                         onClick={() => openDetail(pk)}
                         className="cursor-pointer border-b border-zinc-100 transition active:bg-zinc-100 last:border-b-0"
                       >
-                        {/* MKS */}
-
                         <td className="max-w-[110px] px-2.5 py-2.5 align-middle">
                           <div className="truncate text-[10px] font-bold text-zinc-800">
                             {formatMksName(pk.mksName)}
                           </div>
                         </td>
-
-                        {/* TGL */}
 
                         <td className="whitespace-nowrap px-2.5 py-2.5 align-middle">
                           <div className="text-[10px] font-medium text-zinc-600">
@@ -1381,23 +2088,17 @@ export default function PkPage() {
                           </div>
                         </td>
 
-                        {/* DEBITUR */}
-
                         <td className="max-w-[180px] px-2.5 py-2.5 align-middle">
                           <div className="truncate text-[10px] font-semibold text-zinc-800">
                             {pk.nama_debitur || pk.namaDebitur || "-"}
                           </div>
                         </td>
 
-                        {/* LIMIT */}
-
                         <td className="whitespace-nowrap px-2.5 py-2.5 text-right align-middle">
                           <div className="text-[10px] font-bold text-zinc-800">
                             {formatCurrency(pk.limitKredit)}
                           </div>
                         </td>
-
-                        {/* DETAIL */}
 
                         <td
                           className="px-2.5 py-2.5 text-center align-middle"
