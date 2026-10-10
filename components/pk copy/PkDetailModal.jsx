@@ -1,4 +1,5 @@
 /* eslint-disable react-hooks/set-state-in-effect */
+
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -11,7 +12,6 @@ import {
   ShieldCheck,
   X,
 } from "lucide-react";
-
 import PkLoanSection from "@/components/pk/sections/PkLoanSection";
 import PkDebtorSection from "@/components/pk/sections/PkDebtorSection";
 import PkAddressSection from "@/components/pk/sections/PkAddressSection";
@@ -21,9 +21,7 @@ import PkInsuranceSection from "@/components/pk/sections/PkInsuranceSection";
 import PkDocumentsSection from "@/components/pk/sections/PkDocumentSection";
 import PkOrderSection from "@/components/pk/sections/PkOrderSection";
 import PkBastSection from "@/components/pk/sections/PkBastSection";
-
 import PkRelatedPartySection from "@/components/pk/PkRelatedPartySection";
-
 import { PK_ROLES, canModifySection } from "@/lib/permissions/pkPermissions";
 
 const SECTION_CONFIG = [
@@ -83,28 +81,37 @@ export default function PkDetailModal({
   pk,
   role = PK_ROLES.ADMIN,
   currentSgpId = "SGP-01",
+  mode = "view",
   onClose,
   onSave,
+  saving = false,
   onLockSection,
   onCorrection,
+  notaries = [],
 }) {
   const [draft, setDraft] = useState(null);
   const [activeSection, setActiveSection] = useState("loan");
-
   const [correctionMessage, setCorrectionMessage] = useState("");
   const [showCorrection, setShowCorrection] = useState(false);
+  const [saveError, setSaveError] = useState("");
 
   useEffect(() => {
-    if (!pk) return;
+    if (!pk) {
+      setDraft(null);
+      return;
+    }
 
     setDraft(JSON.parse(JSON.stringify(pk)));
     setActiveSection("loan");
     setCorrectionMessage("");
     setShowCorrection(false);
+    setSaveError("");
   }, [pk]);
 
   const permissions = useMemo(() => {
-    if (!draft) return null;
+    if (!draft) {
+      return null;
+    }
 
     return {
       role,
@@ -113,7 +120,27 @@ export default function PkDetailModal({
     };
   }, [role, draft, currentSgpId]);
 
-  if (!draft) return null;
+  const debtorStatus = draft?.status_debitur || draft?.statusDebitur || "";
+
+  const isMarried = debtorStatus === "MENIKAH";
+
+  const visibleSections = useMemo(() => {
+    if (isMarried) {
+      return SECTION_CONFIG;
+    }
+
+    return SECTION_CONFIG.filter((section) => section.key !== "spouse");
+  }, [isMarried]);
+
+  useEffect(() => {
+    if (!isMarried && activeSection === "spouse") {
+      setActiveSection("debtor");
+    }
+  }, [isMarried, activeSection]);
+
+  if (!draft) {
+    return null;
+  }
 
   const isAdmin = role === PK_ROLES.ADMIN;
 
@@ -122,7 +149,21 @@ export default function PkDetailModal({
   };
 
   const canEditSection = (section) => {
-    if (!permissions) return false;
+    if (!permissions) {
+      return false;
+    }
+
+    if (mode !== "edit") {
+      return false;
+    }
+
+    if (section === "spouse" && !isMarried) {
+      return false;
+    }
+
+    if (isLocked(section)) {
+      return false;
+    }
 
     return canModifySection({
       role,
@@ -133,14 +174,20 @@ export default function PkDetailModal({
   };
 
   const handleLock = (section) => {
-    if (!isAdmin) return;
+    if (!isAdmin || saving) {
+      return;
+    }
+
+    if (section === "spouse" && !isMarried) {
+      return;
+    }
 
     const nextLocked = !isLocked(section);
 
     setDraft((prev) => ({
       ...prev,
       locks: {
-        ...(prev.locks || {}),
+        ...(prev?.locks || {}),
         [section]: nextLocked,
       },
     }));
@@ -152,22 +199,31 @@ export default function PkDetailModal({
     });
   };
 
-  const handleSave = () => {
-    if (!draft) return;
+  const handleSave = async () => {
+    if (!draft || saving) {
+      return;
+    }
 
-    const updatedDraft = {
-      ...draft,
-      updatedAt: new Date().toISOString(),
-    };
+    setSaveError("");
 
-    setDraft(updatedDraft);
-    onSave?.(updatedDraft);
+    try {
+      const savedData = await onSave?.(draft);
+
+      if (savedData) {
+        setDraft(JSON.parse(JSON.stringify(savedData)));
+      }
+    } catch (error) {
+      console.error("Modal save error:", error);
+      setSaveError(error?.message || "Perubahan data PK gagal disimpan.");
+    }
   };
 
   const handleCorrectionSubmit = () => {
     const message = correctionMessage.trim();
 
-    if (!message || !isAdmin) return;
+    if (!message || !isAdmin) {
+      return;
+    }
 
     onCorrection?.({
       pkId: draft.id,
@@ -182,6 +238,10 @@ export default function PkDetailModal({
   };
 
   const renderSection = () => {
+    if (activeSection === "spouse" && !isMarried) {
+      return null;
+    }
+
     const locked = isLocked(activeSection);
     const editable = canEditSection(activeSection);
 
@@ -243,6 +303,7 @@ export default function PkDetailModal({
             setPk={setDraft}
             canEdit={editable}
             locked={locked}
+            notaries={notaries}
           />
         );
 
@@ -291,17 +352,22 @@ export default function PkDetailModal({
     }
   };
 
+  const activeSectionTitle =
+    visibleSections.find((section) => section.key === activeSection)?.title ||
+    "Detail PK";
+
+  const activeEditable = canEditSection(activeSection);
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5">
       <button
         type="button"
         aria-label="Tutup modal"
-        onClick={onClose}
+        onClick={saving ? undefined : onClose}
         className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
       />
 
       <div className="relative flex h-[94vh] w-full max-w-[1500px] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-2xl">
-        {/* Header */}
         <div className="shrink-0 border-b border-zinc-200 bg-white px-5 py-4">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
@@ -310,34 +376,44 @@ export default function PkDetailModal({
                   Detail PK
                 </h2>
 
-                <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600">
-                  {draft.id}
-                </span>
+                {draft.id && (
+                  <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600">
+                    {draft.id}
+                  </span>
+                )}
 
                 <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
-                  {draft.loanStatus || "DRAFT"}
+                  {draft.status_pk || "DRAFT"}
                 </span>
+
+                {isMarried && (
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700">
+                    MENIKAH
+                  </span>
+                )}
               </div>
 
               <p className="mt-1 text-xs text-zinc-500">
-                {draft.debtorName || "Debitur belum diisi"} ·{" "}
-                {draft.pkNumber || "Nomor PK belum diisi"}
+                {draft.nama_debitur ||
+                  draft.debtorName ||
+                  "Debitur belum diisi"}{" "}
+                · {draft.nomor_pk || draft.pkNumber || "Nomor PK belum diisi"}
               </p>
             </div>
 
             <button
               type="button"
-              onClick={onClose}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700"
+              onClick={saving ? undefined : onClose}
+              disabled={saving}
+              aria-label="Tutup"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <X size={18} />
             </button>
           </div>
         </div>
 
-        {/* Body */}
         <div className="flex min-h-0 flex-1">
-          {/* Sidebar */}
           <aside className="hidden w-64 shrink-0 overflow-y-auto border-r border-zinc-200 bg-zinc-50/70 p-3 lg:block">
             <div className="px-2 pb-2 pt-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-400">
@@ -346,7 +422,7 @@ export default function PkDetailModal({
             </div>
 
             <nav className="space-y-1">
-              {SECTION_CONFIG.map((section) => {
+              {visibleSections.map((section) => {
                 const Icon = section.icon;
                 const active = activeSection === section.key;
                 const locked = isLocked(section.key);
@@ -394,16 +470,14 @@ export default function PkDetailModal({
             )}
           </aside>
 
-          {/* Main */}
           <main className="min-w-0 flex-1 overflow-y-auto bg-[#f7f7f5]">
-            {/* Mobile selector */}
             <div className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
               <select
                 value={activeSection}
                 onChange={(e) => setActiveSection(e.target.value)}
                 className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-800 outline-none focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
               >
-                {SECTION_CONFIG.map((section) => (
+                {visibleSections.map((section) => (
                   <option key={section.key} value={section.key}>
                     {section.title}
                     {isLocked(section.key) ? " · Dikunci Admin" : ""}
@@ -413,21 +487,16 @@ export default function PkDetailModal({
             </div>
 
             <div className="space-y-5 p-4 sm:p-5 lg:p-6">
-              {/* Section toolbar */}
               <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3">
                 <div>
                   <p className="text-sm font-semibold text-zinc-900">
-                    {
-                      SECTION_CONFIG.find(
-                        (section) => section.key === activeSection,
-                      )?.title
-                    }
+                    {activeSectionTitle}
                   </p>
 
                   <p className="mt-0.5 text-xs text-zinc-500">
                     {isLocked(activeSection)
                       ? "Bagian ini sedang dikunci oleh Admin."
-                      : canEditSection(activeSection)
+                      : activeEditable
                         ? "Data dapat diperbarui sesuai hak akses."
                         : "Anda hanya dapat melihat bagian ini."}
                   </p>
@@ -437,8 +506,11 @@ export default function PkDetailModal({
                   <button
                     type="button"
                     onClick={() => handleLock(activeSection)}
+                    disabled={
+                      saving || (activeSection === "spouse" && !isMarried)
+                    }
                     className={[
-                      "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition",
+                      "inline-flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium transition disabled:cursor-not-allowed disabled:opacity-50",
                       isLocked(activeSection)
                         ? "border border-amber-200 bg-amber-50 text-amber-700 hover:bg-amber-100"
                         : "border border-zinc-200 bg-white text-zinc-600 hover:bg-zinc-50",
@@ -453,7 +525,16 @@ export default function PkDetailModal({
 
               {renderSection()}
 
-              {/* Correction */}
+              {saveError && (
+                <section className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3">
+                  <p className="text-sm font-medium text-red-800">
+                    Gagal menyimpan perubahan
+                  </p>
+
+                  <p className="mt-1 text-xs text-red-700">{saveError}</p>
+                </section>
+              )}
+
               {showCorrection && isAdmin && (
                 <section className="overflow-hidden rounded-2xl border border-amber-200 bg-white">
                   <div className="border-b border-amber-100 bg-amber-50/70 px-5 py-4">
@@ -502,31 +583,35 @@ export default function PkDetailModal({
           </main>
         </div>
 
-        {/* Footer */}
         <div className="shrink-0 border-t border-zinc-200 bg-white px-4 py-3 sm:px-5">
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-2 text-xs text-zinc-500">
               <CheckCircle2 size={14} className="text-emerald-500" />
-              Perubahan disimpan setelah menekan Simpan Perubahan.
+
+              {saving
+                ? "Sedang menyimpan perubahan..."
+                : "Perubahan disimpan setelah menekan Simpan Perubahan."}
             </div>
 
             <div className="flex items-center justify-end gap-2">
               <button
                 type="button"
-                onClick={onClose}
-                className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50"
+                onClick={saving ? undefined : onClose}
+                disabled={saving}
+                className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Tutup
               </button>
 
-              {canEditSection(activeSection) && (
+              {activeEditable && (
                 <button
                   type="button"
                   onClick={handleSave}
-                  className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800"
+                  disabled={saving}
+                  className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <CheckCircle2 size={16} />
-                  Simpan Perubahan
+                  {saving ? "Menyimpan..." : "Simpan Perubahan"}
                 </button>
               )}
             </div>

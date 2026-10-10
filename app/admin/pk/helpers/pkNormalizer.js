@@ -343,170 +343,77 @@ export function normalizeCollaterals(collaterals) {
 
 export function buildPkUpdatePayload(pk) {
   if (!pk?.id) return null;
-
   return {
-    /* ================================================================
-     * DATA KREDIT
-     * ================================================================ */
-
     jenis_pengajuan_kredit: nullableText(pk.jenis_pengajuan_kredit),
-
     nomor_aplikasi: nullableText(pk.nomor_aplikasi),
-
     tanggal_aplikasi: nullableDate(pk.tanggal_aplikasi),
-
     tanggal_pk: nullableDate(pk.tanggal_pk),
-
     nomor_pk: nullableText(pk.nomor_pk),
-
     cif: nullableText(pk.cif),
-
     limit_kredit: nullableNumber(pk.limit_kredit),
-
     jangka_waktu: nullableNumber(pk.jangka_waktu),
-
     rekening_tabungan: nullableText(pk.rekening_tabungan),
-
     rekening_kredit: nullableText(pk.rekening_kredit),
-
-    /* ================================================================
-     * IDENTITAS DEBITUR
-     * ================================================================ */
-
     nama_debitur: nullableText(pk.nama_debitur),
-
     status_debitur: nullableText(pk.status_debitur),
-
     penyebutan_debitur: nullableText(pk.penyebutan_debitur),
-
     jenis_kelamin: nullableText(pk.jenis_kelamin),
-
     nomor_ktp: nullableText(pk.nomor_ktp ?? pk.nik),
-
     tanggal_expired_ktp: nullableDate(pk.tanggal_expired_ktp),
-
     tempat_lahir: nullableText(pk.tempat_lahir),
-
     tanggal_lahir: nullableDate(pk.tanggal_lahir),
-
     profesi: nullableText(pk.profesi),
-
     nomor_handphone: nullableText(pk.nomor_handphone ?? pk.nomorHp),
-
-    /* ================================================================
-     * ALAMAT DEBITUR
-     * ================================================================ */
-
     alamat_jalan: nullableText(pk.alamat_jalan),
-
     rt: nullableText(pk.rt),
-
     rw: nullableText(pk.rw),
-
     alamat_desa_kelurahan: nullableText(pk.alamat_desa_kelurahan),
-
     alamat_kecamatan: nullableText(pk.alamat_kecamatan),
-
     alamat_kabupaten: nullableText(pk.alamat_kabupaten),
-
-    /* ================================================================
-     * PASANGAN
-     * ================================================================ */
-
     nama_pasangan: nullableText(pk.nama_pasangan),
-
     nik_pasangan: nullableText(pk.nik_pasangan),
-
     nomor_handphone_pasangan: nullableText(pk.nomor_handphone_pasangan),
-
     alamat_pasangan_sama_debitur: nullableBoolean(
       pk.alamat_pasangan_sama_debitur,
     ),
-
     alamat_pasangan_jalan: nullableText(pk.alamat_pasangan_jalan),
-
     alamat_pasangan_rt: nullableText(pk.alamat_pasangan_rt),
-
     alamat_pasangan_rw: nullableText(pk.alamat_pasangan_rw),
-
     alamat_pasangan_desa_kelurahan: nullableText(
       pk.alamat_pasangan_desa_kelurahan,
     ),
-
     alamat_pasangan_kecamatan: nullableText(pk.alamat_pasangan_kecamatan),
-
     alamat_pasangan_kabupaten: nullableText(pk.alamat_pasangan_kabupaten),
-
-    /* ================================================================
-     * KREDIT
-     * ================================================================ */
-
     tujuan_kredit: nullableText(pk.tujuan_kredit),
-
     bunga_per_bulan: nullableNumber(pk.bunga_per_bulan),
-
     bunga_per_tahun: nullableNumber(pk.bunga_per_tahun),
-
     angsuran_kredit: nullableNumber(pk.angsuran_kredit),
-
     tanggal_acuan_angsuran: nullableDate(pk.tanggal_acuan_angsuran),
-
-    /* ================================================================
-     * BIAYA
-     * ================================================================ */
-
     biaya_provisi: nullableNumber(pk.biaya_provisi),
-
     biaya_admin: nullableNumber(pk.biaya_admin),
-
     biaya_provisi_rupiah: nullableNumber(pk.biaya_provisi_rupiah),
-
     materai: nullableNumber(pk.materai),
-
     premi_asuransi_jiwa: nullableNumber(pk.premi_asuransi_jiwa),
-
     nilai_agunan_bangunan: nullableNumber(pk.nilai_agunan_bangunan),
-
     biaya_premi_kebakaran: nullableNumber(pk.biaya_premi_kebakaran),
-
     biaya_notaris: nullableNumber(pk.biaya_notaris),
-
     nilai_pengikatan: nullableNumber(pk.nilai_pengikatan),
-
     total_biaya: nullableNumber(pk.total_biaya),
-
     limit_kredit_sebelumnya: nullableNumber(pk.limit_kredit_sebelumnya),
-
     nominal_pelunasan_pinjaman_exist: nullableNumber(
       pk.nominal_pelunasan_pinjaman_exist,
     ),
-
     biaya_blokir_bpkb: nullableNumber(pk.biaya_blokir_bpkb),
-
-    /* ================================================================
-     * ASURANSI / NOTARIS
-     * ================================================================ */
-
     pt_asuransi_jiwa: nullableText(pk.pt_asuransi_jiwa),
-
     rekening_asuransi_jiwa: nullableText(pk.rekening_asuransi_jiwa),
-
     rekening_notaris: nullableText(pk.rekening_notaris),
-
     pt_asuransi_kendaraan: nullableText(pk.pt_asuransi_kendaraan),
-
     nomor_rekening_blokiran: nullableText(pk.nomor_rekening_blokiran),
-
     klasifikasi_debitur: nullableText(pk.klasifikasi_debitur),
-
-    /* ================================================================
-     * STATUS
-     * ================================================================ */
-
     status_pk: nullableText(pk.status_pk ?? pk.loanStatus) ?? "AKTIF",
-
     notaris_id: nullableText(pk.notaris_id),
-
+    relatedParties: Array.isArray(pk.relatedParties) ? pk.relatedParties : [],
+    collaterals: Array.isArray(pk.collaterals) ? pk.collaterals : [],
     updated_at: new Date().toISOString(),
   };
 }

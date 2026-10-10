@@ -1,57 +1,83 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-
+import { usePathname, useRouter } from "next/navigation";
 import {
+  Home,
+  BriefcaseBusiness,
+  LockKeyhole,
+  Database,
+  Landmark,
+  Building2,
   Archive,
-  CalendarDays,
-  Calculator,
+  PackageCheck,
+  FolderKanban,
   ClipboardCheck,
-  Clock3,
+  Package,
+  ArrowLeftRight,
+  FileClock,
   FileCheck,
+  Wallet,
+  BarChart3,
   FileSpreadsheet,
   FileText,
-  Home,
-  Landmark,
-  LogOut,
-  Package,
-  Printer,
-  Search,
-  Settings,
-  Truck,
+  Files,
+  Clock3,
   Users,
+  Calculator,
+  Settings,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
   X,
 } from "lucide-react";
 
+// ======================================================
+// KONFIGURASI MENU SIDEBAR
+// URL dipertahankan agar sesuai dengan halaman yang ada.
+// ======================================================
+
+const mainMenus = [
+  {
+    label: "Dashboard",
+    href: "/admin/dashboard",
+    icon: Home,
+  },
+  {
+    label: "My Work",
+    href: "/admin/my-work",
+    icon: BriefcaseBusiness,
+  },
+  {
+    label: "Buka / Tutup Blokiran",
+    href: "/admin/blokiran",
+    icon: LockKeyhole,
+  },
+];
+
 const menuSections = [
   {
-    title: null,
+    id: "database-pk",
+    label: "Database PK",
+    icon: Database,
     items: [
       {
-        label: "Dashboard",
-        href: "/admin/dashboard",
-        icon: Home,
-      },
-      {
-        label: "My Work",
-        href: "/admin/my-work",
-        icon: ClipboardCheck,
+        label: "Database PK",
+        href: "/admin/pk",
+        icon: FileSpreadsheet,
       },
     ],
   },
-
   {
-    title: "PROSES",
+    id: "agunan",
+    label: "Agunan",
+    icon: Landmark,
     items: [
       {
-        label: "PK",
-        href: "/admin/pk",
-        icon: FileText,
-      },
-      {
-        label: "Agunan",
+        label: "Agunan Aktif",
         href: "/admin/agunan",
-        icon: Landmark,
+        icon: Building2,
       },
       {
         label: "Agunan Lunas",
@@ -59,7 +85,19 @@ const menuSections = [
         icon: Archive,
       },
       {
-        label: "Pemeriksaan",
+        label: "Dokumentasi Serah Agunan",
+        href: "/admin/penyerahan-agunan-lunas",
+        icon: PackageCheck,
+      },
+    ],
+  },
+  {
+    id: "proses-data",
+    label: "Proses dan Data",
+    icon: FolderKanban,
+    items: [
+      {
+        label: "Checklist Doc PK",
         href: "/admin/pemeriksaan",
         icon: ClipboardCheck,
       },
@@ -69,25 +107,31 @@ const menuSections = [
         icon: Package,
       },
       {
-        label: "Migrasi",
+        label: "Migrasi Agunan",
         href: "/admin/migrasi",
-        icon: Truck,
+        icon: ArrowLeftRight,
       },
       {
         label: "Pending Notaris",
         href: "/admin/pending-notaris",
-        icon: FileCheck,
+        icon: FileClock,
       },
       {
         label: "BAST",
         href: "/admin/bast",
-        icon: FileText,
+        icon: FileCheck,
+      },
+      {
+        label: "Pelunasan Pinjaman",
+        href: "/admin/pelunasan-pinjaman",
+        icon: Wallet,
       },
     ],
   },
-
   {
-    title: "LAPORAN & OPERASIONAL",
+    id: "laporan",
+    label: "Laporan",
+    icon: BarChart3,
     items: [
       {
         label: "RaportMU",
@@ -95,42 +139,54 @@ const menuSections = [
         icon: FileSpreadsheet,
       },
       {
-        label: "Laporan Booking Harian",
+        label: "Laporan Booking dan Aktivasi",
         href: "/admin/booking-harian",
-        icon: CalendarDays,
-      },
-      {
-        label: "Pengajuan Lembur MKA",
-        href: "/admin/pengajuan-lembur-mka",
-        icon: Clock3,
-      },
-      {
-        label: "Cetak Advis",
-        href: "/admin/cetak-advis",
-        icon: Printer,
-      },
-      {
-        label: "Kelola PDF",
-        href: "/admin/kelola-pdf",
         icon: FileText,
       },
     ],
   },
-
   {
-    title: "SURAT",
+    id: "operasional",
+    label: "Operasional",
+    icon: BriefcaseBusiness,
     items: [
       {
         label: "Surat Keluar",
         href: "/admin/surat-keluar",
         icon: FileText,
       },
+      {
+        label: "Loker Agunan",
+        href: "/admin/loker",
+        icon: Archive,
+      },
+      {
+        label: "Kelola PDF",
+        href: "/admin/kelola-pdf",
+        icon: Files,
+      },
+      {
+        label: "Cetak Advis",
+        href: "/admin/cetak-advis",
+        icon: FileSpreadsheet,
+      },
+      {
+        label: "Pengajuan Lembur",
+        href: "/admin/pengajuan-lembur-mka",
+        icon: Clock3,
+      },
     ],
   },
-
   {
-    title: "MASTER DATA",
+    id: "master-data",
+    label: "Master Data",
+    icon: Database,
     items: [
+      {
+        label: "Unit",
+        href: "/admin/master-unit",
+        icon: Building2,
+      },
       {
         label: "Pegawai Unit",
         href: "/admin/pegawai-unit",
@@ -139,18 +195,14 @@ const menuSections = [
       {
         label: "Notaris",
         href: "/admin/notaris",
-        icon: Users,
-      },
-      {
-        label: "Loker",
-        href: "/admin/loker",
-        icon: Archive,
+        icon: Landmark,
       },
     ],
   },
-
   {
-    title: "RUMUS",
+    id: "kalkulator",
+    label: "Kalkulator",
+    icon: Calculator,
     items: [
       {
         label: "Kalkulator AFMS / AJK",
@@ -160,13 +212,14 @@ const menuSections = [
       {
         label: "Kalkulator Pra Pencairan",
         href: "/admin/rumus/pra-pencairan",
-        icon: Calculator,
+        icon: FileSpreadsheet,
       },
     ],
   },
-
   {
-    title: "SISTEM",
+    id: "pengaturan-sistem",
+    label: "Pengaturan Sistem",
+    icon: Settings,
     items: [
       {
         label: "Pengguna",
@@ -176,7 +229,7 @@ const menuSections = [
       {
         label: "Audit Log",
         href: "/admin/audit-log",
-        icon: Search,
+        icon: FileClock,
       },
       {
         label: "Backup & Export",
@@ -186,12 +239,12 @@ const menuSections = [
       {
         label: "Template & Import",
         href: "/admin/import-data",
-        icon: FileSpreadsheet,
+        icon: Files,
       },
       {
         label: "Pindah Cabang",
         href: "/admin/pindah-cabang",
-        icon: Truck,
+        icon: ArrowLeftRight,
       },
       {
         label: "Pengaturan",
@@ -202,103 +255,308 @@ const menuSections = [
   },
 ];
 
-export default function Sidebar({ open, onClose }) {
+// ======================================================
+// PEMERIKSAAN HALAMAN AKTIF
+// ======================================================
+
+function isPathActive(pathname, href) {
+  if (!pathname || !href) return false;
+
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function sectionHasActiveItem(pathname, section) {
+  return section.items.some((item) => isPathActive(pathname, item.href));
+}
+
+// ======================================================
+// SIDEBAR UTAMA
+// ======================================================
+
+export default function Sidebar({ open = false, onClose }) {
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const [expandedSections, setExpandedSections] = useState(() => {
+    const initial = {};
+
+    menuSections.forEach((section) => {
+      initial[section.id] = false;
+    });
+
+    return initial;
+  });
+
+  // Buka otomatis grup yang berisi halaman aktif.
+  useEffect(() => {
+    const activeSection = menuSections.find((section) =>
+      sectionHasActiveItem(pathname, section),
+    );
+
+    if (activeSection) {
+      setExpandedSections((previous) => ({
+        ...previous,
+        [activeSection.id]: true,
+      }));
+    }
+  }, [pathname]);
+
+  // Kunci scroll halaman saat sidebar mobile dibuka.
+  useEffect(() => {
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        onClose?.();
+      }
+    };
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [open, onClose]);
+
+  const toggleSection = (sectionId) => {
+    setExpandedSections((previous) => ({
+      ...previous,
+      [sectionId]: !previous[sectionId],
+    }));
+  };
+
+  const handleNavigate = () => {
+    onClose?.();
+  };
+
+  const handleLogout = () => {
+    onClose?.();
+    router.push("/");
+  };
+
   return (
     <>
-      {/* Mobile overlay */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/30 transition-opacity lg:hidden ${
-          open
-            ? "pointer-events-auto opacity-100"
-            : "pointer-events-none opacity-0"
-        }`}
+      {/* Overlay khusus layar kecil */}
+      <button
+        type="button"
+        aria-label="Tutup menu"
         onClick={onClose}
+        className={`fixed inset-0 z-40 bg-slate-950/40 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden ${
+          open
+            ? "visible opacity-100"
+            : "invisible pointer-events-none opacity-0"
+        }`}
       />
 
       {/* Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col border-r border-zinc-200 bg-white transition-transform duration-200 ease-out lg:translate-x-0 ${
+        aria-label="Navigasi utama"
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[280px] max-w-[85vw] flex-col border-r border-slate-200 bg-white transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:z-30 lg:h-screen lg:w-[260px] lg:max-w-none lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Brand */}
-        <div className="flex h-20 shrink-0 items-center justify-between border-b border-zinc-200 px-6">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-900 text-sm font-bold text-white">
-              J
+        {/* Header */}
+        <div className="flex h-[76px] shrink-0 items-center justify-between border-b border-slate-100 px-5">
+          <Link
+            href="/admin/dashboard"
+            onClick={handleNavigate}
+            className="flex min-w-0 items-center gap-3"
+          >
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#174C40] text-white shadow-sm">
+              <Landmark size={21} strokeWidth={2.2} />
             </div>
 
-            <div>
-              <div className="text-lg font-bold tracking-tight text-zinc-900">
+            <div className="min-w-0">
+              <div className="text-[17px] font-bold tracking-[0.08em] text-slate-800">
                 JOSJIS
               </div>
-
-              <div className="text-[10px] font-medium uppercase tracking-wider text-zinc-400">
-                Kuamang Kuning
+              <div className="mt-0.5 text-[10px] font-medium tracking-[0.16em] text-slate-400">
+                AGUNAN MANAGEMENT
               </div>
             </div>
-          </div>
+          </Link>
 
-          {/* Close mobile */}
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900 lg:hidden"
-            aria-label="Tutup menu"
+            aria-label="Tutup sidebar"
+            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 lg:hidden"
           >
-            <X className="h-5 w-5" />
+            <X size={19} />
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-4 py-5">
-          {menuSections.map((section, sectionIndex) => (
-            <div
-              key={section.title || sectionIndex}
-              className={sectionIndex === 0 ? "" : "mt-7"}
-            >
-              {section.title && (
-                <div className="mb-2 px-3 text-[10px] font-bold tracking-[0.18em] text-zinc-400">
-                  {section.title}
-                </div>
-              )}
+        {/* Navigasi */}
+        <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
+          {/* Menu utama */}
+          <div className="space-y-1">
+            {mainMenus.map((item) => (
+              <SidebarLink
+                key={item.href}
+                item={item}
+                active={isPathActive(pathname, item.href)}
+                onNavigate={handleNavigate}
+              />
+            ))}
+          </div>
 
-              <div className="space-y-1">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
+          {/* Grup menu */}
+          <div className="mt-5 space-y-1">
+            {menuSections.map((section) => {
+              const SectionIcon = section.icon;
+              const expanded = Boolean(expandedSections[section.id]);
+              const hasActiveItem = sectionHasActiveItem(pathname, section);
 
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      onClick={onClose}
-                      className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
-                    >
-                      <Icon
-                        className="h-[18px] w-[18px] shrink-0"
-                        strokeWidth={1.8}
+              // Database PK hanya berisi satu halaman.
+              // Tetap ditampilkan sebagai menu utama yang sejajar.
+              const isSingleItem = section.id === "database-pk";
+
+              if (isSingleItem) {
+                const item = section.items[0];
+
+                return (
+                  <SidebarLink
+                    key={section.id}
+                    item={{
+                      ...item,
+                      label: section.label,
+                      icon: section.icon,
+                    }}
+                    active={isPathActive(pathname, item.href)}
+                    onNavigate={handleNavigate}
+                  />
+                );
+              }
+
+              return (
+                <div key={section.id}>
+                  <button
+                    type="button"
+                    onClick={() => toggleSection(section.id)}
+                    aria-expanded={expanded}
+                    className={`group flex min-h-[43px] w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors duration-150 ${
+                      hasActiveItem
+                        ? "bg-[#174C40]/[0.07] text-[#174C40]"
+                        : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+                    }`}
+                  >
+                    <SectionIcon
+                      size={18}
+                      strokeWidth={1.9}
+                      className={`shrink-0 ${
+                        hasActiveItem
+                          ? "text-[#174C40]"
+                          : "text-slate-400 group-hover:text-slate-600"
+                      }`}
+                    />
+
+                    <span className="min-w-0 flex-1 text-[12px] font-bold uppercase tracking-[0.075em]">
+                      {section.label}
+                    </span>
+
+                    {expanded ? (
+                      <ChevronDown
+                        size={16}
+                        className="shrink-0 text-slate-400"
                       />
+                    ) : (
+                      <ChevronRight
+                        size={16}
+                        className="shrink-0 text-slate-400"
+                      />
+                    )}
+                  </button>
 
-                      <span>{item.label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
+                  {expanded && (
+                    <div className="ml-[21px] mt-1 space-y-1 border-l border-slate-200 py-1 pl-3">
+                      {section.items.map((item) => (
+                        <SidebarLink
+                          key={item.href}
+                          item={item}
+                          active={isPathActive(pathname, item.href)}
+                          nested
+                          onNavigate={handleNavigate}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </nav>
 
-        {/* Bottom */}
-        <div className="shrink-0 border-t border-zinc-200 p-4">
+        {/* Footer */}
+        <div className="shrink-0 border-t border-slate-100 p-3">
+          <div className="mb-2 flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-3">
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#174C40]/10 text-[#174C40]">
+              <Landmark size={16} />
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold text-slate-700">
+                JOSJIS
+              </p>
+              <p className="mt-0.5 truncate text-[10px] text-slate-400">
+                Sistem Informasi Agunan
+              </p>
+            </div>
+          </div>
+
           <button
             type="button"
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
+            onClick={handleLogout}
+            className="flex min-h-[42px] w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 transition hover:bg-red-50 hover:text-red-600"
           >
-            <LogOut className="h-[18px] w-[18px]" strokeWidth={1.8} />
-            Keluar
+            <LogOut size={18} strokeWidth={1.9} />
+            <span>Keluar</span>
           </button>
         </div>
       </aside>
     </>
+  );
+}
+
+// ======================================================
+// ITEM MENU
+// ======================================================
+
+function SidebarLink({ item, active, nested = false, onNavigate }) {
+  const Icon = item.icon;
+
+  return (
+    <Link
+      href={item.href}
+      onClick={onNavigate}
+      aria-current={active ? "page" : undefined}
+      className={`group relative flex min-h-[40px] items-center gap-3 rounded-xl px-3 py-2 transition-colors duration-150 ${
+        nested ? "text-[12px]" : "text-[13px]"
+      } ${
+        active
+          ? "bg-[#174C40] font-semibold text-white shadow-sm shadow-[#174C40]/10"
+          : "font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+      }`}
+    >
+      {active && (
+        <span className="absolute bottom-2 left-0 top-2 w-[3px] rounded-r-full bg-white/80" />
+      )}
+
+      {Icon && (
+        <Icon
+          size={nested ? 16 : 18}
+          strokeWidth={active ? 2.1 : 1.8}
+          className={`shrink-0 ${
+            active ? "text-white" : "text-slate-400 group-hover:text-slate-600"
+          }`}
+        />
+      )}
+
+      <span className="min-w-0 flex-1 leading-5">{item.label}</span>
+    </Link>
   );
 }

@@ -5,12 +5,12 @@ import PkSelect from "@/components/pk/shared/PkSelect";
 import PkSection from "@/components/pk/shared/PkSection";
 
 const maritalStatuses = [
-  { value: "ISTRI", label: "ISTRI" },
-  { value: "SUAMI", label: "SUAMI" },
-  { value: "DUDA", label: "DUDA" },
-  { value: "JANDA", label: "JANDA" },
-  { value: "CERAI HIDUP", label: "CERAI HIDUP" },
-  { value: "CERAI MATI", label: "CERAI MATI" },
+  { value: "MENIKAH", label: "Menikah" },
+  { value: "LAJANG", label: "Lajang" },
+  { value: "DUDA", label: "Duda" },
+  { value: "JANDA", label: "Janda" },
+  { value: "CERAI HIDUP", label: "Cerai Hidup" },
+  { value: "CERAI MATI", label: "Cerai Mati" },
 ];
 
 const genders = [
@@ -18,20 +18,36 @@ const genders = [
   { value: "PEREMPUAN", label: "Perempuan" },
 ];
 
-const salutations = [
-  { value: "Tuan", label: "Tuan" },
-  { value: "Nyonya", label: "Nyonya" },
-];
+function getSalutationByGender(gender) {
+  if (gender === "LAKI-LAKI") return "Tuan";
+  if (gender === "PEREMPUAN") return "Nyonya";
+  return "";
+}
 
 export default function PkDebtorSection({ pk, setPk, canEdit, locked }) {
+  const disabled = !canEdit || locked;
+
   const update = (field, value) => {
-    if (!canEdit || locked) return;
+    if (disabled) return;
 
     setPk((prev) => ({
       ...prev,
       [field]: value,
     }));
   };
+
+  const handleGenderChange = (value) => {
+    if (disabled) return;
+
+    setPk((prev) => ({
+      ...prev,
+      jenis_kelamin: value,
+      penyebutan_debitur: getSalutationByGender(value),
+    }));
+  };
+
+  const salutation =
+    pk?.penyebutan_debitur || getSalutationByGender(pk?.jenis_kelamin);
 
   return (
     <PkSection
@@ -42,55 +58,58 @@ export default function PkDebtorSection({ pk, setPk, canEdit, locked }) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <PkSelect
           label="Status"
-          value={pk.maritalStatus || ""}
-          onChange={(e) => update("maritalStatus", e.target.value)}
-          disabled={!canEdit || locked}
+          value={pk?.status_debitur || ""}
+          onChange={(e) => update("status_debitur", e.target.value)}
+          disabled={disabled}
           options={maritalStatuses}
         />
 
-        <PkSelect
-          label="Penyebutan"
-          value={pk.salutation || ""}
-          onChange={(e) => update("salutation", e.target.value)}
-          disabled={!canEdit || locked}
-          options={salutations}
-        />
+        <PkInput label="Penyebutan" value={salutation} disabled />
 
         <PkInput
           label="Nama Debitur"
-          value={pk.debtorName || ""}
-          onChange={(e) => update("debtorName", e.target.value)}
-          disabled={!canEdit || locked}
+          value={pk?.nama_debitur || ""}
+          onChange={(e) => update("nama_debitur", e.target.value)}
+          disabled={disabled}
         />
 
         <PkInput
           label="NIK"
-          value={pk.nik || ""}
-          onChange={(e) => update("nik", e.target.value)}
-          disabled={!canEdit || locked}
+          value={pk?.nomor_ktp || ""}
+          onChange={(e) => update("nomor_ktp", e.target.value)}
+          disabled={disabled}
+          inputMode="numeric"
         />
 
         <PkSelect
           label="Jenis Kelamin"
-          value={pk.gender || ""}
-          onChange={(e) => update("gender", e.target.value)}
-          disabled={!canEdit || locked}
+          value={pk?.jenis_kelamin || ""}
+          onChange={(e) => handleGenderChange(e.target.value)}
+          disabled={disabled}
           options={genders}
         />
 
         <PkInput
+          label="No. HP"
+          value={pk?.nomor_handphone || ""}
+          onChange={(e) => update("nomor_handphone", e.target.value)}
+          disabled={disabled}
+          inputMode="tel"
+        />
+
+        <PkInput
           label="Tempat Lahir"
-          value={pk.birthPlace || ""}
-          onChange={(e) => update("birthPlace", e.target.value)}
-          disabled={!canEdit || locked}
+          value={pk?.tempat_lahir || ""}
+          onChange={(e) => update("tempat_lahir", e.target.value)}
+          disabled={disabled}
         />
 
         <PkInput
           label="Tanggal Lahir"
           type="date"
-          value={pk.birthDate || ""}
-          onChange={(e) => update("birthDate", e.target.value)}
-          disabled={!canEdit || locked}
+          value={pk?.tanggal_lahir || ""}
+          onChange={(e) => update("tanggal_lahir", e.target.value)}
+          disabled={disabled}
         />
       </div>
     </PkSection>

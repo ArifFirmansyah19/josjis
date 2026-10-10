@@ -5,70 +5,52 @@ import PkSelect from "@/components/pk/shared/PkSelect";
 import PkSection from "@/components/pk/shared/PkSection";
 
 const guaranteeProviders = [
-  {
-    value: "Askrindo",
-    label: "Askrindo",
-  },
-  {
-    value: "Jamkrindo",
-    label: "Jamkrindo",
-  },
+  { value: "Askrindo", label: "Askrindo" },
+  { value: "Jamkrindo", label: "Jamkrindo" },
 ];
 
 const insuranceTypes = [
-  {
-    value: "AFMS",
-    label: "AFMS",
-  },
-  {
-    value: "AJK",
-    label: "AJK",
-  },
+  { value: "AFMS", label: "AFMS" },
+  { value: "AJK", label: "AJK" },
 ];
 
-const advisStatuses = [
-  {
-    value: "SUDAH",
-    label: "Sudah Advis / Posting",
-  },
-  {
-    value: "BELUM",
-    label: "Belum Advis / Posting",
-  },
+const orderStatuses = [
+  { value: "SUDAH_DIORDER", label: "Sudah Diorder" },
+  { value: "BELUM_DIORDER", label: "Belum Diorder" },
 ];
 
 const postingStatuses = [
-  {
-    value: "SUDAH",
-    label: "Sudah Posting Advis",
-  },
-  {
-    value: "BELUM",
-    label: "Belum Posting Advis",
-  },
+  { value: "SUDAH_POSTING", label: "Sudah Posting" },
+  { value: "BELUM_POSTING", label: "Belum Posting" },
 ];
 
 function formatRupiah(value) {
   const amount = Number(value || 0);
-
-  if (!amount) {
-    return "";
-  }
-
+  if (!amount) return "";
   return `Rp ${amount.toLocaleString("id-ID")}`;
 }
 
-export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
-  const insurance = pk.insurance || {};
+function getAgreementDate(pk) {
+  return (
+    pk?.tanggalPerjanjianKredit ||
+    pk?.tanggalAkad ||
+    pk?.tglPerjanjianKredit ||
+    pk?.tglAkad ||
+    pk?.pkDate ||
+    pk?.tanggalPk ||
+    ""
+  );
+}
 
-  const isKUR = pk.loanType === "KUR";
+export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
+  const insurance = pk?.insurance || {};
+  const isKUR = String(pk?.loanType || "").toUpperCase() === "KUR";
 
   const axaEnabled = Boolean(insurance.axa?.enabled);
+  const agreementDate = getAgreementDate(pk);
 
   const updateInsurance = (field, value) => {
-    if (!canEdit || locked) {
-      return;
-    }
+    if (!canEdit || locked) return;
 
     setPk((prev) => ({
       ...prev,
@@ -80,9 +62,7 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
   };
 
   const updateGuarantee = (field, value) => {
-    if (!canEdit || locked) {
-      return;
-    }
+    if (!canEdit || locked) return;
 
     setPk((prev) => ({
       ...prev,
@@ -97,9 +77,7 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
   };
 
   const updateLifeInsurance = (field, value) => {
-    if (!canEdit || locked) {
-      return;
-    }
+    if (!canEdit || locked) return;
 
     setPk((prev) => ({
       ...prev,
@@ -114,9 +92,7 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
   };
 
   const updateAxa = (field, value) => {
-    if (!canEdit || locked) {
-      return;
-    }
+    if (!canEdit || locked) return;
 
     setPk((prev) => ({
       ...prev,
@@ -130,10 +106,8 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
     }));
   };
 
-  const updateMagi = (value) => {
-    if (!canEdit || locked) {
-      return;
-    }
+  const updateMagi = (field, value) => {
+    if (!canEdit || locked) return;
 
     setPk((prev) => ({
       ...prev,
@@ -141,7 +115,22 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
         ...(prev.insurance || {}),
         magi: {
           ...(prev.insurance?.magi || {}),
-          advisStatus: value,
+          [field]: value,
+        },
+      },
+    }));
+  };
+
+  const updateSijitu = (field, value) => {
+    if (!canEdit || locked) return;
+
+    setPk((prev) => ({
+      ...prev,
+      insurance: {
+        ...(prev.insurance || {}),
+        sijitu: {
+          ...(prev.insurance?.sijitu || {}),
+          [field]: value,
         },
       },
     }));
@@ -150,20 +139,18 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
   return (
     <PkSection
       title="Asuransi & Penjaminan"
-      description="Data penjaminan, asuransi jiwa, SIJITU, AXA, dan MAGI."
+      description="Data penjaminan dan asuransi pada fasilitas PK."
       locked={locked}
     >
       <div className="space-y-6">
-        {/* PENJAMINAN KUR */}
         {isKUR && (
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
             <div className="mb-4">
               <p className="text-sm font-semibold text-zinc-900">
                 Polis Penjaminan
               </p>
-
               <p className="mt-1 text-xs text-zinc-500">
-                Polis penjaminan hanya berlaku untuk pinjaman KUR.
+                Wajib untuk fasilitas KUR.
               </p>
             </div>
 
@@ -188,49 +175,94 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
               <PkInput
                 label="Tanggal Pengajuan Polis"
                 type="date"
-                value={insurance.guarantee?.applicationDate || ""}
-                onChange={(e) =>
-                  updateGuarantee("applicationDate", e.target.value)
-                }
-                disabled={!canEdit || locked}
+                value={agreementDate}
+                disabled
               />
             </div>
+
+            <p className="mt-3 text-xs text-zinc-500">
+              Tanggal pengajuan polis otomatis mengikuti tanggal perjanjian
+              kredit / akad.
+            </p>
           </div>
         )}
 
-        {/* SIJITU */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
           <div className="mb-4">
             <p className="text-sm font-semibold text-zinc-900">SIJITU</p>
-
             <p className="mt-1 text-xs text-zinc-500">
-              Status advis/posting SIJITU.
+              Pantau status order dan posting SIJITU.
             </p>
           </div>
 
-          <div className="max-w-md">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <PkSelect
-              label="Status Advis / Posting"
-              value={insurance.sijitu?.postingStatus || ""}
-              onChange={(e) =>
-                updateInsurance("sijitu", {
-                  ...(insurance.sijitu || {}),
-                  postingStatus: e.target.value,
-                })
-              }
+              label="Status Order"
+              value={insurance.sijitu?.orderStatus || "BELUM_DIORDER"}
+              onChange={(e) => updateSijitu("orderStatus", e.target.value)}
+              disabled={!canEdit || locked}
+              options={orderStatuses}
+            />
+
+            <PkSelect
+              label="Status Posting"
+              value={insurance.sijitu?.postingStatus || "BELUM_POSTING"}
+              onChange={(e) => updateSijitu("postingStatus", e.target.value)}
               disabled={!canEdit || locked}
               options={postingStatuses}
             />
           </div>
         </div>
 
-        {/* ASURANSI JIWA */}
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+          <div className="mb-4">
+            <p className="text-sm font-semibold text-zinc-900">MAGI</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Status order, posting, dan premi MAGI.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <PkSelect
+              label="Status Order"
+              value={insurance.magi?.orderStatus || "BELUM_DIORDER"}
+              onChange={(e) => updateMagi("orderStatus", e.target.value)}
+              disabled={!canEdit || locked}
+              options={orderStatuses}
+            />
+
+            <PkSelect
+              label="Status Posting"
+              value={insurance.magi?.postingStatus || "BELUM_POSTING"}
+              onChange={(e) => updateMagi("postingStatus", e.target.value)}
+              disabled={!canEdit || locked}
+              options={postingStatuses}
+            />
+
+            <div>
+              <PkInput
+                label="Premi Dibayarkan"
+                type="number"
+                value={insurance.magi?.premium ?? ""}
+                onChange={(e) => updateMagi("premium", e.target.value)}
+                disabled={!canEdit || locked}
+                placeholder="50000"
+              />
+
+              {insurance.magi?.premium && (
+                <p className="mt-1.5 text-xs text-zinc-500">
+                  {formatRupiah(insurance.magi.premium)}
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
           <div className="mb-4">
             <p className="text-sm font-semibold text-zinc-900">Asuransi Jiwa</p>
-
             <p className="mt-1 text-xs text-zinc-500">
-              Pilih jenis asuransi jiwa dan lengkapi informasi polis.
+              Pilih AFMS atau AJK, kemudian lengkapi status dan premi.
             </p>
           </div>
 
@@ -243,18 +275,29 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
               options={insuranceTypes}
             />
 
-            <PkInput
-              label="Nomor Polis"
-              value={insurance.life?.policyNumber || ""}
+            <PkSelect
+              label="Status Order"
+              value={insurance.life?.orderStatus || "BELUM_DIORDER"}
               onChange={(e) =>
-                updateLifeInsurance("policyNumber", e.target.value)
+                updateLifeInsurance("orderStatus", e.target.value)
               }
               disabled={!canEdit || locked}
+              options={orderStatuses}
+            />
+
+            <PkSelect
+              label="Status Posting"
+              value={insurance.life?.postingStatus || "BELUM_POSTING"}
+              onChange={(e) =>
+                updateLifeInsurance("postingStatus", e.target.value)
+              }
+              disabled={!canEdit || locked}
+              options={postingStatuses}
             />
 
             <div>
               <PkInput
-                label="Besaran Premi / Yang Dibayarkan"
+                label="Premi Dibayarkan"
                 type="number"
                 value={insurance.life?.premium ?? ""}
                 onChange={(e) => updateLifeInsurance("premium", e.target.value)}
@@ -268,20 +311,9 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
                 </p>
               )}
             </div>
-
-            <PkSelect
-              label="Status Advis / Posting"
-              value={insurance.life?.advisStatus || ""}
-              onChange={(e) =>
-                updateLifeInsurance("advisStatus", e.target.value)
-              }
-              disabled={!canEdit || locked}
-              options={advisStatuses}
-            />
           </div>
         </div>
 
-        {/* AXA */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
           <div className="flex items-start gap-3">
             <input
@@ -302,7 +334,7 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
               </label>
 
               <p className="mt-1 text-xs text-zinc-500">
-                Centang jika fasilitas pinjaman ini menggunakan AXA.
+                Opsional. Aktifkan jika fasilitas menggunakan AXA.
               </p>
             </div>
           </div>
@@ -316,43 +348,23 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
                 disabled={!canEdit || locked}
               />
 
-              <div>
-                <PkInput
-                  label="Premi AXA"
-                  type="number"
-                  value={insurance.axa?.premium ?? ""}
-                  onChange={(e) => updateAxa("premium", e.target.value)}
-                  disabled={!canEdit || locked}
-                  placeholder="50000"
-                />
+              <PkSelect
+                label="Status Order"
+                value={insurance.axa?.orderStatus || "BELUM_DIORDER"}
+                onChange={(e) => updateAxa("orderStatus", e.target.value)}
+                disabled={!canEdit || locked}
+                options={orderStatuses}
+              />
 
-                {insurance.axa?.premium && (
-                  <p className="mt-1.5 text-xs text-zinc-500">
-                    {formatRupiah(insurance.axa.premium)}
-                  </p>
-                )}
-              </div>
+              <PkSelect
+                label="Status Posting"
+                value={insurance.axa?.postingStatus || "BELUM_POSTING"}
+                onChange={(e) => updateAxa("postingStatus", e.target.value)}
+                disabled={!canEdit || locked}
+                options={postingStatuses}
+              />
             </div>
           )}
-        </div>
-
-        {/* MAGI */}
-        <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-          <div className="mb-4">
-            <p className="text-sm font-semibold text-zinc-900">MAGI</p>
-
-            <p className="mt-1 text-xs text-zinc-500">Status advis MAGI.</p>
-          </div>
-
-          <div className="max-w-md">
-            <PkSelect
-              label="Status Advis"
-              value={insurance.magi?.advisStatus || ""}
-              onChange={(e) => updateMagi(e.target.value)}
-              disabled={!canEdit || locked}
-              options={advisStatuses}
-            />
-          </div>
         </div>
       </div>
     </PkSection>

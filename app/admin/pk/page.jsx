@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw, Plus } from "lucide-react";
+
 import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
-import PkDetailModal from "@/components/pk/PkDetailModal";
+import PkDetailModal from "./components/PkDetailModal";
 import { supabase } from "@/lib/supabase";
+
 import { PK_ROLES } from "./constants/pkConstants";
+
 import {
   getUnitUuid,
   formatMksName,
@@ -16,80 +19,72 @@ import {
   getRole,
   normalizeText,
 } from "./helpers/pkFormatters";
+
 import { buildPkUpdatePayload } from "./helpers/pkNormalizer";
+
 import {
   fetchNotaries,
   fetchPkData,
   updatePkData,
 } from "./services/pkSupabase";
+
 import PkFilter from "./components/PkFilter";
 import PkDesktopTable from "./components/PkDesktopTable";
 import PkMobileTable from "./components/PkMobileTable";
 
+const DEFAULT_PAGE_SIZE = 25;
+
+const EMPTY_PAGINATION = {
+  page: 1,
+  pageSize: DEFAULT_PAGE_SIZE,
+  total: 0,
+  totalPages: 0,
+  from: 0,
+  to: 0,
+};
+
 function canViewPk() {
   const role = getRole();
-  if (!role) {
-    return true;
-  }
-  return PK_ROLES.includes(role);
+  return !role || PK_ROLES.includes(role);
 }
 
-function mergeSavedPk(previous, savedRow, relatedParties = []) {
+function normalizeInsurance(insurance) {
+  const source = insurance || {};
+
   return {
-    ...previous,
-    ...savedRow,
-    id: savedRow?.id || previous?.id,
-    unitId: savedRow?.unit_id || previous?.unitId || null,
-    mksId: previous?.mksId || savedRow?.mks_id || null,
-    mksName: previous?.mksName || "-",
-    mksAgentCode: previous?.mksAgentCode || "",
-    loanType: savedRow?.jenis_pengajuan_kredit || "",
-    applicationNumber: savedRow?.nomor_aplikasi || "",
-    applicationDate: savedRow?.tanggal_aplikasi || "",
-    pkDate: savedRow?.tanggal_pk || "",
-    pkNumber: savedRow?.nomor_pk || "",
-    limit: savedRow?.limit_kredit ?? "",
-    tenor: savedRow?.jangka_waktu ?? "",
-    cif: savedRow?.cif || "",
-    savingsAccount: savedRow?.rekening_tabungan || "",
-    loanAccount: savedRow?.rekening_kredit || "",
-    loanStatus: savedRow?.status_pk || "AKTIF",
-    tanggalPk: savedRow?.tanggal_pk || null,
-    tanggalPeminjaman: savedRow?.tanggal_aplikasi || null,
-    jenisPengajuanKredit: savedRow?.jenis_pengajuan_kredit || "",
-    limitKredit: Number(savedRow?.limit_kredit || 0),
-    namaDebitur: savedRow?.nama_debitur || "",
-    nik: savedRow?.nomor_ktp || "",
-    nomorHp: savedRow?.nomor_handphone || "",
-    jenisKelamin: savedRow?.jenis_kelamin || "",
-    penyebutanDebitur: savedRow?.penyebutan_debitur || "",
-    nomor_handphone: savedRow?.nomor_handphone || "",
-    jenis_kelamin: savedRow?.jenis_kelamin || "",
-    penyebutan_debitur: savedRow?.penyebutan_debitur || "",
-    status_debitur: savedRow?.status_debitur || "",
-    rt: savedRow?.rt || "",
-    rw: savedRow?.rw || "",
-    alamatJalan: savedRow?.alamat_jalan || "",
-    alamatDesaKelurahan: savedRow?.alamat_desa_kelurahan || "",
-    alamatKecamatan: savedRow?.alamat_kecamatan || "",
-    alamatKabupaten: savedRow?.alamat_kabupaten || "",
-    alamat_jalan: savedRow?.alamat_jalan || "",
-    alamat_desa_kelurahan: savedRow?.alamat_desa_kelurahan || "",
-    alamat_kecamatan: savedRow?.alamat_kecamatan || "",
-    alamat_kabupaten: savedRow?.alamat_kabupaten || "",
-    nama_pasangan: savedRow?.nama_pasangan || "",
-    nik_pasangan: savedRow?.nik_pasangan || "",
-    nomor_handphone_pasangan: savedRow?.nomor_handphone_pasangan || "",
-    alamat_pasangan_sama_debitur:
-      savedRow?.alamat_pasangan_sama_debitur ?? false,
-    alamat_pasangan_jalan: savedRow?.alamat_pasangan_jalan || "",
-    alamat_pasangan_rt: savedRow?.alamat_pasangan_rt || "",
-    alamat_pasangan_rw: savedRow?.alamat_pasangan_rw || "",
-    alamat_pasangan_desa_kelurahan:
-      savedRow?.alamat_pasangan_desa_kelurahan || "",
-    alamat_pasangan_kecamatan: savedRow?.alamat_pasangan_kecamatan || "",
-    alamat_pasangan_kabupaten: savedRow?.alamat_pasangan_kabupaten || "",
-    relatedParties: Array.isArray(relatedParties) ? relatedParties : [],
+    ...source,
+
+    sijitu: {
+      ...(source.sijitu || {}),
+      orderStatus: source.sijitu?.orderStatus || "BELUM_DIORDER",
+      postingStatus: source.sijitu?.postingStatus || "BELUM_POSTING",
+    },
+
+    magi: {
+      ...(source.magi || {}),
+      advisStatus: source.magi?.advisStatus || "BELUM_ADVIS",
+      postingStatus: source.magi?.postingStatus || "BELUM_POSTING",
+      premium: source.magi?.premium ?? "",
+    },
+
+    life: {
+      ...(source.life || {}),
+      type: source.life?.type || "",
+      orderStatus: source.life?.orderStatus || "BELUM_DIORDER",
+      postingStatus: source.life?.postingStatus || "BELUM_POSTING",
+      premium: source.life?.premium ?? "",
+    },
+
+    guarantee: {
+      ...(source.guarantee || {}),
+    },
+
+    axa: {
+      ...(source.axa || {}),
+      enabled: Boolean(source.axa?.enabled),
+    },
+
+    rows: Array.isArray(source.rows) ? source.rows : [],
   };
 }
 
@@ -99,89 +94,135 @@ export default function PkPage() {
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+
   const [pkRows, setPkRows] = useState([]);
   const [notaries, setNotaries] = useState([]);
+
   const [search, setSearch] = useState("");
   const [productFilter, setProductFilter] = useState("SEMUA");
   const [mksFilter, setMksFilter] = useState("SEMUA");
   const [limitFilter, setLimitFilter] = useState("SEMUA");
   const [monthFilter, setMonthFilter] = useState("SEMUA");
   const [yearFilter, setYearFilter] = useState("SEMUA");
+
+  const [pagination, setPagination] = useState(EMPTY_PAGINATION);
+
   const [selectedPk, setSelectedPk] = useState(null);
   const [modalMode, setModalMode] = useState("view");
 
-  async function loadPkData() {
-    if (!activeUnitUuid) {
-      setPkRows([]);
-      setErrorMessage(
-        `Unit ${activeUnit?.value || "-"} belum memiliki UUID database.`,
-      );
-      return;
-    }
+  // Parameter filter yang dikirim ke database.
+  const filters = useMemo(
+    () => ({
+      search: search.trim(),
+      productFilter,
+      mksFilter,
+      limitFilter,
+      monthFilter,
+      yearFilter,
+    }),
+    [search, productFilter, mksFilter, limitFilter, monthFilter, yearFilter],
+  );
 
-    setLoading(true);
-    setErrorMessage("");
-
-    try {
-      if (!canViewPk()) {
+  const loadPkData = useCallback(
+    async (requestedPage = 1, overrides = {}) => {
+      if (!activeUnitUuid) {
         setPkRows([]);
-        return;
+        setPagination(EMPTY_PAGINATION);
+        setErrorMessage(
+          `Unit ${activeUnit?.value || "-"} belum memiliki UUID database.`,
+        );
+        return [];
       }
 
-      console.log("JOSJIS PK - Unit:", activeUnit?.value, activeUnitUuid);
+      if (!canViewPk()) {
+        setPkRows([]);
+        setPagination(EMPTY_PAGINATION);
+        return [];
+      }
 
-      const [mappedRows, notaryRows] = await Promise.all([
-        fetchPkData({
-          supabase,
-          activeUnitUuid,
-        }),
-        fetchNotaries({
-          supabase,
-        }),
-      ]);
+      setLoading(true);
+      setErrorMessage("");
 
-      setPkRows(Array.isArray(mappedRows) ? mappedRows : []);
+      try {
+        const currentFilters = {
+          ...filters,
+          ...overrides,
+        };
 
-      setNotaries(Array.isArray(notaryRows) ? notaryRows : []);
+        const [pkResult, notaryRows] = await Promise.all([
+          fetchPkData({
+            supabase,
+            activeUnitUuid,
+            page: requestedPage,
+            pageSize: pagination.pageSize,
+            filters: currentFilters,
+          }),
+          fetchNotaries({ supabase }),
+        ]);
 
-      console.log(
-        "JOSJIS PK - Notaris:",
-        Array.isArray(notaryRows) ? notaryRows : [],
-      );
-    } catch (error) {
-      console.error("Load PK error:", error);
-      setErrorMessage(error?.message || "Data PK gagal dimuat.");
-      setPkRows([]);
-      setNotaries([]);
-    } finally {
-      setLoading(false);
-    }
-  }
+        // Format hasil service: { rows, pagination }.
+        const nextRows = Array.isArray(pkResult?.rows) ? pkResult.rows : [];
 
+        setPkRows(nextRows);
+
+        if (pkResult?.pagination) {
+          setPagination(pkResult.pagination);
+        }
+
+        setNotaries(Array.isArray(notaryRows) ? notaryRows : []);
+
+        return nextRows;
+      } catch (error) {
+        console.error("Load PK error:", error);
+
+        setErrorMessage(error?.message || "Data PK gagal dimuat.");
+        setPkRows([]);
+        setPagination(EMPTY_PAGINATION);
+
+        return [];
+      } finally {
+        setLoading(false);
+      }
+    },
+    [activeUnitUuid, activeUnit?.value, filters, pagination.pageSize],
+  );
+
+  // Ganti unit: mulai lagi dari halaman pertama.
   useEffect(() => {
-    loadPkData();
+    setPagination((current) => ({
+      ...current,
+      page: 1,
+    }));
   }, [activeUnitUuid]);
+
+  // Filter berubah: mulai lagi dari halaman pertama.
+  useEffect(() => {
+    setPagination((current) => {
+      if (current.page === 1) return current;
+      return { ...current, page: 1 };
+    });
+  }, [filters]);
+
+  // Muat ulang ketika unit, filter, atau halaman berubah.
+  useEffect(() => {
+    loadPkData(pagination.page);
+  }, [loadPkData, pagination.page]);
 
   const yearOptions = useMemo(() => {
     const years = new Set();
 
     pkRows.forEach((pk) => {
       const year = getDateYear(pk?.tanggalPk);
-
-      if (year) {
-        years.add(year);
-      }
+      if (year) years.add(String(year));
     });
 
     const sortedYears = Array.from(years).sort((a, b) => Number(b) - Number(a));
 
     return [
-      {
-        value: "SEMUA",
-        label: "Semua Tahun",
-      },
+      { value: "SEMUA", label: "Semua Tahun" },
       ...sortedYears.map((year) => ({
         value: year,
         label: year,
@@ -195,102 +236,38 @@ export default function PkPage() {
     pkRows.forEach((pk) => {
       const id = pk?.mksId || "TANPA_MKS";
 
-      if (!map.has(id)) {
-        map.set(id, {
-          value: id,
+      if (!map.has(String(id))) {
+        map.set(String(id), {
+          value: String(id),
           label: formatMksName(pk?.mksName),
         });
       }
     });
 
     return [
-      {
-        value: "SEMUA",
-        label: "Semua MKS",
-      },
+      { value: "SEMUA", label: "Semua MKS" },
       ...Array.from(map.values()).sort((a, b) =>
         a.label.localeCompare(b.label, "id"),
       ),
     ];
   }, [pkRows]);
 
+  /*
+   * Data sudah difilter oleh service/database.
+   * Jangan memfilter ulang dengan pkRows.filter() di sini,
+   * karena pkRows hanya berisi halaman aktif.
+   */
   const visiblePk = useMemo(() => {
-    const query = normalizeText(search);
+    if (mksFilter === "SEMUA") return pkRows;
 
+    // Fallback sementara untuk filter MKS.
+    // Agar filter MKS mencakup seluruh database, tambahkan
+    // penerapan mksFilter pada query pk di loanService.js.
     return pkRows.filter((pk) => {
-      if (activeUnitUuid && pk?.unitId && pk.unitId !== activeUnitUuid) {
-        return false;
-      }
-
-      if (query) {
-        const searchableText = [
-          pk?.id,
-          pk?.nomor_pk,
-          pk?.nomor_aplikasi,
-          pk?.cif,
-          pk?.nama_debitur,
-          pk?.nomor_ktp,
-          pk?.nik,
-          pk?.rekening_tabungan,
-          pk?.rekening_kredit,
-          pk?.mksName,
-          pk?.mksAgentCode,
-          pk?.jenisPengajuanKredit,
-          pk?.jenis_pengajuan_kredit,
-        ]
-          .filter(Boolean)
-          .join(" ");
-
-        if (!normalizeText(searchableText).includes(query)) {
-          return false;
-        }
-      }
-
-      if (
-        productFilter !== "SEMUA" &&
-        normalizeText(pk?.jenisPengajuanKredit) !== normalizeText(productFilter)
-      ) {
-        return false;
-      }
-
-      if (mksFilter !== "SEMUA") {
-        const pkMksId = pk?.mksId || "TANPA_MKS";
-
-        if (pkMksId !== mksFilter) {
-          return false;
-        }
-      }
-
-      if (
-        limitFilter !== "SEMUA" &&
-        getLimitBucket(pk?.limitKredit) !== limitFilter
-      ) {
-        return false;
-      }
-
-      if (
-        monthFilter !== "SEMUA" &&
-        getDateMonth(pk?.tanggalPk) !== monthFilter
-      ) {
-        return false;
-      }
-
-      if (yearFilter !== "SEMUA" && getDateYear(pk?.tanggalPk) !== yearFilter) {
-        return false;
-      }
-
-      return true;
+      const id = String(pk?.mksId || "TANPA_MKS");
+      return id === String(mksFilter);
     });
-  }, [
-    pkRows,
-    activeUnitUuid,
-    search,
-    productFilter,
-    mksFilter,
-    limitFilter,
-    monthFilter,
-    yearFilter,
-  ]);
+  }, [pkRows, mksFilter]);
 
   function openDetail(pk) {
     setSuccessMessage("");
@@ -307,16 +284,19 @@ export default function PkPage() {
   }
 
   function closeModal() {
-    if (saving) {
-      return;
-    }
+    if (saving) return;
 
     setSelectedPk(null);
     setModalMode("view");
   }
 
   function handleAdd() {
+    setErrorMessage("");
+    setSuccessMessage("");
     setSelectedPk(null);
+
+    // Modal tambah baru belum dibuka oleh implementasi ini.
+    setErrorMessage("Fitur tambah PK belum dihubungkan ke formulir data baru.");
   }
 
   async function handleSave(updatedPk) {
@@ -324,9 +304,7 @@ export default function PkPage() {
       throw new Error("ID PK tidak ditemukan.");
     }
 
-    if (saving) {
-      return;
-    }
+    if (saving) return;
 
     setSaving(true);
     setErrorMessage("");
@@ -341,12 +319,17 @@ export default function PkPage() {
 
       const payload = {
         ...basePayload,
+
         relatedParties: Array.isArray(updatedPk.relatedParties)
           ? updatedPk.relatedParties
           : [],
-      };
 
-      console.log("JOSJIS PK UPDATE:", updatedPk.id, payload);
+        collaterals: Array.isArray(updatedPk.collaterals)
+          ? updatedPk.collaterals
+          : [],
+
+        insurance: normalizeInsurance(updatedPk.insurance),
+      };
 
       const savedRow = await updatePkData({
         supabase,
@@ -360,45 +343,47 @@ export default function PkPage() {
         );
       }
 
-      setPkRows((current) =>
-        current.map((item) => {
-          if (item.id !== savedRow.id) {
-            return item;
-          }
+      /*
+       * Refresh halaman aktif. Jika data yang diedit tidak lagi
+       * masuk filter atau halaman aktif, jangan menyatakan
+       * penyimpanan gagal karena database sudah berhasil menyimpan.
+       */
+      const refreshedRows = await loadPkData(pagination.page);
 
-          return mergeSavedPk(item, savedRow, updatedPk.relatedParties);
-        }),
+      const refreshedPk = refreshedRows.find(
+        (item) => String(item?.id) === String(savedRow.id),
       );
 
-      setSelectedPk((current) => {
-        if (!current || current.id !== savedRow.id) {
-          return current;
-        }
-
-        return mergeSavedPk(current, savedRow, updatedPk.relatedParties);
-      });
+      if (refreshedPk) {
+        setSelectedPk(refreshedPk);
+        setPkRows((current) =>
+          current.map((item) =>
+            String(item?.id) === String(refreshedPk.id) ? refreshedPk : item,
+          ),
+        );
+      } else {
+        // Data mungkin tidak masuk halaman/filter aktif setelah disimpan.
+        setSelectedPk((current) =>
+          current
+            ? {
+                ...current,
+                ...updatedPk,
+                id: savedRow.id,
+              }
+            : current,
+        );
+      }
 
       setSuccessMessage("Data PK berhasil disimpan.");
-
-      await loadPkData();
+      return refreshedPk || savedRow;
     } catch (error) {
       console.error("Save PK error:", error);
 
-      const message = error?.message || "Data PK gagal disimpan.";
-
-      setErrorMessage(message);
+      setErrorMessage(error?.message || "Data PK gagal disimpan.");
       throw error;
     } finally {
       setSaving(false);
     }
-  }
-
-  function handleLockSection(payload) {
-    console.log("Lock section:", payload);
-  }
-
-  function handleCorrection(payload) {
-    console.log("Correction:", payload);
   }
 
   function resetFilters() {
@@ -408,6 +393,28 @@ export default function PkPage() {
     setLimitFilter("SEMUA");
     setMonthFilter("SEMUA");
     setYearFilter("SEMUA");
+  }
+
+  function changePage(nextPage) {
+    const maxPage = Math.max(1, pagination.totalPages);
+    const safePage = Math.min(maxPage, Math.max(1, nextPage));
+
+    if (safePage !== pagination.page) {
+      setPagination((current) => ({
+        ...current,
+        page: safePage,
+      }));
+    }
+  }
+
+  function changePageSize(event) {
+    const pageSize = Number(event.target.value);
+
+    setPagination((current) => ({
+      ...current,
+      page: 1,
+      pageSize,
+    }));
   }
 
   return (
@@ -426,7 +433,7 @@ export default function PkPage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={loadPkData}
+              onClick={() => loadPkData(pagination.page)}
               disabled={loading || saving}
               className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
             >
@@ -462,15 +469,19 @@ export default function PkPage() {
               <div className="truncate text-xs font-bold text-zinc-800">
                 {activeUnit?.name || "-"}
               </div>
-
               <div className="text-[10px] text-zinc-400">
                 {activeUnit?.code || activeUnit?.value || "-"}
               </div>
             </div>
           </div>
 
-          <div className="shrink-0 text-[10px] font-medium text-zinc-400">
-            {visiblePk.length} data
+          <div className="shrink-0 text-right text-[10px] text-zinc-500">
+            <div className="font-semibold text-zinc-700">
+              {pagination.total.toLocaleString("id-ID")} hasil
+            </div>
+            <div>
+              {pagination.from}–{pagination.to} ditampilkan
+            </div>
           </div>
         </div>
 
@@ -490,7 +501,7 @@ export default function PkPage() {
           mksOptions={mksOptions}
           yearOptions={yearOptions}
           visibleCount={visiblePk.length}
-          totalCount={pkRows.length}
+          totalCount={pagination.total}
           resetFilters={resetFilters}
         />
 
@@ -513,7 +524,58 @@ export default function PkPage() {
             loading={loading}
             visiblePk={visiblePk}
             openDetail={openDetail}
+            openEdit={openEdit}
           />
+
+          <div className="flex flex-col gap-3 border-t border-zinc-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+              <span>Baris per halaman</span>
+
+              <select
+                value={pagination.pageSize}
+                onChange={changePageSize}
+                disabled={loading}
+                className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 outline-none focus:border-zinc-400"
+              >
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+
+              <span>
+                Menampilkan {pagination.from}–{pagination.to} dari{" "}
+                {pagination.total.toLocaleString("id-ID")} PK
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => changePage(pagination.page - 1)}
+                disabled={loading || pagination.page <= 1}
+                className="h-8 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Sebelumnya
+              </button>
+
+              <span className="min-w-20 text-center text-xs text-zinc-600">
+                Halaman {pagination.page} / {Math.max(1, pagination.totalPages)}
+              </span>
+
+              <button
+                type="button"
+                onClick={() => changePage(pagination.page + 1)}
+                disabled={
+                  loading ||
+                  pagination.page >= pagination.totalPages ||
+                  pagination.totalPages === 0
+                }
+                className="h-8 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Berikutnya
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -523,9 +585,10 @@ export default function PkPage() {
           mode={modalMode}
           onClose={closeModal}
           onSave={handleSave}
-          onLockSection={handleLockSection}
-          onCorrection={handleCorrection}
+          onLockSection={(payload) => console.log("Lock section:", payload)}
+          onCorrection={(payload) => console.log("Correction:", payload)}
           notaries={notaries}
+          saving={saving}
         />
       )}
     </DashboardLayout>

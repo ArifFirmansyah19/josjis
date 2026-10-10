@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useState } from "react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
@@ -18,1806 +17,1172 @@ import {
   MapPin,
   Power,
 } from "lucide-react";
-
-function showValue(value) {
-  return value === null || value === undefined || value === "" ? "-" : value;
-}
-
-export default function PegawaiPage() {
+const showValue = (value) =>
+  value === null || value === undefined || value === "" ? "-" : value;
+const formatJenis = (jenis) => {
+  const map = {
+    BRANCH_MANAGER: "Branch Manager",
+    MKS: "MKS",
+    PENGAWAS: "Pengawas",
+    MKA: "MKA",
+  };
+  return map[jenis] || jenis || "-";
+};
+export default function MasterPegawaiPage() {
   const { activeUnit } = useUnit();
-
   const [unitData, setUnitData] = useState(null);
   const [pegawai, setPegawai] = useState([]);
   const [mks, setMks] = useState([]);
-
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-
-  // Modal
   const [showUnitModal, setShowUnitModal] = useState(false);
   const [showPegawaiModal, setShowPegawaiModal] = useState(false);
   const [showMksModal, setShowMksModal] = useState(false);
   const [showMkaModal, setShowMkaModal] = useState(false);
-
-  // Editing
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [editingPegawai, setEditingPegawai] = useState(null);
   const [editingMks, setEditingMks] = useState(null);
-  const [editingMka, setEditingMka] = useState(null);
-
-  // Form unit
+  const [detailPegawai, setDetailPegawai] = useState(null);
   const [unitForm, setUnitForm] = useState({
     nama_unit: "",
     kode_unit: "",
-    kode_legacy: "",
     kode_kawasan: "",
+    kode_legacy: "",
   });
-
-  // Form pegawai umum
   const [pegawaiForm, setPegawaiForm] = useState({
     nama: "",
     nip: "",
     jabatan: "",
+    jenis_pegawai: "PENGAWAS",
+    no_hp: "",
+    email: "",
     aktif: true,
   });
-
-  // Form MKS
   const [mksForm, setMksForm] = useState({
     nama: "",
     nip: "",
-    jabatan: "",
-    kode_agen: "",
-    pengawas_id: "",
+    jabatan: "MKS",
+    no_hp: "",
+    email: "",
     aktif: true,
   });
-
-  // Form MKA
   const [mkaForm, setMkaForm] = useState({
     nama: "",
     nip: "",
     jabatan: "MKA",
+    no_hp: "",
+    email: "",
     aktif: true,
   });
-
-  function showSuccess(message) {
-    setSuccess(message);
-    setError("");
-
-    window.setTimeout(() => {
-      setSuccess("");
-    }, 3000);
-  }
-
+  useEffect(() => {
+    loadData();
+  }, [activeUnit?.value]);
   async function loadData() {
+    if (!activeUnit?.value) {
+      setUnitData(null);
+      setPegawai([]);
+      setMks([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setError("");
     try {
-      setLoading(true);
-      setError("");
-
-      if (!activeUnit?.value) {
+      const { data: unit, error: unitError } = await supabase
+        .from("unit")
+        .select("*")
+        .eq("kode_unit", activeUnit.value)
+        .maybeSingle();
+      if (unitError) throw unitError;
+      if (!unit) {
         setUnitData(null);
         setPegawai([]);
         setMks([]);
+        setError(`Unit ${activeUnit.value} tidak ditemukan.`);
         return;
       }
-
-      // ============================================================
-      // UNIT
-      // ============================================================
-
-      const { data: unit, error: unitError } = await supabase
-        .from("unit")
-        .select(
-          "id, nama_unit, kode_unit, kode_legacy, kode_kawasan, cabang_id",
-        )
-        .eq("kode_unit", activeUnit.value)
-        .maybeSingle();
-
-      if (unitError) throw unitError;
-
-      if (!unit) {
-        throw new Error(
-          `Data unit dengan kode ${activeUnit.value} tidak ditemukan.`,
-        );
-      }
-
       setUnitData(unit);
-
-      setUnitForm({
-        nama_unit: unit.nama_unit || "",
-        kode_unit: unit.kode_unit || "",
-        kode_legacy: unit.kode_legacy || "",
-        kode_kawasan: unit.kode_kawasan || "",
-      });
-
-      // ============================================================
-      // PEGAWAI UNIT
-      // ============================================================
-
       const { data: unitPegawai, error: pegawaiError } = await supabase
         .from("pegawai")
-        .select(
-          "id, nama, nip, jabatan, jenis_pegawai, cabang_id, unit_id, aktif, created_at, updated_at",
-        )
+        .select("*")
         .eq("unit_id", unit.id)
         .order("nama", { ascending: true });
-
       if (pegawaiError) throw pegawaiError;
-
-      // ============================================================
-      // BRANCH MANAGER
-      // BM tidak menggunakan unit_id
-      // ============================================================
-
       const { data: branchManagers, error: bmError } = await supabase
         .from("pegawai")
-        .select(
-          "id, nama, nip, jabatan, jenis_pegawai, cabang_id, unit_id, aktif, created_at, updated_at",
-        )
+        .select("*")
         .eq("jenis_pegawai", "BRANCH_MANAGER")
         .order("nama", { ascending: true });
-
       if (bmError) throw bmError;
-
-      setPegawai([...(branchManagers || []), ...(unitPegawai || [])]);
-
-      // ============================================================
-      // MKS
-      // ============================================================
-
       const { data: mksData, error: mksError } = await supabase
         .from("mks")
-        .select(
-          "id, pegawai_id, pengawas_id, kode_agen, created_at, updated_at",
-        );
-
+        .select("*")
+        .order("id", { ascending: true });
       if (mksError) throw mksError;
-
+      setPegawai([...(branchManagers || []), ...(unitPegawai || [])]);
       setMks(mksData || []);
     } catch (err) {
-      console.error("loadData error:", err);
-      setError(err?.message || "Gagal memuat data master pegawai.");
+      console.error(err);
+      setError(err?.message || "Gagal mengambil data pegawai.");
     } finally {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    loadData();
-  }, [activeUnit?.value]);
-
-  // ============================================================
-  // DERIVED DATA
-  // ============================================================
-
   const branchManagers = useMemo(
-    () => pegawai.filter((item) => item.jenis_pegawai === "BRANCH_MANAGER"),
+    () => pegawai.filter((p) => p.jenis_pegawai === "BRANCH_MANAGER"),
     [pegawai],
   );
-
   const currentUnitPegawai = useMemo(
-    () =>
-      pegawai.filter(
-        (item) =>
-          item.unit_id === unitData?.id &&
-          item.jenis_pegawai !== "BRANCH_MANAGER",
-      ),
-    [pegawai, unitData],
+    () => pegawai.filter((p) => p.jenis_pegawai !== "BRANCH_MANAGER"),
+    [pegawai],
   );
-
   const pengawasList = useMemo(
-    () =>
-      currentUnitPegawai.filter((item) => item.jenis_pegawai === "PENGAWAS"),
+    () => currentUnitPegawai.filter((p) => p.jenis_pegawai === "PENGAWAS"),
     [currentUnitPegawai],
   );
-
   const mkaList = useMemo(
-    () => currentUnitPegawai.filter((item) => item.jenis_pegawai === "MKA"),
+    () => currentUnitPegawai.filter((p) => p.jenis_pegawai === "MKA"),
     [currentUnitPegawai],
   );
-
   const mksPegawaiList = useMemo(
-    () => currentUnitPegawai.filter((item) => item.jenis_pegawai === "MKS"),
+    () => currentUnitPegawai.filter((p) => p.jenis_pegawai === "MKS"),
     [currentUnitPegawai],
   );
-
-  const mksList = useMemo(() => {
-    return mksPegawaiList
-      .map((pegawaiItem) => {
-        const mksItem = mks.find((item) => item.pegawai_id === pegawaiItem.id);
-
-        return {
-          ...pegawaiItem,
-          mks_id: mksItem?.id || null,
-          kode_agen: mksItem?.kode_agen || "",
-          pengawas_id: mksItem?.pengawas_id || null,
-        };
-      })
-      .sort((a, b) => (a.nama || "").localeCompare(b.nama || ""));
-  }, [mksPegawaiList, mks]);
-
   const pegawaiById = useMemo(() => {
-    const map = new Map();
-
-    pegawai.forEach((item) => {
-      map.set(item.id, item);
+    const map = {};
+    pegawai.forEach((p) => {
+      map[p.id] = p;
     });
-
     return map;
   }, [pegawai]);
-
-  // ============================================================
-  // UNIT
-  // ============================================================
-
-  function openUnitModal() {
+  const mksList = useMemo(
+    () =>
+      mks
+        .map((item) => ({
+          ...item,
+          pegawai: pegawaiById[item.pegawai_id] || null,
+        }))
+        .filter((item) => item.pegawai),
+    [mks, pegawaiById],
+  );
+  function openUnitEdit() {
     if (!unitData) return;
-
     setUnitForm({
       nama_unit: unitData.nama_unit || "",
       kode_unit: unitData.kode_unit || "",
-      kode_legacy: unitData.kode_legacy || "",
       kode_kawasan: unitData.kode_kawasan || "",
+      kode_legacy: unitData.kode_legacy || "",
     });
-
     setShowUnitModal(true);
   }
-
-  async function handleSaveUnit() {
+  function openPegawaiEdit(item) {
+    setEditingPegawai(item);
+    setPegawaiForm({
+      nama: item.nama || "",
+      nip: item.nip || "",
+      jabatan: item.jabatan || "",
+      jenis_pegawai: item.jenis_pegawai || "PENGAWAS",
+      no_hp: item.no_hp || "",
+      email: item.email || "",
+      aktif: item.aktif !== false,
+    });
+    setShowPegawaiModal(true);
+  }
+  function openMksEdit(item) {
+    const p = item.pegawai;
+    if (!p) return;
+    setEditingMks(item);
+    setMksForm({
+      nama: p.nama || "",
+      nip: p.nip || "",
+      jabatan: p.jabatan || "MKS",
+      no_hp: p.no_hp || "",
+      email: p.email || "",
+      aktif: p.aktif !== false,
+    });
+    setShowMksModal(true);
+  }
+  function openMkaAdd() {
+    setEditingPegawai(null);
+    setMkaForm({
+      nama: "",
+      nip: "",
+      jabatan: "MKA",
+      no_hp: "",
+      email: "",
+      aktif: true,
+    });
+    setShowMkaModal(true);
+  }
+  function openMkaEdit(item) {
+    setEditingPegawai(item);
+    setMkaForm({
+      nama: item.nama || "",
+      nip: item.nip || "",
+      jabatan: item.jabatan || "MKA",
+      no_hp: item.no_hp || "",
+      email: item.email || "",
+      aktif: item.aktif !== false,
+    });
+    setShowMkaModal(true);
+  }
+  function openDetail(item) {
+    setDetailPegawai(item);
+    setShowDetailModal(true);
+  }
+  async function saveUnit() {
     if (!unitData?.id) return;
-
-    if (!unitForm.nama_unit.trim()) {
-      setError("Nama unit wajib diisi.");
-      return;
-    }
-
-    if (!unitForm.kode_unit.trim()) {
-      setError("Kode unit wajib diisi.");
-      return;
-    }
-
+    setSaving(true);
+    setError("");
+    setSuccess("");
     try {
-      setSaving(true);
-      setError("");
-
-      const { data, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("unit")
         .update({
           nama_unit: unitForm.nama_unit.trim(),
           kode_unit: unitForm.kode_unit.trim(),
+          kode_kawasan: unitForm.kode_kawasan.trim(),
           kode_legacy: unitForm.kode_legacy.trim() || null,
-          kode_kawasan: unitForm.kode_kawasan.trim() || null,
-          updated_at: new Date().toISOString(),
         })
-        .eq("id", unitData.id)
-        .select(
-          "id, nama_unit, kode_unit, kode_legacy, kode_kawasan, cabang_id",
-        )
-        .maybeSingle();
-
+        .eq("id", unitData.id);
       if (updateError) throw updateError;
-
-      if (!data) {
-        throw new Error(
-          "Data unit tidak berhasil diperbarui. Periksa izin/RLS.",
-        );
-      }
-
+      setSuccess("Data unit berhasil diperbarui.");
       setShowUnitModal(false);
-
       await loadData();
-
-      showSuccess("Data unit berhasil diperbarui.");
     } catch (err) {
-      console.error("handleSaveUnit error:", err);
+      console.error(err);
       setError(err?.message || "Gagal menyimpan data unit.");
     } finally {
       setSaving(false);
     }
   }
-
-  // ============================================================
-  // PEGAWAI UMUM
-  // ============================================================
-
-  function openPegawaiModal(item) {
-    setEditingPegawai(item);
-
-    setPegawaiForm({
-      nama: item?.nama || "",
-      nip: item?.nip || "",
-      jabatan: item?.jabatan || "",
-      aktif: item?.aktif !== false,
-    });
-
-    setShowPegawaiModal(true);
-  }
-
-  async function handleSavePegawai() {
+  async function savePegawai() {
     if (!editingPegawai?.id) return;
-
     if (!pegawaiForm.nama.trim()) {
       setError("Nama pegawai wajib diisi.");
       return;
     }
-
-    if (!pegawaiForm.jabatan.trim()) {
-      setError("Jabatan wajib diisi.");
-      return;
-    }
-
+    setSaving(true);
+    setError("");
+    setSuccess("");
     try {
-      setSaving(true);
-      setError("");
-
-      const { data, error: updateError } = await supabase
+      const { error: updateError } = await supabase
         .from("pegawai")
         .update({
           nama: pegawaiForm.nama.trim(),
           nip: pegawaiForm.nip.trim() || null,
-          jabatan: pegawaiForm.jabatan.trim(),
+          jabatan: pegawaiForm.jabatan.trim() || null,
+          jenis_pegawai: pegawaiForm.jenis_pegawai,
+          no_hp: pegawaiForm.no_hp.trim() || null,
+          email: pegawaiForm.email.trim() || null,
           aktif: pegawaiForm.aktif,
-          updated_at: new Date().toISOString(),
         })
-        .eq("id", editingPegawai.id)
-        .select(
-          "id, nama, nip, jabatan, jenis_pegawai, aktif, unit_id, cabang_id",
-        )
-        .maybeSingle();
-
+        .eq("id", editingPegawai.id);
       if (updateError) throw updateError;
-
-      if (!data) {
-        throw new Error(
-          "Data pegawai tidak berubah. Periksa izin/RLS tabel pegawai.",
-        );
-      }
-
+      setSuccess("Data pegawai berhasil diperbarui.");
       setShowPegawaiModal(false);
       setEditingPegawai(null);
-
       await loadData();
-
-      showSuccess(`Data ${pegawaiForm.nama.trim()} berhasil diperbarui.`);
     } catch (err) {
-      console.error("handleSavePegawai error:", err);
+      console.error(err);
       setError(err?.message || "Gagal menyimpan data pegawai.");
     } finally {
       setSaving(false);
     }
   }
-
-  // ============================================================
-  // TOGGLE AKTIF / NONAKTIF
-  // ============================================================
-
-  async function togglePegawaiAktif(item) {
-    if (!item?.id) return;
-
-    try {
-      setSaving(true);
-      setError("");
-
-      const newStatus = item.aktif === false;
-
-      const { data, error: updateError } = await supabase
-        .from("pegawai")
-        .update({
-          aktif: newStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", item.id)
-        .select("id, nama, aktif")
-        .maybeSingle();
-
-      if (updateError) {
-        throw updateError;
-      }
-
-      // Sangat penting:
-      // Jika RLS menolak update atau tidak ada row yang terkena,
-      // data akan null dan kita tidak menampilkan pesan sukses.
-      if (!data) {
-        throw new Error(
-          "Status tidak berubah. Data pegawai tidak ditemukan atau akses update ditolak oleh RLS.",
-        );
-      }
-
-      console.log("Status pegawai berhasil diubah:", data);
-
-      await loadData();
-
-      showSuccess(
-        newStatus
-          ? `${item.nama} berhasil diaktifkan.`
-          : `${item.nama} berhasil dinonaktifkan.`,
-      );
-    } catch (err) {
-      console.error("togglePegawaiAktif error:", err);
-
-      setError(err?.message || "Gagal mengubah status aktif/nonaktif pegawai.");
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  // ============================================================
-  // MKS
-  // ============================================================
-
-  function openMksModal(item) {
-    setEditingMks(item);
-
-    setMksForm({
-      nama: item?.nama || "",
-      nip: item?.nip || "",
-      jabatan: item?.jabatan || "",
-      kode_agen: item?.kode_agen || "",
-      pengawas_id: item?.pengawas_id || "",
-      aktif: item?.aktif !== false,
-    });
-
-    setShowMksModal(true);
-  }
-
-  async function handleSaveMks() {
-    if (!editingMks?.id) return;
-
+  async function saveMks() {
+    if (!editingMks?.pegawai?.id) return;
     if (!mksForm.nama.trim()) {
       setError("Nama MKS wajib diisi.");
       return;
     }
-
-    if (!mksForm.jabatan.trim()) {
-      setError("Jabatan MKS wajib diisi.");
-      return;
-    }
-
+    setSaving(true);
+    setError("");
+    setSuccess("");
     try {
-      setSaving(true);
-      setError("");
-
-      // ==========================================================
-      // UPDATE PEGAWAI
-      // ==========================================================
-
-      const { data: updatedPegawai, error: pegawaiUpdateError } = await supabase
+      const { error: pegawaiError } = await supabase
         .from("pegawai")
         .update({
           nama: mksForm.nama.trim(),
           nip: mksForm.nip.trim() || null,
-          jabatan: mksForm.jabatan.trim(),
+          jabatan: mksForm.jabatan.trim() || "MKS",
+          jenis_pegawai: "MKS",
+          no_hp: mksForm.no_hp.trim() || null,
+          email: mksForm.email.trim() || null,
           aktif: mksForm.aktif,
-          updated_at: new Date().toISOString(),
         })
-        .eq("id", editingMks.id)
-        .select(
-          "id, nama, nip, jabatan, jenis_pegawai, aktif, unit_id, cabang_id",
-        )
-        .maybeSingle();
-
-      if (pegawaiUpdateError) {
-        throw pegawaiUpdateError;
-      }
-
-      if (!updatedPegawai) {
-        throw new Error(
-          "Data pegawai MKS tidak berhasil diperbarui. Periksa izin/RLS.",
-        );
-      }
-
-      // ==========================================================
-      // CARI DATA MKS
-      // ==========================================================
-
-      const mksRecord = mks.find((item) => item.pegawai_id === editingMks.id);
-
-      // ==========================================================
-      // UPDATE MKS
-      // ==========================================================
-
-      if (mksRecord) {
-        const { data: updatedMks, error: mksUpdateError } = await supabase
-          .from("mks")
-          .update({
-            kode_agen: mksForm.kode_agen.trim() || null,
-            pengawas_id: mksForm.pengawas_id || null,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("pegawai_id", editingMks.id)
-          .select("id, pegawai_id, kode_agen, pengawas_id")
-          .maybeSingle();
-
-        if (mksUpdateError) {
-          throw mksUpdateError;
-        }
-
-        if (!updatedMks) {
-          throw new Error(
-            "Data MKS tidak ditemukan atau tidak dapat diperbarui.",
-          );
-        }
-      } else {
-        // ========================================================
-        // INSERT MKS
-        // ========================================================
-
-        const { data: insertedMks, error: mksInsertError } = await supabase
-          .from("mks")
-          .insert({
-            pegawai_id: editingMks.id,
-            kode_agen: mksForm.kode_agen.trim() || null,
-            pengawas_id: mksForm.pengawas_id || null,
-          })
-          .select("id, pegawai_id, kode_agen, pengawas_id")
-          .maybeSingle();
-
-        if (mksInsertError) {
-          throw mksInsertError;
-        }
-
-        if (!insertedMks) {
-          throw new Error("Data MKS gagal dibuat.");
-        }
-      }
-
+        .eq("id", editingMks.pegawai.id);
+      if (pegawaiError) throw pegawaiError;
+      const { error: mksError } = await supabase
+        .from("mks")
+        .update({
+          pegawai_id: editingMks.pegawai.id,
+        })
+        .eq("id", editingMks.id);
+      if (mksError) throw mksError;
+      setSuccess("Data MKS berhasil diperbarui.");
       setShowMksModal(false);
       setEditingMks(null);
-
       await loadData();
-
-      showSuccess(`Data MKS ${mksForm.nama.trim()} berhasil diperbarui.`);
     } catch (err) {
-      console.error("handleSaveMks error:", err);
-
+      console.error(err);
       setError(err?.message || "Gagal menyimpan data MKS.");
     } finally {
       setSaving(false);
     }
   }
-
-  // ============================================================
-  // MKA
-  // ============================================================
-
-  function openAddMkaModal() {
-    setEditingMka(null);
-
-    setMkaForm({
-      nama: "",
-      nip: "",
-      jabatan: "MKA",
-      aktif: true,
-    });
-
-    setShowMkaModal(true);
-  }
-
-  function openEditMkaModal(item) {
-    setEditingMka(item);
-
-    setMkaForm({
-      nama: item?.nama || "",
-      nip: item?.nip || "",
-      jabatan: item?.jabatan || "MKA",
-      aktif: item?.aktif !== false,
-    });
-
-    setShowMkaModal(true);
-  }
-
-  async function handleSaveMka() {
+  async function saveMka() {
     if (!unitData?.id) {
       setError("Unit aktif tidak ditemukan.");
       return;
     }
-
     if (!mkaForm.nama.trim()) {
       setError("Nama MKA wajib diisi.");
       return;
     }
-
-    if (!mkaForm.jabatan.trim()) {
-      setError("Jabatan wajib diisi.");
-      return;
-    }
-
+    setSaving(true);
+    setError("");
+    setSuccess("");
     try {
-      setSaving(true);
-      setError("");
-
-      if (editingMka?.id) {
-        // ========================================================
-        // UPDATE MKA
-        // ========================================================
-
-        const { data, error: updateError } = await supabase
+      if (editingPegawai?.id) {
+        const { error: updateError } = await supabase
           .from("pegawai")
           .update({
             nama: mkaForm.nama.trim(),
             nip: mkaForm.nip.trim() || null,
-            jabatan: mkaForm.jabatan.trim(),
-            aktif: mkaForm.aktif,
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", editingMka.id)
-          .eq("unit_id", unitData.id)
-          .eq("jenis_pegawai", "MKA")
-          .select("id, nama, nip, jabatan, jenis_pegawai, unit_id, aktif")
-          .maybeSingle();
-
-        if (updateError) throw updateError;
-
-        if (!data) {
-          throw new Error("Data MKA tidak berhasil diperbarui.");
-        }
-
-        showSuccess(`MKA ${mkaForm.nama.trim()} berhasil diperbarui.`);
-      } else {
-        // ========================================================
-        // INSERT MKA
-        // ========================================================
-
-        const { data, error: insertError } = await supabase
-          .from("pegawai")
-          .insert({
-            nama: mkaForm.nama.trim(),
-            nip: mkaForm.nip.trim() || null,
-            jabatan: mkaForm.jabatan.trim(),
+            jabatan: mkaForm.jabatan.trim() || "MKA",
             jenis_pegawai: "MKA",
-            cabang_id: unitData.cabang_id,
-            unit_id: unitData.id,
+            no_hp: mkaForm.no_hp.trim() || null,
+            email: mkaForm.email.trim() || null,
             aktif: mkaForm.aktif,
           })
-          .select("id, nama, nip, jabatan, jenis_pegawai, unit_id, aktif")
-          .maybeSingle();
-
+          .eq("id", editingPegawai.id);
+        if (updateError) throw updateError;
+        setSuccess("Data MKA berhasil diperbarui.");
+      } else {
+        const { error: insertError } = await supabase.from("pegawai").insert({
+          nama: mkaForm.nama.trim(),
+          nip: mkaForm.nip.trim() || null,
+          jabatan: mkaForm.jabatan.trim() || "MKA",
+          jenis_pegawai: "MKA",
+          no_hp: mkaForm.no_hp.trim() || null,
+          email: mkaForm.email.trim() || null,
+          cabang_id: unitData.cabang_id,
+          unit_id: unitData.id,
+          aktif: mkaForm.aktif,
+        });
         if (insertError) throw insertError;
-
-        if (!data) {
-          throw new Error("Data MKA gagal ditambahkan.");
-        }
-
-        showSuccess(`MKA ${mkaForm.nama.trim()} berhasil ditambahkan.`);
+        setSuccess("MKA berhasil ditambahkan.");
       }
-
       setShowMkaModal(false);
-      setEditingMka(null);
-
+      setEditingPegawai(null);
+      setMkaForm({
+        nama: "",
+        nip: "",
+        jabatan: "MKA",
+        no_hp: "",
+        email: "",
+        aktif: true,
+      });
       await loadData();
     } catch (err) {
-      console.error("handleSaveMka error:", err);
-
-      setError(err?.message || "Gagal menyimpan data MKA.");
+      console.error(err);
+      setError(err?.message || "Gagal menyimpan MKA.");
     } finally {
       setSaving(false);
     }
   }
-
-  async function handleDeleteMka(item) {
+  async function toggleAktif(item) {
     if (!item?.id) return;
-
-    const confirmed = window.confirm(
-      `Hapus MKA "${item.nama}" dari master pegawai?`,
-    );
-
-    if (!confirmed) return;
-
+    setSaving(true);
+    setError("");
+    setSuccess("");
     try {
-      setSaving(true);
-      setError("");
-
-      const { data, error: deleteError } = await supabase
+      const { error: updateError } = await supabase
+        .from("pegawai")
+        .update({ aktif: !item.aktif })
+        .eq("id", item.id);
+      if (updateError) throw updateError;
+      setSuccess(`Status ${item.nama} berhasil diubah.`);
+      await loadData();
+    } catch (err) {
+      console.error(err);
+      setError(err?.message || "Gagal mengubah status pegawai.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function deletePegawai(item) {
+    if (!item?.id) return;
+    const ok = window.confirm(`Hapus pegawai "${item.nama}"?`);
+    if (!ok) return;
+    setSaving(true);
+    setError("");
+    setSuccess("");
+    try {
+      if (item.jenis_pegawai === "MKS") {
+        const { error: mksError } = await supabase
+          .from("mks")
+          .delete()
+          .eq("pegawai_id", item.id);
+        if (mksError) throw mksError;
+      }
+      const { error: deleteError } = await supabase
         .from("pegawai")
         .delete()
-        .eq("id", item.id)
-        .eq("unit_id", unitData?.id)
-        .eq("jenis_pegawai", "MKA")
-        .select("id, nama")
-        .maybeSingle();
-
+        .eq("id", item.id);
       if (deleteError) throw deleteError;
-
-      if (!data) {
-        throw new Error("Data MKA tidak terhapus. Periksa izin/RLS.");
-      }
-
+      setSuccess(`Pegawai ${item.nama} berhasil dihapus.`);
+      setShowDetailModal(false);
       await loadData();
-
-      showSuccess(`MKA ${item.nama} berhasil dihapus.`);
     } catch (err) {
-      console.error("handleDeleteMka error:", err);
-
-      setError(err?.message || "Gagal menghapus MKA.");
+      console.error(err);
+      setError(err?.message || "Gagal menghapus pegawai.");
     } finally {
       setSaving(false);
     }
   }
-
-  // ============================================================
-  // UI
-  // ============================================================
-
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <Loading />
+      </DashboardLayout>
+    );
+  }
   return (
     <DashboardLayout>
-      <div className="space-y-4 p-3 sm:p-4 md:space-y-6 md:p-6">
-        {/* ======================================================
-            HEADER
-        ====================================================== */}
-
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <h1 className="text-lg font-bold text-gray-900 sm:text-xl">
-              Master Pegawai
-            </h1>
-
-            <p className="mt-0.5 text-xs text-gray-500 sm:text-sm">
-              Kelola data unit dan pegawai JOSJIS
+      <div className="space-y-5">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <h1 className="text-xl font-bold text-slate-900">Master Pegawai</h1>
+            <p className="mt-1 text-sm text-slate-500">
+              Kelola data pegawai berdasarkan unit aktif.
             </p>
           </div>
-
           <button
             type="button"
             onClick={loadData}
             disabled={loading || saving}
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 shadow-sm transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:h-10 sm:w-10"
-            title="Refresh"
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
           >
-            <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
+            <RefreshCw size={16} />
+            Refresh
           </button>
         </div>
-
-        {/* ======================================================
-            ALERT
-        ====================================================== */}
-
         {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
-            {error}
-          </div>
+          <Alert type="error" message={error} onClose={() => setError("")} />
         )}
-
         {success && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-700">
-            {success}
-          </div>
+          <Alert
+            type="success"
+            message={success}
+            onClose={() => setSuccess("")}
+          />
         )}
-
-        {/* ======================================================
-            UNIT
-        ====================================================== */}
-
-        <SectionCard
-          icon={<MapPin size={18} />}
-          title="Unit Aktif"
-          action={
-            <button
-              type="button"
-              onClick={openUnitModal}
-              disabled={!unitData || saving}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
-            >
-              <Pencil size={13} />
-              <span>Edit</span>
-            </button>
-          }
-        >
-          {unitData ? (
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <InfoBox label="Nama Unit" value={unitData.nama_unit} />
-
-              <InfoBox label="Kode Unit" value={unitData.kode_unit} />
-
-              <InfoBox label="Kode Legacy" value={unitData.kode_legacy} />
-
-              <InfoBox label="Kode Kawasan" value={unitData.kode_kawasan} />
-            </div>
-          ) : (
-            <div className="rounded-lg bg-gray-50 p-4 text-sm text-gray-500">
-              Belum ada unit aktif.
-            </div>
-          )}
-        </SectionCard>
-
-        {/* ======================================================
-            SUMMARY
-        ====================================================== */}
-
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <SummaryCard
-            icon={<UserCog size={18} />}
-            label="Branch Manager"
-            value={branchManagers.length}
+        {!unitData ? (
+          <EmptyState
+            title="Unit tidak ditemukan"
+            description="Pilih unit JKK1 atau JKK2 terlebih dahulu."
           />
-
-          <SummaryCard
-            icon={<ShieldCheck size={18} />}
-            label="Pengawas"
-            value={pengawasList.length}
-          />
-
-          <SummaryCard
-            icon={<BriefcaseBusiness size={18} />}
-            label="MKA"
-            value={mkaList.length}
-          />
-
-          <SummaryCard
-            icon={<KeyRound size={18} />}
-            label="MKS"
-            value={mksList.length}
-          />
-        </div>
-
-        {/* ======================================================
-            LOADING
-        ====================================================== */}
-
-        {loading ? (
-          <div className="rounded-xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">
-            <RefreshCw size={22} className="mx-auto mb-2 animate-spin" />
-            Memuat data pegawai...
-          </div>
         ) : (
           <>
-            {/* ==================================================
-                BRANCH MANAGER
-            ================================================== */}
-
             <SectionCard
-              icon={<UserCog size={18} />}
-              title="Branch Manager"
-              description="Data Branch Manager yang digunakan bersama unit."
-            >
-              {branchManagers.length === 0 ? (
-                <EmptyTable text="Belum ada data Branch Manager." />
-              ) : (
-                <ResponsiveTable
-                  headers={["Nama", "NIP", "Jabatan", "Status", "Aksi"]}
-                  desktopRows={branchManagers.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-gray-100 last:border-0"
-                    >
-                      <Td strong>{showValue(item.nama)}</Td>
-                      <Td>{showValue(item.nip)}</Td>
-                      <Td>{showValue(item.jabatan)}</Td>
-                      <Td>
-                        <StatusBadge aktif={item.aktif} />
-                      </Td>
-                      <Td>
-                        <div className="flex gap-1">
-                          <IconActionButton
-                            icon={<Pencil size={14} />}
-                            title="Edit"
-                            onClick={() => openPegawaiModal(item)}
-                          />
-
-                          <IconActionButton
-                            icon={
-                              item.aktif ? <X size={14} /> : <Power size={14} />
-                            }
-                            title={item.aktif ? "Nonaktifkan" : "Aktifkan"}
-                            onClick={() => togglePegawaiAktif(item)}
-                          />
-                        </div>
-                      </Td>
-                    </tr>
-                  ))}
-                  mobileCards={branchManagers.map((item) => (
-                    <CompactMobileCard
-                      key={item.id}
-                      title={item.nama}
-                      subtitle={item.jabatan}
-                      status={item.aktif}
-                      actions={
-                        <>
-                          <IconActionButton
-                            icon={<Pencil size={14} />}
-                            title="Edit"
-                            onClick={() => openPegawaiModal(item)}
-                          />
-
-                          <IconActionButton
-                            icon={
-                              item.aktif ? <X size={14} /> : <Power size={14} />
-                            }
-                            title={item.aktif ? "Nonaktifkan" : "Aktifkan"}
-                            onClick={() => togglePegawaiAktif(item)}
-                          />
-                        </>
-                      }
-                    >
-                      <CompactInfo label="NIP" value={item.nip} />
-
-                      <CompactInfo label="Jabatan" value={item.jabatan} />
-                    </CompactMobileCard>
-                  ))}
-                />
-              )}
-            </SectionCard>
-
-            {/* ==================================================
-                PENGAWAS
-            ================================================== */}
-
-            <SectionCard
-              icon={<ShieldCheck size={18} />}
-              title="Pengawas"
-              description={`Pengawas pada ${showValue(unitData?.nama_unit)}.`}
-            >
-              {pengawasList.length === 0 ? (
-                <EmptyTable text="Belum ada data Pengawas." />
-              ) : (
-                <ResponsiveTable
-                  headers={["Nama", "NIP", "Jabatan", "Status", "Aksi"]}
-                  desktopRows={pengawasList.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-gray-100 last:border-0"
-                    >
-                      <Td strong>{showValue(item.nama)}</Td>
-                      <Td>{showValue(item.nip)}</Td>
-                      <Td>{showValue(item.jabatan)}</Td>
-                      <Td>
-                        <StatusBadge aktif={item.aktif} />
-                      </Td>
-                      <Td>
-                        <div className="flex gap-1">
-                          <IconActionButton
-                            icon={<Pencil size={14} />}
-                            title="Edit"
-                            onClick={() => openPegawaiModal(item)}
-                          />
-
-                          <IconActionButton
-                            icon={
-                              item.aktif ? <X size={14} /> : <Power size={14} />
-                            }
-                            title={item.aktif ? "Nonaktifkan" : "Aktifkan"}
-                            onClick={() => togglePegawaiAktif(item)}
-                          />
-                        </div>
-                      </Td>
-                    </tr>
-                  ))}
-                  mobileCards={pengawasList.map((item) => (
-                    <CompactMobileCard
-                      key={item.id}
-                      title={item.nama}
-                      subtitle={item.jabatan}
-                      status={item.aktif}
-                      actions={
-                        <>
-                          <IconActionButton
-                            icon={<Pencil size={14} />}
-                            title="Edit"
-                            onClick={() => openPegawaiModal(item)}
-                          />
-
-                          <IconActionButton
-                            icon={
-                              item.aktif ? <X size={14} /> : <Power size={14} />
-                            }
-                            title={item.aktif ? "Nonaktifkan" : "Aktifkan"}
-                            onClick={() => togglePegawaiAktif(item)}
-                          />
-                        </>
-                      }
-                    >
-                      <CompactInfo label="NIP" value={item.nip} />
-
-                      <CompactInfo label="Jabatan" value={item.jabatan} />
-                    </CompactMobileCard>
-                  ))}
-                />
-              )}
-            </SectionCard>
-
-            {/* ==================================================
-                MKA
-            ================================================== */}
-
-            <SectionCard
-              icon={<BriefcaseBusiness size={18} />}
-              title="MKA"
-              description="Master pegawai MKA pada unit aktif."
+              title="Informasi Unit"
+              icon={<MapPin size={18} />}
               action={
                 <button
                   type="button"
-                  onClick={openAddMkaModal}
-                  disabled={saving}
-                  className="flex items-center gap-1.5 rounded-lg bg-gray-900 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-gray-800 disabled:opacity-50"
+                  onClick={openUnitEdit}
+                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
                 >
-                  <Plus size={13} />
-                  <span>Tambah</span>
+                  <Pencil size={15} />
+                  Edit Unit
                 </button>
               }
             >
-              {mkaList.length === 0 ? (
-                <EmptyTable text="Belum ada data MKA." />
-              ) : (
-                <ResponsiveTable
-                  headers={["Nama", "NIP", "Jabatan", "Status", "Aksi"]}
-                  desktopRows={mkaList.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-gray-100 last:border-0"
-                    >
-                      <Td strong>{showValue(item.nama)}</Td>
-                      <Td>{showValue(item.nip)}</Td>
-                      <Td>{showValue(item.jabatan)}</Td>
-                      <Td>
-                        <StatusBadge aktif={item.aktif} />
-                      </Td>
-                      <Td>
-                        <div className="flex gap-1">
-                          <IconActionButton
-                            icon={<Pencil size={14} />}
-                            title="Edit"
-                            onClick={() => openEditMkaModal(item)}
-                          />
-
-                          <IconActionButton
-                            icon={
-                              item.aktif ? <X size={14} /> : <Power size={14} />
-                            }
-                            title={item.aktif ? "Nonaktifkan" : "Aktifkan"}
-                            onClick={() => togglePegawaiAktif(item)}
-                          />
-
-                          <IconActionButton
-                            icon={<Trash2 size={14} />}
-                            title="Hapus"
-                            danger
-                            onClick={() => handleDeleteMka(item)}
-                          />
-                        </div>
-                      </Td>
-                    </tr>
-                  ))}
-                  mobileCards={mkaList.map((item) => (
-                    <CompactMobileCard
-                      key={item.id}
-                      title={item.nama}
-                      subtitle={item.jabatan}
-                      status={item.aktif}
-                      actions={
-                        <>
-                          <IconActionButton
-                            icon={<Pencil size={14} />}
-                            title="Edit"
-                            onClick={() => openEditMkaModal(item)}
-                          />
-
-                          <IconActionButton
-                            icon={
-                              item.aktif ? <X size={14} /> : <Power size={14} />
-                            }
-                            title={item.aktif ? "Nonaktifkan" : "Aktifkan"}
-                            onClick={() => togglePegawaiAktif(item)}
-                          />
-
-                          <IconActionButton
-                            icon={<Trash2 size={14} />}
-                            title="Hapus"
-                            danger
-                            onClick={() => handleDeleteMka(item)}
-                          />
-                        </>
-                      }
-                    >
-                      <CompactInfo label="NIP" value={item.nip} />
-
-                      <CompactInfo label="Jabatan" value={item.jabatan} />
-                    </CompactMobileCard>
-                  ))}
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <InfoBox
+                  label="Kode Kawasan"
+                  value={unitData.kode_kawasan}
+                  highlight
                 />
-              )}
+                <InfoBox label="Nama Unit" value={unitData.nama_unit} />
+                <InfoBox label="Kode Unit" value={unitData.kode_unit} />
+                <InfoBox label="Kode Legacy" value={unitData.kode_legacy} />
+              </div>
             </SectionCard>
-
-            {/* ==================================================
-                MKS
-            ================================================== */}
-
-            <SectionCard
-              icon={<KeyRound size={18} />}
-              title="MKS"
-              description="Master MKS beserta kode agen dan Pengawas."
-            >
-              {mksList.length === 0 ? (
-                <EmptyTable text="Belum ada data MKS." />
-              ) : (
-                <ResponsiveTable
-                  headers={[
-                    "Nama",
-                    "NIP",
-                    "Jabatan",
-                    "Kode Agen",
-                    "Pengawas",
-                    "Status",
-                    "Aksi",
-                  ]}
-                  desktopRows={mksList.map((item) => {
-                    const pengawas = item.pengawas_id
-                      ? pegawaiById.get(item.pengawas_id)
-                      : null;
-
-                    return (
-                      <tr
-                        key={item.id}
-                        className="border-b border-gray-100 last:border-0"
-                      >
-                        <Td strong>{showValue(item.nama)}</Td>
-
-                        <Td>{showValue(item.nip)}</Td>
-
-                        <Td>{showValue(item.jabatan)}</Td>
-
-                        <Td>
-                          <span className="font-mono text-xs font-semibold text-gray-800">
-                            {showValue(item.kode_agen)}
-                          </span>
-                        </Td>
-
-                        <Td>{showValue(pengawas?.nama)}</Td>
-
-                        <Td>
-                          <StatusBadge aktif={item.aktif} />
-                        </Td>
-
-                        <Td>
-                          <div className="flex gap-1">
-                            {/* EDIT MKS */}
-                            <IconActionButton
-                              icon={<Pencil size={14} />}
-                              title="Edit MKS"
-                              onClick={() => openMksModal(item)}
-                            />
-
-                            {/* TOGGLE MKS */}
-                            <IconActionButton
-                              icon={
-                                item.aktif ? (
-                                  <X size={14} />
-                                ) : (
-                                  <Power size={14} />
-                                )
-                              }
-                              title={
-                                item.aktif ? "Nonaktifkan MKS" : "Aktifkan MKS"
-                              }
-                              onClick={() => togglePegawaiAktif(item)}
-                            />
-                          </div>
-                        </Td>
-                      </tr>
-                    );
-                  })}
-                  mobileCards={mksList.map((item) => {
-                    const pengawas = item.pengawas_id
-                      ? pegawaiById.get(item.pengawas_id)
-                      : null;
-
-                    return (
-                      <CompactMobileCard
-                        key={item.id}
-                        title={item.nama}
-                        subtitle={`Kode Agen: ${item.kode_agen || "-"}`}
-                        status={item.aktif}
-                        actions={
-                          <>
-                            {/* EDIT */}
-                            <IconActionButton
-                              icon={<Pencil size={14} />}
-                              title="Edit MKS"
-                              onClick={() => openMksModal(item)}
-                            />
-
-                            {/* TOGGLE */}
-                            <IconActionButton
-                              icon={
-                                item.aktif ? (
-                                  <X size={14} />
-                                ) : (
-                                  <Power size={14} />
-                                )
-                              }
-                              title={
-                                item.aktif ? "Nonaktifkan MKS" : "Aktifkan MKS"
-                              }
-                              onClick={() => togglePegawaiAktif(item)}
-                            />
-                          </>
-                        }
-                      >
-                        <CompactInfo label="NIP" value={item.nip} />
-
-                        <CompactInfo label="Jabatan" value={item.jabatan} />
-
-                        <CompactInfo label="Pengawas" value={pengawas?.nama} />
-
-                        <CompactInfo label="Kode Agen" value={item.kode_agen} />
-                      </CompactMobileCard>
-                    );
-                  })}
-                />
-              )}
-            </SectionCard>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <SummaryCard
+                icon={<ShieldCheck size={19} />}
+                label="Branch Manager"
+                value={branchManagers.length}
+              />
+              <SummaryCard
+                icon={<UserCog size={19} />}
+                label="Pengawas"
+                value={pengawasList.length}
+              />
+              <SummaryCard
+                icon={<BriefcaseBusiness size={19} />}
+                label="MKA"
+                value={mkaList.length}
+              />
+              <SummaryCard
+                icon={<KeyRound size={19} />}
+                label="MKS"
+                value={mksPegawaiList.length}
+              />
+            </div>
+            <EmployeeSection
+              title="Branch Manager"
+              icon={<ShieldCheck size={18} />}
+              data={branchManagers}
+              onDetail={openDetail}
+              onEdit={openPegawaiEdit}
+              onDelete={deletePegawai}
+              onToggle={toggleAktif}
+              showUnit={false}
+            />
+            <EmployeeSection
+              title="Pengawas"
+              icon={<UserCog size={18} />}
+              data={pengawasList}
+              onDetail={openDetail}
+              onEdit={openPegawaiEdit}
+              onDelete={deletePegawai}
+              onToggle={toggleAktif}
+              showUnit={false}
+            />
+            <EmployeeSection
+              title="MKA"
+              icon={<BriefcaseBusiness size={18} />}
+              data={mkaList}
+              onAdd={openMkaAdd}
+              onDetail={openDetail}
+              onEdit={openMkaEdit}
+              onDelete={deletePegawai}
+              onToggle={toggleAktif}
+              showUnit={false}
+            />
+            <MksSection
+              data={mksList}
+              onDetail={openDetail}
+              onEdit={openMksEdit}
+              onDelete={deletePegawai}
+              onToggle={toggleAktif}
+            />
           </>
         )}
-
-        {/* ======================================================
-            MODAL UNIT
-        ====================================================== */}
-
-        <Modal
-          open={showUnitModal}
-          title="Edit Unit"
-          onClose={() => setShowUnitModal(false)}
-        >
-          <div className="space-y-4">
+      </div>
+      {showUnitModal && (
+        <Modal title="Edit Unit" onClose={() => setShowUnitModal(false)}>
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField
               label="Nama Unit"
               value={unitForm.nama_unit}
-              onChange={(value) =>
-                setUnitForm((prev) => ({
-                  ...prev,
-                  nama_unit: value,
-                }))
-              }
-              required
+              onChange={(v) => setUnitForm({ ...unitForm, nama_unit: v })}
             />
-
             <FormField
               label="Kode Unit"
               value={unitForm.kode_unit}
-              onChange={(value) =>
-                setUnitForm((prev) => ({
-                  ...prev,
-                  kode_unit: value,
-                }))
-              }
-              required
+              onChange={(v) => setUnitForm({ ...unitForm, kode_unit: v })}
             />
-
-            <FormField
-              label="Kode Legacy"
-              value={unitForm.kode_legacy}
-              onChange={(value) =>
-                setUnitForm((prev) => ({
-                  ...prev,
-                  kode_legacy: value,
-                }))
-              }
-            />
-
             <FormField
               label="Kode Kawasan"
               value={unitForm.kode_kawasan}
-              onChange={(value) =>
-                setUnitForm((prev) => ({
-                  ...prev,
-                  kode_kawasan: value,
-                }))
-              }
+              onChange={(v) => setUnitForm({ ...unitForm, kode_kawasan: v })}
             />
-
-            <ModalActions
-              onCancel={() => setShowUnitModal(false)}
-              onSave={handleSaveUnit}
-              saving={saving}
+            <FormField
+              label="Kode Legacy"
+              value={unitForm.kode_legacy}
+              onChange={(v) => setUnitForm({ ...unitForm, kode_legacy: v })}
             />
           </div>
+          <ModalActions
+            saving={saving}
+            onCancel={() => setShowUnitModal(false)}
+            onSave={saveUnit}
+          />
         </Modal>
-
-        {/* ======================================================
-            MODAL PEGAWAI
-        ====================================================== */}
-
-        <Modal
-          open={showPegawaiModal}
-          title="Edit Pegawai"
-          onClose={() => setShowPegawaiModal(false)}
-        >
-          <div className="space-y-4">
-            <FormField
-              label="Nama"
-              value={pegawaiForm.nama}
-              onChange={(value) =>
-                setPegawaiForm((prev) => ({
-                  ...prev,
-                  nama: value,
-                }))
-              }
-              required
-            />
-
-            <FormField
-              label="NIP"
-              value={pegawaiForm.nip}
-              onChange={(value) =>
-                setPegawaiForm((prev) => ({
-                  ...prev,
-                  nip: value,
-                }))
-              }
-            />
-
-            <FormField
-              label="Jabatan"
-              value={pegawaiForm.jabatan}
-              onChange={(value) =>
-                setPegawaiForm((prev) => ({
-                  ...prev,
-                  jabatan: value,
-                }))
-              }
-              required
-            />
-
-            <ToggleField
-              label="Status Pegawai"
-              value={pegawaiForm.aktif}
-              onChange={(value) =>
-                setPegawaiForm((prev) => ({
-                  ...prev,
-                  aktif: value,
-                }))
-              }
-            />
-
-            <ModalActions
-              onCancel={() => setShowPegawaiModal(false)}
-              onSave={handleSavePegawai}
-              saving={saving}
-            />
-          </div>
+      )}
+      {showPegawaiModal && (
+        <Modal title="Edit Pegawai" onClose={() => setShowPegawaiModal(false)}>
+          <PegawaiForm form={pegawaiForm} setForm={setPegawaiForm} />
+          <ModalActions
+            saving={saving}
+            onCancel={() => setShowPegawaiModal(false)}
+            onSave={savePegawai}
+          />
         </Modal>
-
-        {/* ======================================================
-            MODAL MKS
-        ====================================================== */}
-
-        <Modal
-          open={showMksModal}
-          title="Edit MKS"
-          onClose={() => setShowMksModal(false)}
-        >
-          <div className="space-y-4">
-            <FormField
-              label="Nama"
-              value={mksForm.nama}
-              onChange={(value) =>
-                setMksForm((prev) => ({
-                  ...prev,
-                  nama: value,
-                }))
-              }
-              required
-            />
-
-            <FormField
-              label="NIP"
-              value={mksForm.nip}
-              onChange={(value) =>
-                setMksForm((prev) => ({
-                  ...prev,
-                  nip: value,
-                }))
-              }
-            />
-
-            <FormField
-              label="Jabatan"
-              value={mksForm.jabatan}
-              onChange={(value) =>
-                setMksForm((prev) => ({
-                  ...prev,
-                  jabatan: value,
-                }))
-              }
-              required
-            />
-
-            <FormField
-              label="Kode Agen"
-              value={mksForm.kode_agen}
-              onChange={(value) =>
-                setMksForm((prev) => ({
-                  ...prev,
-                  kode_agen: value,
-                }))
-              }
-            />
-
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-gray-700">
-                Pengawas
-              </label>
-
-              <select
-                value={mksForm.pengawas_id}
-                onChange={(event) =>
-                  setMksForm((prev) => ({
-                    ...prev,
-                    pengawas_id: event.target.value,
-                  }))
-                }
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
-              >
-                <option value="">- Pilih Pengawas -</option>
-
-                {pengawasList.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.nama}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <ToggleField
-              label="Status MKS"
-              value={mksForm.aktif}
-              onChange={(value) =>
-                setMksForm((prev) => ({
-                  ...prev,
-                  aktif: value,
-                }))
-              }
-            />
-
-            <ModalActions
-              onCancel={() => setShowMksModal(false)}
-              onSave={handleSaveMks}
-              saving={saving}
-            />
-          </div>
+      )}
+      {showMksModal && (
+        <Modal title="Edit MKS" onClose={() => setShowMksModal(false)}>
+          <PegawaiContactForm form={mksForm} setForm={setMksForm} />
+          <ModalActions
+            saving={saving}
+            onCancel={() => setShowMksModal(false)}
+            onSave={saveMks}
+          />
         </Modal>
-
-        {/* ======================================================
-            MODAL MKA
-        ====================================================== */}
-
+      )}
+      {showMkaModal && (
         <Modal
-          open={showMkaModal}
-          title={editingMka ? "Edit MKA" : "Tambah MKA"}
+          title={editingPegawai ? "Edit MKA" : "Tambah MKA"}
           onClose={() => setShowMkaModal(false)}
         >
+          <PegawaiContactForm form={mkaForm} setForm={setMkaForm} />
+          <ModalActions
+            saving={saving}
+            onCancel={() => setShowMkaModal(false)}
+            onSave={saveMka}
+          />
+        </Modal>
+      )}
+      {showDetailModal && detailPegawai && (
+        <Modal title="Detail Pegawai" onClose={() => setShowDetailModal(false)}>
           <div className="space-y-4">
-            <FormField
-              label="Nama"
-              value={mkaForm.nama}
-              onChange={(value) =>
-                setMkaForm((prev) => ({
-                  ...prev,
-                  nama: value,
-                }))
-              }
-              required
-            />
-
-            <FormField
-              label="NIP"
-              value={mkaForm.nip}
-              onChange={(value) =>
-                setMkaForm((prev) => ({
-                  ...prev,
-                  nip: value,
-                }))
-              }
-            />
-
-            <FormField
-              label="Jabatan"
-              value={mkaForm.jabatan}
-              onChange={(value) =>
-                setMkaForm((prev) => ({
-                  ...prev,
-                  jabatan: value,
-                }))
-              }
-              required
-            />
-
-            <ToggleField
-              label="Status MKA"
-              value={mkaForm.aktif}
-              onChange={(value) =>
-                setMkaForm((prev) => ({
-                  ...prev,
-                  aktif: value,
-                }))
-              }
-            />
-
-            <ModalActions
-              onCancel={() => setShowMkaModal(false)}
-              onSave={handleSaveMka}
-              saving={saving}
-            />
+            <div className="rounded-xl bg-slate-50 p-4">
+              <div className="flex flex-col gap-1">
+                <div className="text-lg font-bold text-slate-900">
+                  {showValue(detailPegawai.nama)}
+                </div>
+                <div className="text-sm text-slate-500">
+                  {formatJenis(detailPegawai.jenis_pegawai)}
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <DetailItem label="Nama" value={detailPegawai.nama} />
+              <DetailItem label="NIP" value={detailPegawai.nip} />
+              <DetailItem label="Jabatan" value={detailPegawai.jabatan} />
+              <DetailItem
+                label="Jenis Pegawai"
+                value={formatJenis(detailPegawai.jenis_pegawai)}
+              />
+              <DetailItem
+                label="Nomor HP / WhatsApp"
+                value={detailPegawai.no_hp}
+              />
+              <DetailItem label="Email" value={detailPegawai.email} />
+              <DetailItem
+                label="Status"
+                value={detailPegawai.aktif ? "Aktif" : "Nonaktif"}
+              />
+              <DetailItem label="Unit ID" value={detailPegawai.unit_id} />
+            </div>
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-between">
+              <button
+                type="button"
+                onClick={() => deletePegawai(detailPegawai)}
+                disabled={saving}
+                className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
+              >
+                <Trash2 size={16} />
+                Hapus
+              </button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => toggleAktif(detailPegawai)}
+                  disabled={saving}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  <Power size={16} />
+                  {detailPegawai.aktif ? "Nonaktifkan" : "Aktifkan"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    if (detailPegawai.jenis_pegawai === "MKA")
+                      openMkaEdit(detailPegawai);
+                    else if (detailPegawai.jenis_pegawai === "MKS") {
+                      const found = mksList.find(
+                        (x) => x.pegawai_id === detailPegawai.id,
+                      );
+                      if (found) openMksEdit(found);
+                      else openPegawaiEdit(detailPegawai);
+                    } else openPegawaiEdit(detailPegawai);
+                  }}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+                >
+                  <Pencil size={16} />
+                  Edit
+                </button>
+              </div>
+            </div>
           </div>
         </Modal>
-      </div>
+      )}
     </DashboardLayout>
   );
 }
-
-/* ================================================================
-   COMPONENTS
-================================================================ */
-
-function ResponsiveTable({ headers, desktopRows, mobileCards }) {
+function EmployeeSection({
+  title,
+  icon,
+  data,
+  onAdd,
+  onDetail,
+  onEdit,
+  onDelete,
+  onToggle,
+  showUnit,
+}) {
+  return (
+    <SectionCard
+      title={title}
+      icon={icon}
+      action={
+        onAdd ? (
+          <button
+            type="button"
+            onClick={onAdd}
+            className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white hover:bg-slate-800"
+          >
+            <Plus size={16} />
+            Tambah
+          </button>
+        ) : null
+      }
+    >
+      <ResponsiveTable
+        data={data}
+        showUnit={showUnit}
+        onDetail={onDetail}
+        onEdit={onEdit}
+        onDelete={onDelete}
+        onToggle={onToggle}
+      />
+    </SectionCard>
+  );
+}
+function MksSection({ data, onDetail, onEdit, onDelete, onToggle }) {
+  const rows = data.map((item) => item.pegawai).filter(Boolean);
+  return (
+    <SectionCard title="MKS" icon={<KeyRound size={18} />}>
+      <ResponsiveTable
+        data={rows}
+        onDetail={onDetail}
+        onEdit={(item) => {
+          const found = data.find((x) => x.pegawai_id === item.id);
+          if (found) onEdit(found);
+        }}
+        onDelete={onDelete}
+        onToggle={onToggle}
+      />
+    </SectionCard>
+  );
+}
+function ResponsiveTable({ data, onDetail, onEdit, onDelete, onToggle }) {
+  if (!data.length) {
+    return (
+      <EmptyState
+        title="Belum ada data"
+        description="Belum ada pegawai pada bagian ini."
+        compact
+      />
+    );
+  }
   return (
     <>
-      <div className="hidden md:block">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200 bg-gray-50 text-left">
-                {headers.map((header) => (
-                  <th
-                    key={header}
-                    className="whitespace-nowrap px-3 py-2.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500"
-                  >
-                    {header}
-                  </th>
-                ))}
+      <div className="hidden overflow-x-auto md:block">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <th className="px-4 py-3">Nama</th>
+              <th className="px-4 py-3">NIP</th>
+              <th className="px-4 py-3">Jabatan</th>
+              <th className="px-4 py-3">No. HP</th>
+              <th className="px-4 py-3">Email</th>
+              <th className="px-4 py-3">Status</th>
+              <th className="px-4 py-3 text-right">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((item) => (
+              <tr
+                key={item.id}
+                onClick={() => onDetail(item)}
+                className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50"
+              >
+                <Td>{showValue(item.nama)}</Td>
+                <Td>{showValue(item.nip)}</Td>
+                <Td>{showValue(item.jabatan)}</Td>
+                <Td>{showValue(item.no_hp)}</Td>
+                <Td>{showValue(item.email)}</Td>
+                <Td>
+                  <StatusBadge aktif={item.aktif} />
+                </Td>
+                <Td align="right">
+                  <ActionButtons
+                    item={item}
+                    onEdit={onEdit}
+                    onDelete={onDelete}
+                    onToggle={onToggle}
+                  />
+                </Td>
               </tr>
-            </thead>
-
-            <tbody>{desktopRows}</tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
-
-      <div className="divide-y divide-gray-100 md:hidden">{mobileCards}</div>
+      <div className="grid gap-3 md:hidden">
+        {data.map((item) => (
+          <CompactMobileCard
+            key={item.id}
+            item={item}
+            onDetail={onDetail}
+            onEdit={onEdit}
+            onDelete={onDelete}
+            onToggle={onToggle}
+          />
+        ))}
+      </div>
     </>
   );
 }
-
-function CompactMobileCard({ title, subtitle, status, actions, children }) {
+function CompactMobileCard({ item, onDetail, onEdit, onDelete, onToggle }) {
   return (
-    <div className="space-y-2.5 px-3 py-3">
-      <div className="flex items-start justify-between gap-2">
+    <div
+      onClick={() => onDetail(item)}
+      className="cursor-pointer rounded-xl border border-slate-200 bg-white p-4 hover:border-slate-300"
+    >
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="truncate text-sm font-semibold text-gray-900">
-            {showValue(title)}
+          <div className="truncate font-bold text-slate-900">
+            {showValue(item.nama)}
           </div>
-
-          <div className="mt-0.5 truncate text-xs text-gray-500">
-            {showValue(subtitle)}
+          <div className="mt-1 text-sm text-slate-500">
+            {showValue(item.jabatan)}
           </div>
         </div>
-
-        <StatusBadge aktif={status} />
+        <StatusBadge aktif={item.aktif} />
       </div>
-
-      <div className="grid grid-cols-2 gap-x-3 gap-y-2">{children}</div>
-
-      <div className="flex justify-end gap-1 pt-0.5">{actions}</div>
+      <div className="mt-3 grid grid-cols-1 gap-2 text-sm">
+        <div>
+          <span className="text-slate-400">No. HP: </span>
+          <span className="font-medium text-slate-700">
+            {showValue(item.no_hp)}
+          </span>
+        </div>
+        <div className="truncate">
+          <span className="text-slate-400">Email: </span>
+          <span className="font-medium text-slate-700">
+            {showValue(item.email)}
+          </span>
+        </div>
+      </div>
+      <div
+        className="mt-3 border-t border-slate-100 pt-3"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <ActionButtons
+          item={item}
+          onEdit={onEdit}
+          onDelete={onDelete}
+          onToggle={onToggle}
+        />
+      </div>
     </div>
   );
 }
-
-function CompactInfo({ label, value }) {
+function ActionButtons({ item, onEdit, onDelete, onToggle }) {
   return (
-    <div className="min-w-0">
-      <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
-        {label}
-      </div>
-
-      <div className="truncate text-xs text-gray-700">{showValue(value)}</div>
+    <div className="flex items-center justify-end gap-1">
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onToggle(item);
+        }}
+        className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+        title={item.aktif ? "Nonaktifkan" : "Aktifkan"}
+      >
+        <Power size={16} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit(item);
+        }}
+        className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+        title="Edit"
+      >
+        <Pencil size={16} />
+      </button>
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDelete(item);
+        }}
+        className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+        title="Hapus"
+      >
+        <Trash2 size={16} />
+      </button>
     </div>
   );
 }
-
-function InfoBox({ label, value }) {
+function PegawaiForm({ form, setForm }) {
   return (
-    <div className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2.5">
-      <div className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">
+    <div className="grid gap-4 md:grid-cols-2">
+      <FormField
+        label="Nama"
+        value={form.nama}
+        onChange={(v) => setForm({ ...form, nama: v })}
+        required
+      />
+      <FormField
+        label="NIP"
+        value={form.nip}
+        onChange={(v) => setForm({ ...form, nip: v })}
+      />
+      <FormField
+        label="Jabatan"
+        value={form.jabatan}
+        onChange={(v) => setForm({ ...form, jabatan: v })}
+      />
+      <FormField
+        label="Nomor HP / WhatsApp"
+        value={form.no_hp}
+        onChange={(v) => setForm({ ...form, no_hp: v })}
+        type="tel"
+      />
+      <FormField
+        label="Email"
+        value={form.email}
+        onChange={(v) => setForm({ ...form, email: v })}
+        type="email"
+      />
+      <ToggleField
+        label="Aktif"
+        checked={form.aktif}
+        onChange={(v) => setForm({ ...form, aktif: v })}
+      />
+    </div>
+  );
+}
+function PegawaiContactForm({ form, setForm }) {
+  return (
+    <div className="grid gap-4 md:grid-cols-2">
+      <FormField
+        label="Nama"
+        value={form.nama}
+        onChange={(v) => setForm({ ...form, nama: v })}
+        required
+      />
+      <FormField
+        label="NIP"
+        value={form.nip}
+        onChange={(v) => setForm({ ...form, nip: v })}
+      />
+      <FormField
+        label="Jabatan"
+        value={form.jabatan}
+        onChange={(v) => setForm({ ...form, jabatan: v })}
+      />
+      <FormField
+        label="Nomor HP / WhatsApp"
+        value={form.no_hp}
+        onChange={(v) => setForm({ ...form, no_hp: v })}
+        type="tel"
+      />
+      <FormField
+        label="Email"
+        value={form.email}
+        onChange={(v) => setForm({ ...form, email: v })}
+        type="email"
+      />
+      <ToggleField
+        label="Aktif"
+        checked={form.aktif}
+        onChange={(v) => setForm({ ...form, aktif: v })}
+      />
+    </div>
+  );
+}
+function DetailItem({ label, value }) {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white p-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-400">
         {label}
       </div>
-
-      <div className="mt-0.5 truncate text-xs font-medium text-gray-800 sm:text-sm">
+      <div className="mt-1 break-words text-sm font-medium text-slate-800">
         {showValue(value)}
       </div>
     </div>
   );
 }
-
-function SummaryCard({ icon, label, value }) {
+function InfoBox({ label, value, highlight }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 shadow-sm sm:p-4">
-      <div className="flex items-center gap-2 text-gray-500">
-        {icon}
-
-        <span className="truncate text-[10px] font-medium uppercase tracking-wide sm:text-xs">
-          {label}
-        </span>
+    <div
+      className={`rounded-xl border p-4 ${highlight ? "border-slate-300 bg-slate-900 text-white" : "border-slate-200 bg-white"}`}
+    >
+      <div
+        className={`text-xs font-semibold uppercase tracking-wide ${highlight ? "text-slate-300" : "text-slate-400"}`}
+      >
+        {label}
       </div>
-
-      <div className="mt-1 text-xl font-bold text-gray-900 sm:text-2xl">
-        {value}
+      <div
+        className={`mt-1 break-words text-sm font-bold ${highlight ? "text-white" : "text-slate-900"}`}
+      >
+        {showValue(value)}
       </div>
     </div>
   );
 }
-
-function SectionCard({ icon, title, description, action, children }) {
+function SummaryCard({ icon, label, value }) {
   return (
-    <section className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-      <div className="flex items-start justify-between gap-3 border-b border-gray-100 px-3 py-3 sm:px-4 sm:py-3.5">
-        <div className="flex min-w-0 items-start gap-2.5">
-          <div className="mt-0.5 shrink-0 text-gray-600">{icon}</div>
-
-          <div className="min-w-0">
-            <h2 className="text-sm font-semibold text-gray-900 sm:text-base">
-              {title}
-            </h2>
-
-            {description && (
-              <p className="mt-0.5 text-[11px] leading-relaxed text-gray-500 sm:text-xs">
-                {description}
-              </p>
-            )}
-          </div>
+    <div className="rounded-xl border border-slate-200 bg-white p-4">
+      <div className="flex items-center gap-2 text-slate-500">
+        {icon}
+        <span className="text-sm font-medium">{label}</span>
+      </div>
+      <div className="mt-2 text-2xl font-bold text-slate-900">{value}</div>
+    </div>
+  );
+}
+function SectionCard({ title, icon, action, children }) {
+  return (
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-200 px-4 py-3">
+        <div className="flex items-center gap-2 font-bold text-slate-900">
+          {icon}
+          {title}
         </div>
-
         {action}
       </div>
-
-      {children}
-    </section>
+      <div>{children}</div>
+    </div>
   );
 }
-
-function EmptyTable({ text }) {
-  return (
-    <div className="px-4 py-8 text-center text-sm text-gray-400">{text}</div>
-  );
-}
-
-function Td({ children, strong = false }) {
+function Td({ children, align }) {
   return (
     <td
-      className={`whitespace-nowrap px-3 py-2.5 ${
-        strong ? "font-medium text-gray-900" : "text-gray-600"
-      }`}
+      className={`px-4 py-3 text-slate-700 ${align === "right" ? "text-right" : ""}`}
     >
       {children}
     </td>
   );
 }
-
 function StatusBadge({ aktif }) {
-  return aktif ? (
-    <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-      Aktif
-    </span>
-  ) : (
-    <span className="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold text-gray-500">
-      Nonaktif
-    </span>
-  );
-}
-
-function IconActionButton({ icon, title, onClick, danger = false }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      className={`flex h-8 w-8 items-center justify-center rounded-lg border transition ${
-        danger
-          ? "border-red-100 bg-white text-red-500 hover:bg-red-50"
-          : "border-gray-200 bg-white text-gray-600 hover:bg-gray-50"
-      }`}
+    <span
+      className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${aktif ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}
     >
-      {icon}
-    </button>
+      {aktif ? "Aktif" : "Nonaktif"}
+    </span>
   );
 }
-
-function FormField({ label, value, onChange, required = false }) {
+function FormField({ label, value, onChange, type = "text", required }) {
   return (
-    <div>
-      <label className="mb-1.5 block text-xs font-semibold text-gray-700">
+    <label className="block">
+      <span className="mb-1.5 block text-sm font-semibold text-slate-700">
         {label}
-        {required && <span className="ml-0.5 text-red-500">*</span>}
-      </label>
-
+        {required && <span className="ml-1 text-red-500">*</span>}
+      </span>
       <input
-        type="text"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-gray-400 focus:ring-2 focus:ring-gray-100"
+        type={type}
+        value={value ?? ""}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
       />
-    </div>
+    </label>
   );
 }
-
-function ToggleField({ label, value, onChange }) {
+function ToggleField({ label, checked, onChange }) {
   return (
-    <div className="flex items-center justify-between rounded-lg border border-gray-200 bg-gray-50 px-3 py-2.5">
-      <span className="text-sm font-medium text-gray-700">{label}</span>
-
-      <button
-        type="button"
-        onClick={() => onChange(!value)}
-        className={`relative h-6 w-11 rounded-full transition ${
-          value ? "bg-emerald-500" : "bg-gray-300"
-        }`}
-        aria-label={label}
-      >
-        <span
-          className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition ${
-            value ? "left-[22px]" : "left-0.5"
-          }`}
-        />
-      </button>
-    </div>
+    <label className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 rounded border-slate-300"
+      />
+      <span className="text-sm font-semibold text-slate-700">{label}</span>
+    </label>
   );
 }
-
-function Modal({ open, title, onClose, children }) {
-  if (!open) return null;
-
+function ModalActions({ saving, onCancel, onSave }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-      <div className="flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-w-lg sm:rounded-2xl">
-        <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-4 py-3.5">
-          <h3 className="text-sm font-semibold text-gray-900 sm:text-base">
-            {title}
-          </h3>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-            title="Tutup"
-          >
-            <X size={18} />
-          </button>
-        </div>
-
-        <div className="overflow-y-auto p-4">{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function ModalActions({ onCancel, onSave, saving }) {
-  return (
-    <div className="flex gap-2 border-t border-gray-100 pt-4">
+    <div className="mt-6 flex flex-col-reverse gap-2 border-t border-slate-200 pt-4 sm:flex-row sm:justify-end">
       <button
         type="button"
         onClick={onCancel}
         disabled={saving}
-        className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+        className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
       >
         Batal
       </button>
-
       <button
         type="button"
         onClick={onSave}
         disabled={saving}
-        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+        className="inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
       >
-        {saving ? (
-          <>
-            <RefreshCw size={15} className="animate-spin" />
-            Menyimpan...
-          </>
-        ) : (
-          <>
-            <Save size={15} />
-            Simpan
-          </>
-        )}
+        <Save size={16} />
+        {saving ? "Menyimpan..." : "Simpan"}
       </button>
+    </div>
+  );
+}
+function Modal({ title, onClose, children }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
+      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
+          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+          >
+            <X size={20} />
+          </button>
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+function Alert({ type, message, onClose }) {
+  const success = type === "success";
+  return (
+    <div
+      className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${success ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-800"}`}
+    >
+      <div>{message}</div>
+      <button
+        type="button"
+        onClick={onClose}
+        className="shrink-0 opacity-70 hover:opacity-100"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
+function Loading() {
+  return (
+    <div className="flex min-h-[300px] items-center justify-center">
+      <div className="flex items-center gap-2 text-sm text-slate-500">
+        <RefreshCw size={17} className="animate-spin" />
+        Memuat data pegawai...
+      </div>
+    </div>
+  );
+}
+function EmptyState({ title, description, compact }) {
+  return (
+    <div
+      className={`text-center ${compact ? "px-4 py-8" : "rounded-xl border border-dashed border-slate-300 bg-white px-5 py-12"}`}
+    >
+      <div className="font-semibold text-slate-700">{title}</div>
+      <div className="mt-1 text-sm text-slate-500">{description}</div>
     </div>
   );
 }
