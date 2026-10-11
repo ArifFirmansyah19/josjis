@@ -90,6 +90,51 @@ export default function PkRelatedPartySection({ pk, setPk, canEdit, locked }) {
 
   const isDisabled = !canEdit || locked;
 
+  useEffect(() => {
+    if (!Array.isArray(pk?.relatedParties) || pk.relatedParties.length === 0) {
+      return;
+    }
+
+    const seen = new Set();
+    let hasDuplicate = false;
+
+    const nextParties = pk.relatedParties.map((party, index) => {
+      const originalId = party?.id;
+
+      if (originalId && !seen.has(originalId)) {
+        seen.add(originalId);
+        return party;
+      }
+
+      hasDuplicate = true;
+
+      // Buat ID unik untuk data yang ID-nya kosong atau duplikat.
+      let newId = `REL-FIX-${Date.now()}-${index}-${Math.random()
+        .toString(36)
+        .slice(2, 9)}`;
+
+      while (seen.has(newId)) {
+        newId = `REL-FIX-${Date.now()}-${Math.random()
+          .toString(36)
+          .slice(2, 9)}`;
+      }
+
+      seen.add(newId);
+
+      return {
+        ...party,
+        id: newId,
+      };
+    });
+
+    if (hasDuplicate) {
+      setPk((prev) => ({
+        ...prev,
+        relatedParties: nextParties,
+      }));
+    }
+  }, [pk?.relatedParties, setPk]);
+
   /*
    * =========================================================
    * MENGAMBIL PILIHAN HUBUNGAN UNTUK SETIAP PARTY

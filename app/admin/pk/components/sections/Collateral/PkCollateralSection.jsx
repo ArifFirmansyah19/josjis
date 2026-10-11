@@ -10,16 +10,34 @@ const collateralTypes = [
   { value: "SHM", label: "SHM" },
   { value: "BPKB", label: "BPKB" },
 ];
+
+const collateralCategoryOptions = {
+  BPKB: [
+    { value: "MOBIL_PRIBADI", label: "Mobil Pribadi" },
+    { value: "TRUK", label: "Truk" },
+    { value: "SEPEDA_MOTOR", label: "Sepeda Motor" },
+    { value: "LAINNYA", label: "Lainnya (Isi Sendiri)" },
+  ],
+  SHM: [
+    { value: "TANAH_RUMAH", label: "Tanah dan Rumah" },
+    { value: "TANAH_KOSONG", label: "Tanah Kosong" },
+    { value: "TANAH_PERKEBUNAN", label: "Tanah Perkebunan" },
+    { value: "LAINNYA", label: "Lainnya (Isi Sendiri)" },
+  ],
+};
+
 const certificateTypes = [
   { value: "FISIK", label: "Fisik" },
   { value: "ELEKTRONIK", label: "Elektronik" },
 ];
+
 const certificateLocations = [
   { value: "DIBAWA_DEBITUR", label: "Dibawa Debitur saat PK" },
   { value: "PERLU_ORDER_CO", label: "Perlu di-order dari CO" },
   { value: "DI_CABANG", label: "Di Cabang" },
   { value: "DI_NOTARIS", label: "Di Notaris" },
 ];
+
 const relationshipOptions = [
   { value: "MILIK_SENDIRI", label: "Diri Sendiri" },
   { value: "SUAMI", label: "Suami" },
@@ -30,10 +48,12 @@ const relationshipOptions = [
   { value: "JUAL_BELI", label: "Jual Beli" },
   { value: "WARIS", label: "Waris" },
 ];
+
 const bindingRoleOptions = [
   { value: "DIKAT", label: "Diikat" },
   { value: "MORAL_OBLIGATION", label: "Moral Obligasi" },
 ];
+
 const automaticOwnerRelationships = new Set([
   "MILIK_SENDIRI",
   "SUAMI",
@@ -45,58 +65,127 @@ const automaticOwnerRelationships = new Set([
 function createId(prefix) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
+
 function createOwner() {
-  return { id: createId("OWNER"), name: "", nik: "" };
+  return {
+    id: createId("OWNER"), // ID lokal untuk form/React
+    dbId: null, // ID database, null untuk pemilik baru
+    name: "",
+    nik: "",
+  };
 }
+
 function normalizeText(value) {
   return String(value ?? "").trim();
 }
+
 function normalizeUpper(value) {
   return normalizeText(value).toUpperCase();
 }
+function isNikOptional(relationship) {
+  return ["JUAL_BELI", "SAUDARA", "WARIS"].includes(
+    normalizeUpper(relationship),
+  );
+}
+
 function normalizeNumericValue(value) {
-  if (value === null || value === undefined || value === "") return "";
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
   const digits = String(value).replace(/\D/g, "");
-  if (!digits) return "";
+
+  if (!digits) {
+    return "";
+  }
+
   const number = Number(digits);
+
   return Number.isFinite(number) ? number : "";
 }
+
 function formatNumber(value) {
-  if (value === null || value === undefined || value === "") return "";
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
   const number = Number(value);
+
   return Number.isFinite(number) ? number.toLocaleString("id-ID") : "";
 }
+
 function normalizeOwners(collateral) {
-  if (Array.isArray(collateral?.owners) && collateral.owners.length) {
-    return collateral.owners.map((owner) => ({
-      id: owner?.id || createId("OWNER"),
-      name: owner?.name ?? owner?.nama ?? "",
-      nik: owner?.nik ?? owner?.NIK ?? "",
-    }));
+  const nikOptional = isNikOptional(collateral?.relationship);
+
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+  function getDbId(owner) {
+    // Utamakan ID database yang sudah dipetakan.
+    if (typeof owner?.dbId === "string" && uuidPattern.test(owner.dbId)) {
+      return owner.dbId;
+    }
+
+    // Kompatibilitas dengan data lama yang menyimpan UUID di id.
+    const id = owner?.id;
+
+    return typeof id === "string" && uuidPattern.test(id) ? id : null;
   }
+
+  function normalizeOwner(owner, index) {
+    const name = String(owner?.name ?? owner?.nama ?? "").trim();
+
+    return {
+      // ID lokal untuk form; bukan identitas database.
+      id:
+        owner?.id && !uuidPattern.test(String(owner.id))
+          ? owner.id
+          : generateFallbackOwnerId({ nama: name }, index),
+
+      // UUID asli pemilik di tabel agunan_pemilik.
+      dbId: getDbId(owner),
+
+      name,
+      nik: nikOptional ? null : String(owner?.nik ?? owner?.NIK ?? "").trim(),
+    };
+  }
+
+  if (Array.isArray(collateral?.owners) && collateral.owners.length) {
+    return collateral.owners.map((owner, index) =>
+      normalizeOwner(owner, index),
+    );
+  }
+
   if (collateral?.owner) {
     return [
-      {
-        id: createId("OWNER"),
-        name: collateral.owner,
-        nik:
-          collateral?.ownerNik ||
-          collateral?.nikPemilik ||
-          collateral?.nik_pemilik ||
-          "",
-      },
+      normalizeOwner(
+        {
+          name: collateral.owner,
+          nik:
+            collateral?.ownerNik ??
+            collateral?.nikPemilik ??
+            collateral?.nik_pemilik ??
+            "",
+          dbId: null,
+        },
+        0,
+      ),
     ];
   }
+
   return [];
 }
+
 function getDebtorName(pk) {
   return (
     pk?.namaDebitur || pk?.nama_debitur || pk?.debtorName || pk?.debitur || ""
   );
 }
+
 function getDebtorNik(pk) {
   return pk?.nik || pk?.nikDebitur || pk?.nik_debitur || pk?.NIK || "";
 }
+
 function getDebtorGender(pk) {
   const raw = pk?.jenis_kelamin || pk?.jenisKelamin || "";
   const value = normalizeUpper(raw);
@@ -111,6 +200,7 @@ function getDebtorGender(pk) {
 
   return "";
 }
+
 function getMaritalStatus(pk) {
   const raw =
     pk?.statusDebitur ||
@@ -120,11 +210,14 @@ function getMaritalStatus(pk) {
     pk?.statusNikah ||
     pk?.status_nikah ||
     "";
+
   return normalizeUpper(raw);
 }
+
 function isMarried(pk) {
   return ["MENIKAH", "KAWIN", "MARRIED"].includes(getMaritalStatus(pk));
 }
+
 function getProductType(pk) {
   const raw =
     pk?.jenisPengajuanKredit ||
@@ -139,11 +232,15 @@ function getProductType(pk) {
     pk?.tipeProduk ||
     pk?.tipe_produk ||
     "";
+
   const value = normalizeUpper(raw);
+
   if (value.includes("KUR")) return "KUR";
   if (value.includes("KUM")) return "KUM";
+
   return value;
 }
+
 function getLimit(pk) {
   const raw =
     pk?.limitKredit ??
@@ -154,19 +251,28 @@ function getLimit(pk) {
     pk?.jumlahPinjaman ??
     pk?.jumlah_pinjaman ??
     "";
+
   const digits = String(raw).replace(/\D/g, "");
-  if (!digits) return 0;
+
+  if (!digits) {
+    return 0;
+  }
+
   const number = Number(digits);
+
   return Number.isFinite(number) ? number : 0;
 }
+
 function getCertificateType(collateral) {
   return normalizeUpper(collateral?.certificateType) === "ELEKTRONIK"
     ? "ELEKTRONIK"
     : "FISIK";
 }
+
 function getPkBindingType(pk, collaterals) {
   return getBindingType(getProductType(pk), getLimit(pk), collaterals);
 }
+
 function getSpouseData(pk) {
   const pasangan =
     pk?.pasangan ||
@@ -174,6 +280,7 @@ function getSpouseData(pk) {
     pk?.pasangan_debitur ||
     pk?.spouse ||
     null;
+
   return {
     name:
       pasangan?.nama ||
@@ -198,11 +305,19 @@ function getSpouseData(pk) {
       "",
   };
 }
+
 function getRelatedParties(pk) {
-  if (Array.isArray(pk?.relatedParties)) return pk.relatedParties;
-  if (Array.isArray(pk?.related_parties)) return pk.related_parties;
+  if (Array.isArray(pk?.relatedParties)) {
+    return pk.relatedParties;
+  }
+
+  if (Array.isArray(pk?.related_parties)) {
+    return pk.related_parties;
+  }
+
   return [];
 }
+
 function getRelatedPartyData(pk, relationship) {
   const targets =
     relationship === "AYAH_DEBITUR"
@@ -210,13 +325,19 @@ function getRelatedPartyData(pk, relationship) {
       : relationship === "IBU_DEBITUR"
         ? ["IBU", "IBU_DEBITUR"]
         : [];
-  if (!targets.length) return { name: "", nik: "" };
+
+  if (!targets.length) {
+    return { name: "", nik: "" };
+  }
+
   const party = getRelatedParties(pk).find((item) => {
     const relation = normalizeUpper(
       item?.hubungan || item?.relationship || item?.relation || "",
     );
+
     return targets.includes(relation);
   });
+
   return {
     name:
       party?.nama || party?.name || party?.nama_pihak || party?.namaPihak || "",
@@ -230,6 +351,7 @@ function getRelatedPartyData(pk, relationship) {
       "",
   };
 }
+
 function getAutomaticOwnerData(pk, relationship) {
   if (relationship === "MILIK_SENDIRI") {
     return {
@@ -237,41 +359,43 @@ function getAutomaticOwnerData(pk, relationship) {
       nik: getDebtorNik(pk),
     };
   }
+
   if (relationship === "SUAMI" || relationship === "ISTRI") {
     return getSpouseData(pk);
   }
+
   if (relationship === "AYAH_DEBITUR" || relationship === "IBU_DEBITUR") {
     return getRelatedPartyData(pk, relationship);
   }
+
   return { name: "", nik: "" };
 }
+
 function getRelationshipOptions(pk) {
-  const rawGender = getDebtorGender(pk);
-  const gender = normalizeUpper(rawGender);
+  const gender = normalizeUpper(getDebtorGender(pk));
   const married = isMarried(pk);
 
-  const isMale =
-    gender === "L" ||
-    gender === "LAKI-LAKI" ||
-    gender === "LAKI LAKI" ||
-    gender === "LAKI LAKI-LAKI" ||
-    gender === "MALE";
+  const isMale = ["L", "LAKI-LAKI", "LAKI LAKI", "MALE"].includes(gender);
 
-  const isFemale =
-    gender === "P" ||
-    gender === "PEREMPUAN" ||
-    gender === "WANITA" ||
-    gender === "FEMALE";
+  const isFemale = ["P", "PEREMPUAN", "WANITA", "FEMALE"].includes(gender);
 
   return relationshipOptions.filter((option) => {
-    if (option.value === "SUAMI") return married && isFemale;
-    if (option.value === "ISTRI") return married && isMale;
+    if (option.value === "SUAMI") {
+      return married && isFemale;
+    }
+
+    if (option.value === "ISTRI") {
+      return married && isMale;
+    }
+
     return true;
   });
 }
+
 function getNotaryName(notary) {
   return notary?.nama_notaris || notary?.namaNotaris || notary?.nama || "";
 }
+
 function getNotaryOptions(notaries) {
   return [
     { value: "", label: "Pilih Notaris" },
@@ -283,21 +407,30 @@ function getNotaryOptions(notaries) {
       })),
   ];
 }
+
 function normalizeRelationshipForDb(value) {
   if (value === "AYAH_DEBITUR" || value === "IBU_DEBITUR") {
     return "ORANG_TUA";
   }
+
   return value;
 }
+
 function getBindingLabel(bindingType) {
-  if (bindingType === "SKMHT") return "SKMHT";
-  if (bindingType === "APHT") return "APHT";
+  const value = normalizeUpper(bindingType);
+
+  if (value === "SKMHT") return "SKMHT";
+  if (value === "APHT") return "APHT";
+
   return "Tidak Ada";
 }
+
 function createEmptyCollateral() {
   return {
     id: createId("COL"),
     type: "SHM",
+    tipeAgunan: "",
+    tipeAgunanLainnya: "",
     number: "",
     certificateType: "FISIK",
     certificateLocation: "DIBAWA_DEBITUR",
@@ -329,6 +462,7 @@ function createEmptyCollateral() {
       fee: "",
       outgoingLetterNumber: "",
       note: "",
+      covernote: "",
       status: "BELUM DIPROSES",
     },
   };
@@ -343,11 +477,18 @@ export default function PkCollateralSection({
   onUseCollateralFromOtherLoan,
 }) {
   const collaterals = Array.isArray(pk?.collaterals) ? pk.collaterals : [];
+
   const editable = Boolean(canEdit && !locked);
+
   const firstShm = collaterals.find((item) => item?.type === "SHM");
+
   const firstShmBindingType = getPkBindingType(pk, collaterals);
+
+  const normalizedFirstBindingType = normalizeUpper(firstShmBindingType);
+
   const firstShmIsBound =
-    Boolean(firstShm) && firstShmBindingType !== "TIDAK ADA";
+    Boolean(firstShm) && ["SKMHT", "APHT"].includes(normalizedFirstBindingType);
+
   const additionalRoleOptions = firstShmIsBound
     ? bindingRoleOptions
     : bindingRoleOptions.filter(
@@ -356,6 +497,7 @@ export default function PkCollateralSection({
 
   const updateCollateral = (collateralId, field, value) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) =>
@@ -366,6 +508,7 @@ export default function PkCollateralSection({
 
   const updateCollateralAddress = (collateralId, field, value) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) =>
@@ -384,6 +527,7 @@ export default function PkCollateralSection({
 
   const updateBinding = (collateralId, field, value) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) =>
@@ -406,6 +550,7 @@ export default function PkCollateralSection({
 
   const addCollateral = () => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: [...(prev.collaterals || []), createEmptyCollateral()],
@@ -414,6 +559,7 @@ export default function PkCollateralSection({
 
   const removeCollateral = (collateralId) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).filter(
@@ -424,10 +570,12 @@ export default function PkCollateralSection({
 
   const handleTypeChange = (collateral, type) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) => {
         if (item.id !== collateral.id) return item;
+
         if (type === "BPKB") {
           return {
             ...item,
@@ -444,10 +592,12 @@ export default function PkCollateralSection({
               fee: "",
               outgoingLetterNumber: "",
               note: "",
+              covernote: "",
               status: "TIDAK DIPROSES",
             },
           };
         }
+
         return {
           ...item,
           type,
@@ -460,6 +610,7 @@ export default function PkCollateralSection({
 
   const handleCertificateTypeChange = (collateral, certificateType) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) =>
@@ -470,11 +621,14 @@ export default function PkCollateralSection({
 
   const handleRelationshipChange = (collateral, relationship) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) => {
         if (item.id !== collateral.id) return item;
+
         const currentOwners = normalizeOwners(item);
+
         if (!relationship) {
           return {
             ...item,
@@ -484,14 +638,17 @@ export default function PkCollateralSection({
             owners: [],
           };
         }
+
         if (automaticOwnerRelationships.has(relationship)) {
           const automaticOwner = getAutomaticOwnerData(prev, relationship);
           const existingOwner = currentOwners[0];
+
           const owner = {
             id: existingOwner?.id || createId("OWNER"),
             name: automaticOwner.name || "",
             nik: automaticOwner.nik || "",
           };
+
           return {
             ...item,
             relationship,
@@ -500,17 +657,26 @@ export default function PkCollateralSection({
             owners: [owner],
           };
         }
-        if (relationship === "WARIS") {
-          const owners = currentOwners.length ? currentOwners : [createOwner()];
+
+        if (isNikOptional(relationship)) {
+          const owners = currentOwners.length
+            ? currentOwners.map((owner) => ({
+                ...owner,
+                nik: null,
+              }))
+            : [{ ...createOwner(), nik: null }];
+
           return {
             ...item,
             relationship,
-            relationshipDb: "WARIS",
+            relationshipDb: normalizeRelationshipForDb(relationship),
             owners,
             owner: owners[0]?.name || "",
           };
         }
+
         const firstOwner = currentOwners[0];
+
         return {
           ...item,
           relationship,
@@ -524,13 +690,29 @@ export default function PkCollateralSection({
 
   const updateOwner = (collateralId, ownerId, field, value) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) => {
         if (item.id !== collateralId) return item;
-        const owners = normalizeOwners(item).map((owner) =>
-          owner.id === ownerId ? { ...owner, [field]: value } : owner,
-        );
+
+        const nikOptional = isNikOptional(item.relationship);
+
+        const owners = normalizeOwners(item).map((owner) => {
+          if (owner.id !== ownerId) return owner;
+
+          const updatedOwner = {
+            ...owner,
+            [field]: value,
+          };
+
+          if (nikOptional) {
+            updatedOwner.nik = null;
+          }
+
+          return updatedOwner;
+        });
+
         return {
           ...item,
           owners,
@@ -542,28 +724,37 @@ export default function PkCollateralSection({
 
   const addOwner = (collateralId) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
-      collaterals: (prev.collaterals || []).map((item) =>
-        item.id === collateralId
-          ? {
-              ...item,
-              owners: [...normalizeOwners(item), createOwner()],
-            }
-          : item,
-      ),
+      collaterals: (prev.collaterals || []).map((item) => {
+        if (item.id !== collateralId) return item;
+
+        const newOwner = {
+          ...createOwner(),
+          nik: isNikOptional(item.relationship) ? null : "",
+        };
+
+        return {
+          ...item,
+          owners: [...normalizeOwners(item), newOwner],
+        };
+      }),
     }));
   };
 
   const removeOwner = (collateralId, ownerId) => {
     if (!editable) return;
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) => {
         if (item.id !== collateralId) return item;
+
         const owners = normalizeOwners(item).filter(
           (owner) => owner.id !== ownerId,
         );
+
         return {
           ...item,
           owners,
@@ -581,15 +772,19 @@ export default function PkCollateralSection({
     ) {
       return;
     }
+
     if (value === "DIKAT" && !firstShmIsBound) {
       return;
     }
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) => {
         if (item.id !== collateral.id) return item;
+
         const currentBinding = item.binding || {};
         const isBound = value === "DIKAT";
+
         return {
           ...item,
           binding: {
@@ -604,7 +799,8 @@ export default function PkCollateralSection({
             outgoingLetterNumber: isBound
               ? currentBinding.outgoingLetterNumber || ""
               : "",
-            note: isBound ? currentBinding.note || "" : "",
+            note: currentBinding.note || "",
+            covernote: currentBinding.covernote || "",
           },
         };
       }),
@@ -613,9 +809,11 @@ export default function PkCollateralSection({
 
   const handleNotaryChange = (collateral, notaryId) => {
     if (!editable) return;
+
     const selectedNotary = notaries.find(
       (notary) => String(notary?.id) === String(notaryId),
     );
+
     setPk((prev) => ({
       ...prev,
       collaterals: (prev.collaterals || []).map((item) =>
@@ -639,26 +837,34 @@ export default function PkCollateralSection({
 
   const getShmIndex = (collateralId) => {
     let count = 0;
+
     for (const collateral of collaterals) {
       if (collateral.type !== "SHM") continue;
-      if (collateral.id === collateralId) return count;
+
+      if (collateral.id === collateralId) {
+        return count;
+      }
+
       count++;
     }
+
     return -1;
   };
 
   return (
     <PkSection
       title="Data Agunan"
-      description="Data dokumen agunan, kepemilikan, lokasi, nilai, dan pengikatan."
+      description="Data dokumen agunan, kepemilikan, lokasi, nilai, pengikatan, dan proses notaris."
       locked={locked}
     >
       {collaterals.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50/70 px-5 py-10 text-center">
           <p className="text-sm font-medium text-zinc-700">Belum ada agunan</p>
+
           <p className="mx-auto mt-1 max-w-md text-xs leading-5 text-zinc-500">
             Tambahkan agunan baru atau gunakan sertifikat dari pinjaman lain.
           </p>
+
           {editable && (
             <div className="mt-5 flex flex-wrap items-center justify-center gap-2">
               <button
@@ -669,6 +875,7 @@ export default function PkCollateralSection({
                 <Plus size={16} />
                 Tambah Agunan Baru
               </button>
+
               <button
                 type="button"
                 onClick={() => onUseCollateralFromOtherLoan?.()}
@@ -690,22 +897,30 @@ export default function PkCollateralSection({
               const shmIndex = getShmIndex(collateral.id);
               const isFirstShm = collateral.type === "SHM" && shmIndex === 0;
               const isAdditionalShm = collateral.type === "SHM" && !isFirstShm;
+
               const effectiveBindingType = isFirstShm
                 ? firstShmBindingType
                 : collateral.binding?.role === "DIKAT"
                   ? firstShmBindingType
                   : "TIDAK ADA";
+
+              const normalizedBindingType =
+                normalizeUpper(effectiveBindingType);
+
               const bindingEnabled =
                 collateral.type === "SHM" &&
-                effectiveBindingType !== "TIDAK ADA" &&
+                ["SKMHT", "APHT"].includes(normalizedBindingType) &&
                 (isFirstShm || collateral.binding?.role === "DIKAT");
+
               const automaticOwner = getAutomaticOwnerData(
                 pk,
                 collateral.relationship,
               );
+
               const isAutomaticOwner = automaticOwnerRelationships.has(
                 collateral.relationship,
               );
+
               const displayedOwner = isAutomaticOwner
                 ? automaticOwner
                 : {
@@ -723,6 +938,7 @@ export default function PkCollateralSection({
                       <p className="text-sm font-semibold text-zinc-900">
                         Agunan {index + 1}
                       </p>
+
                       <p className="mt-0.5 text-xs text-zinc-500">
                         {collateral.type === "SHM"
                           ? isFirstShm
@@ -731,6 +947,7 @@ export default function PkCollateralSection({
                           : "BPKB — tidak dapat menjadi agunan yang diikat."}
                       </p>
                     </div>
+
                     {editable && (
                       <button
                         type="button"
@@ -743,12 +960,14 @@ export default function PkCollateralSection({
                     )}
                   </div>
 
+                  {/* DOKUMEN AGUNAN */}
                   <div>
                     <div className="mb-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                         Dokumen Agunan
                       </p>
                     </div>
+
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                       <PkSelect
                         label="Jenis Agunan"
@@ -759,6 +978,55 @@ export default function PkCollateralSection({
                         disabled={!editable}
                         options={collateralTypes}
                       />
+
+                      <PkSelect
+                        label="Kategori Agunan"
+                        value={collateral.tipeAgunan || ""}
+                        onChange={(e) => {
+                          const value = e.target.value;
+
+                          setPk((prev) => ({
+                            ...prev,
+                            collaterals: (prev.collaterals || []).map((item) =>
+                              item.id === collateral.id
+                                ? {
+                                    ...item,
+                                    tipeAgunan: value,
+                                    tipeAgunanLainnya:
+                                      value === "LAINNYA"
+                                        ? item.tipeAgunanLainnya || ""
+                                        : "",
+                                  }
+                                : item,
+                            ),
+                          }));
+                        }}
+                        disabled={!editable}
+                        options={[
+                          {
+                            value: "",
+                            label: "Pilih kategori agunan...",
+                          },
+                          ...(collateralCategoryOptions[collateral.type] || []),
+                        ]}
+                      />
+
+                      {collateral.tipeAgunan === "LAINNYA" && (
+                        <PkInput
+                          label="Keterangan Kategori Agunan"
+                          value={collateral.tipeAgunanLainnya || ""}
+                          onChange={(e) =>
+                            updateCollateral(
+                              collateral.id,
+                              "tipeAgunanLainnya",
+                              e.target.value,
+                            )
+                          }
+                          disabled={!editable}
+                          placeholder="Masukkan kategori agunan"
+                        />
+                      )}
+
                       <PkInput
                         label={
                           collateral.type === "BPKB"
@@ -775,6 +1043,7 @@ export default function PkCollateralSection({
                         }
                         disabled={!editable}
                       />
+
                       <PkSelect
                         label="Jenis Sertifikat"
                         value={collateral.certificateType || ""}
@@ -787,6 +1056,7 @@ export default function PkCollateralSection({
                         disabled={!editable || collateral.type === "BPKB"}
                         options={certificateTypes}
                       />
+
                       <PkSelect
                         label="Fisik Sertifikat"
                         value={collateral.certificateLocation || ""}
@@ -805,17 +1075,25 @@ export default function PkCollateralSection({
                         <>
                           <PkInput
                             label="Luas"
-                            value={collateral.area || ""}
-                            onChange={(e) =>
-                              updateCollateral(
-                                collateral.id,
-                                "area",
-                                e.target.value,
-                              )
+                            value={
+                              collateral.area !== "" && collateral.area != null
+                                ? String(collateral.area)
+                                    .replace(/\./g, "")
+                                    .replace(/\B(?=(\d{3})+(?!\d))/g, ".")
+                                : ""
                             }
+                            onChange={(e) => {
+                              const rawValue = e.target.value.replace(
+                                /\./g,
+                                "",
+                              );
+
+                              updateCollateral(collateral.id, "area", rawValue);
+                            }}
                             disabled={!editable}
                             suffix="m²"
                           />
+
                           <PkInput
                             label="Tanggal Buku"
                             type="date"
@@ -850,6 +1128,7 @@ export default function PkCollateralSection({
                             }
                             disabled={!editable}
                           />
+
                           <PkInput
                             label="Nomor Rangka"
                             value={
@@ -866,6 +1145,7 @@ export default function PkCollateralSection({
                             }
                             disabled={!editable}
                           />
+
                           <PkInput
                             label="Nomor Mesin"
                             value={
@@ -882,6 +1162,7 @@ export default function PkCollateralSection({
                             }
                             disabled={!editable}
                           />
+
                           <PkInput
                             label="Merek"
                             value={collateral.merek || collateral.merk || ""}
@@ -894,6 +1175,7 @@ export default function PkCollateralSection({
                             }
                             disabled={!editable}
                           />
+
                           <PkInput
                             label="Tipe"
                             value={collateral.tipe || ""}
@@ -906,6 +1188,7 @@ export default function PkCollateralSection({
                             }
                             disabled={!editable}
                           />
+
                           <PkInput
                             label="Tahun"
                             value={collateral.tahun || ""}
@@ -923,12 +1206,14 @@ export default function PkCollateralSection({
                     </div>
                   </div>
 
+                  {/* KEPEMILIKAN */}
                   <div className="mt-6 border-t border-zinc-200 pt-5">
                     <div className="mb-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                         Kepemilikan
                       </p>
                     </div>
+
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                       <PkSelect
                         label="Hubungan dengan Debitur"
@@ -947,85 +1232,123 @@ export default function PkCollateralSection({
                       />
                     </div>
 
-                    {isWaris ? (
-                      <div className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-sm font-semibold text-zinc-900">
-                              Daftar Pemilik
-                            </p>
-                            <p className="mt-0.5 text-xs leading-5 text-zinc-500">
-                              Satu dokumen waris dapat memiliki beberapa nama
-                              pemilik.
-                            </p>
-                          </div>
-                          {editable && (
-                            <button
-                              type="button"
-                              onClick={() => addOwner(collateral.id)}
-                              className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
-                            >
-                              <Plus size={14} />
-                              Tambah Pemilik
-                            </button>
-                          )}
-                        </div>
-
-                        <div className="mt-4 space-y-3">
-                          {owners.map((owner, ownerIndex) => (
-                            <div
-                              key={owner.id}
-                              className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3"
-                            >
-                              <div className="mb-3 flex items-center justify-between">
-                                <p className="text-xs font-semibold text-zinc-700">
-                                  Pemilik {ownerIndex + 1}
+                    {isNikOptional(collateral.relationship) ? (
+                      <div className="mt-4">
+                        {isWaris ? (
+                          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-semibold text-zinc-900">
+                                  Daftar Pemilik
                                 </p>
-                                {editable && owners.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      removeOwner(collateral.id, owner.id)
-                                    }
-                                    className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                                  >
-                                    <Trash2 size={13} />
-                                    Hapus
-                                  </button>
-                                )}
+                                <p className="mt-0.5 text-xs leading-5 text-zinc-500">
+                                  Satu dokumen waris dapat memiliki beberapa
+                                  nama pemilik.
+                                </p>
                               </div>
 
-                              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <PkInput
-                                  label="Nama Pemilik"
-                                  value={owner.name || ""}
-                                  onChange={(e) =>
-                                    updateOwner(
-                                      collateral.id,
-                                      owner.id,
-                                      "name",
-                                      e.target.value,
-                                    )
-                                  }
-                                  disabled={!editable}
-                                />
-                                <PkInput
-                                  label="NIK Pemilik"
-                                  value={owner.nik || ""}
-                                  onChange={(e) =>
-                                    updateOwner(
-                                      collateral.id,
-                                      owner.id,
-                                      "nik",
-                                      e.target.value,
-                                    )
-                                  }
-                                  disabled={!editable}
-                                />
-                              </div>
+                              {editable && (
+                                <button
+                                  type="button"
+                                  onClick={() => addOwner(collateral.id)}
+                                  className="inline-flex items-center gap-1.5 rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
+                                >
+                                  <Plus size={14} />
+                                  Tambah Pemilik
+                                </button>
+                              )}
                             </div>
-                          ))}
-                        </div>
+
+                            <div className="mt-4 space-y-3">
+                              {owners.map((owner, ownerIndex) => (
+                                <div
+                                  key={owner.id}
+                                  className="rounded-xl border border-zinc-200 bg-zinc-50/70 p-3"
+                                >
+                                  <div className="mb-3 flex items-center justify-between">
+                                    <p className="text-xs font-semibold text-zinc-700">
+                                      Pemilik {ownerIndex + 1}
+                                    </p>
+
+                                    {editable && owners.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          removeOwner(collateral.id, owner.id)
+                                        }
+                                        className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                                      >
+                                        <Trash2 size={13} />
+                                        Hapus
+                                      </button>
+                                    )}
+                                  </div>
+
+                                  <PkInput
+                                    label="Nama Pemilik"
+                                    value={owner.name || ""}
+                                    onChange={(e) =>
+                                      updateOwner(
+                                        collateral.id,
+                                        owner.id,
+                                        "name",
+                                        e.target.value,
+                                      )
+                                    }
+                                    disabled={!editable}
+                                    placeholder="Masukkan nama pemilik"
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-4">
+                            <PkInput
+                              label="Atas Nama"
+                              value={displayedOwner.name || ""}
+                              onChange={(e) => {
+                                if (!editable || isAutomaticOwner) return;
+
+                                const value = e.target.value;
+
+                                setPk((prev) => ({
+                                  ...prev,
+                                  collaterals: (prev.collaterals || []).map(
+                                    (item) => {
+                                      if (item.id !== collateral.id)
+                                        return item;
+
+                                      const existing = normalizeOwners(item)[0];
+
+                                      const owner = {
+                                        id: existing?.id || createId("OWNER"),
+                                        name: value,
+                                        nik: null,
+                                      };
+
+                                      return {
+                                        ...item,
+                                        owner: value,
+                                        owners: value ? [owner] : [],
+                                      };
+                                    },
+                                  ),
+                                }));
+                              }}
+                              disabled={!editable || isAutomaticOwner}
+                              placeholder="Masukkan nama pemilik"
+                            />
+                          </div>
+                        )}
+
+                        <p className="mt-2 text-xs leading-5 text-zinc-500">
+                          {collateral.relationship === "WARIS"
+                            ? "NIK pemilik tidak diperlukan untuk dokumen waris."
+                            : collateral.relationship === "SAUDARA"
+                              ? "NIK pemilik tidak diperlukan untuk hubungan saudara."
+                              : "NIK pemilik tidak diperlukan untuk hubungan jual beli."}
+                        </p>
                       </div>
                     ) : (
                       <div className="mt-4">
@@ -1034,18 +1357,18 @@ export default function PkCollateralSection({
                             label="Atas Nama"
                             value={displayedOwner.name || ""}
                             onChange={(e) => {
-                              if (!editable || isAutomaticOwner) {
-                                return;
-                              }
+                              if (!editable || isAutomaticOwner) return;
+
                               const value = e.target.value;
+
                               setPk((prev) => ({
                                 ...prev,
                                 collaterals: (prev.collaterals || []).map(
                                   (item) => {
-                                    if (item.id !== collateral.id) {
-                                      return item;
-                                    }
+                                    if (item.id !== collateral.id) return item;
+
                                     const existing = normalizeOwners(item)[0];
+
                                     return {
                                       ...item,
                                       owner: value,
@@ -1056,7 +1379,7 @@ export default function PkCollateralSection({
                                                 existing?.id ||
                                                 createId("OWNER"),
                                               name: value,
-                                              nik: existing?.nik || "",
+                                              nik: existing?.nik ?? "",
                                             },
                                           ]
                                         : [],
@@ -1067,19 +1390,21 @@ export default function PkCollateralSection({
                             }}
                             disabled={!editable || isAutomaticOwner}
                           />
+
                           <PkInput
                             label="NIK Pemilik"
                             value={displayedOwner.nik || ""}
                             onChange={(e) => {
-                              if (!editable || isAutomaticOwner) {
-                                return;
-                              }
+                              if (!editable || isAutomaticOwner) return;
+
                               const owner = owners[0];
+
                               if (!owner) {
                                 const newOwner = {
                                   ...createOwner(),
                                   nik: e.target.value,
                                 };
+
                                 setPk((prev) => ({
                                   ...prev,
                                   collaterals: (prev.collaterals || []).map(
@@ -1092,8 +1417,10 @@ export default function PkCollateralSection({
                                         : item,
                                   ),
                                 }));
+
                                 return;
                               }
+
                               updateOwner(
                                 collateral.id,
                                 owner.id,
@@ -1111,36 +1438,36 @@ export default function PkCollateralSection({
                             debitur.
                           </p>
                         )}
-                        {(collateral.relationship === "SUAMI" ||
-                          collateral.relationship === "ISTRI") && (
+
+                        {["SUAMI", "ISTRI"].includes(
+                          collateral.relationship,
+                        ) && (
                           <p className="mt-2 text-xs leading-5 text-zinc-500">
                             Nama dan NIK pasangan otomatis mengikuti data
                             pasangan.
                           </p>
                         )}
-                        {(collateral.relationship === "AYAH_DEBITUR" ||
-                          collateral.relationship === "IBU_DEBITUR") && (
+
+                        {["AYAH_DEBITUR", "IBU_DEBITUR"].includes(
+                          collateral.relationship,
+                        ) && (
                           <p className="mt-2 text-xs leading-5 text-zinc-500">
                             Nama dan NIK orang tua otomatis mengikuti data Pihak
                             Terkait.
-                          </p>
-                        )}
-                        {collateral.relationship === "JUAL_BELI" && (
-                          <p className="mt-2 text-xs leading-5 text-zinc-500">
-                            Nama dan NIK pemilik dokumen dicatat pada data
-                            pemilik.
                           </p>
                         )}
                       </div>
                     )}
                   </div>
 
+                  {/* STATUS PENGIKATAN */}
                   {collateral.type === "SHM" && (
                     <div className="mt-6 border-t border-zinc-200 pt-5">
                       <div className="mb-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                           Status Pengikatan
                         </p>
+
                         <p className="mt-1 text-xs leading-5 text-zinc-500">
                           {isFirstShm
                             ? "SHM pertama otomatis menentukan pengikatan berdasarkan produk, limit, dan jenis sertifikat."
@@ -1157,11 +1484,13 @@ export default function PkCollateralSection({
                             }
                             disabled
                           />
+
                           <PkInput
                             label="Jenis Pengikatan"
                             value={getBindingLabel(firstShmBindingType)}
                             disabled
                           />
+
                           <PkInput
                             label="Dasar Pengikatan"
                             value={`${getProductType(pk) || "-"} • ${formatNumber(getLimit(pk)) || "0"} • ${getCertificateType(collateral)}`}
@@ -1188,6 +1517,7 @@ export default function PkCollateralSection({
                               ...additionalRoleOptions,
                             ]}
                           />
+
                           <PkInput
                             label="Jenis Pengikatan"
                             value={
@@ -1197,6 +1527,7 @@ export default function PkCollateralSection({
                             }
                             disabled
                           />
+
                           <PkInput
                             label="Status"
                             value={
@@ -1266,15 +1597,16 @@ export default function PkCollateralSection({
                     </div>
                   )}
 
-                  {collateral.type === "SHM" && bindingEnabled && (
+                  {/* DATA PENGIKATAN DAN NOTARIS */}
+                  {bindingEnabled && (
                     <div className="mt-6 border-t border-zinc-200 pt-5">
                       <div className="mb-4">
                         <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
-                          Data Pengikatan
+                          Data Pengikatan & Notaris
                         </p>
                         <p className="mt-1 text-xs leading-5 text-zinc-500">
-                          Data proses notaris dan pengikatan dicatat di bagian
-                          ini.
+                          Data pengikatan, notaris, biaya, dan Covernote untuk
+                          agunan yang diikat.
                         </p>
                       </div>
 
@@ -1284,6 +1616,7 @@ export default function PkCollateralSection({
                           value={getBindingLabel(effectiveBindingType)}
                           disabled
                         />
+
                         <PkSelect
                           label="Notaris"
                           value={String(collateral.binding?.notaryId || "")}
@@ -1293,12 +1626,14 @@ export default function PkCollateralSection({
                           disabled={!editable}
                           options={getNotaryOptions(notaries)}
                         />
+
                         <PkInput
                           label="Kode Notaris"
                           value={collateral.binding?.notaryCode || ""}
                           disabled
-                          placeholder="Akan tersedia dari master notaris"
+                          placeholder="Dari master notaris"
                         />
+
                         <PkInput
                           label="Biaya Pengikatan"
                           type="text"
@@ -1314,6 +1649,7 @@ export default function PkCollateralSection({
                           disabled={!editable}
                           prefix="Rp"
                         />
+
                         <PkInput
                           label="Nomor Surat Keluar Order Notaris"
                           value={collateral.binding?.outgoingLetterNumber || ""}
@@ -1327,15 +1663,43 @@ export default function PkCollateralSection({
                           disabled={!editable}
                           placeholder="Contoh: 056"
                         />
+
                         <PkInput
                           label="Status Pengikatan"
                           value={collateral.binding?.status || "BELUM DIPROSES"}
                           disabled
                         />
-                        <div className="md:col-span-2 xl:col-span-3">
+
+                        <div>
                           <PkInput
-                            label="Catatan Pengikatan"
-                            value={collateral.binding?.note || ""}
+                            label="Covernote (Opsional)"
+                            value={collateral.binding?.covernote ?? ""}
+                            onChange={(e) =>
+                              updateBinding(
+                                collateral.id,
+                                "covernote",
+                                e.target.value,
+                              )
+                            }
+                            disabled={!editable}
+                            placeholder="Masukkan covernote..."
+                          />
+                        </div>
+
+                        <div className="md:col-span-2 xl:col-span-3">
+                          <label
+                            htmlFor={`catatan-pengikatan-${collateral.id}`}
+                            className="mb-1.5 block text-sm font-medium text-zinc-700"
+                          >
+                            Catatan Pengikatan
+                            <span className="ml-2 text-xs font-normal text-zinc-400">
+                              (Opsional)
+                            </span>
+                          </label>
+
+                          <textarea
+                            id={`catatan-pengikatan-${collateral.id}`}
+                            value={collateral.binding?.note ?? ""}
                             onChange={(e) =>
                               updateBinding(
                                 collateral.id,
@@ -1344,22 +1708,24 @@ export default function PkCollateralSection({
                               )
                             }
                             disabled={!editable}
-                            placeholder="Catatan proses pengikatan"
+                            rows={3}
+                            placeholder="Tulis catatan pengikatan..."
+                            className="w-full rounded-xl border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-100 disabled:cursor-not-allowed disabled:bg-zinc-100"
                           />
                         </div>
                       </div>
                     </div>
                   )}
 
+                  {/* ALAMAT AGUNAN */}
                   <div className="mt-6 border-t border-zinc-200 pt-5">
                     <div className="mb-3">
                       <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400">
                         Alamat Agunan
                       </p>
                     </div>
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      <div className="md:col-span-2 xl:col-span-3"></div>
 
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                       <PkInput
                         label="Desa / Kelurahan"
                         value={address.village || ""}
@@ -1372,6 +1738,7 @@ export default function PkCollateralSection({
                         }
                         disabled={!editable}
                       />
+
                       <PkInput
                         label="Kecamatan"
                         value={address.district || ""}
@@ -1384,6 +1751,7 @@ export default function PkCollateralSection({
                         }
                         disabled={!editable}
                       />
+
                       <PkInput
                         label="Kabupaten"
                         value={address.regency || ""}
@@ -1399,6 +1767,7 @@ export default function PkCollateralSection({
                     </div>
                   </div>
 
+                  {/* NILAI DAN CATATAN AGUNAN */}
                   <div className="mt-6 border-t border-zinc-200 pt-5">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <PkInput
@@ -1412,6 +1781,7 @@ export default function PkCollateralSection({
                         disabled={!editable}
                         prefix="Rp"
                       />
+
                       <PkInput
                         label="Catatan Agunan"
                         value={collateral.note || ""}
@@ -1442,6 +1812,7 @@ export default function PkCollateralSection({
                 <Plus size={16} />
                 Tambah Agunan Baru
               </button>
+
               <button
                 type="button"
                 onClick={() => onUseCollateralFromOtherLoan?.()}

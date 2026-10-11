@@ -5,28 +5,69 @@ import {
   isUuid,
 } from "../shared/pkHelpers";
 
+const NIK_OPTIONAL_RELATIONSHIPS = new Set(["JUAL_BELI", "SAUDARA", "WARIS"]);
+
+function normalizeRelationship(value) {
+  return String(value || "")
+    .trim()
+    .toUpperCase();
+}
+
 export function normalizeCollateralForSave(collateral) {
+  const relationship = nullableText(collateral?.relationship);
+  const normalizedRelationship = normalizeRelationship(relationship);
+
   const rawOwners = Array.isArray(collateral?.owners) ? collateral.owners : [];
 
   let owners = rawOwners
-    .map((owner) => ({
-      id: owner?.id || null,
-      nama: nullableText(owner?.nama),
-      nik: nullableText(owner?.nik),
-      hubungan: nullableText(owner?.hubungan),
-    }))
+    .map((owner) => {
+      const ownerRelationship = nullableText(owner?.hubungan) || relationship;
+
+      const normalizedOwnerRelationship =
+        normalizeRelationship(ownerRelationship);
+
+      const nikOptional = NIK_OPTIONAL_RELATIONSHIPS.has(
+        normalizedOwnerRelationship,
+      );
+
+      return {
+        id: owner?.id || null,
+        nama: nullableText(owner?.nama ?? owner?.name),
+        nik: nikOptional ? null : nullableText(owner?.nik),
+        hubungan: ownerRelationship,
+      };
+    })
     .filter((owner) => owner.nama);
 
+  // Kompatibilitas dengan data lama yang hanya memiliki satu pemilik.
   if (!owners.length && nullableText(collateral?.owner)) {
+    const nikOptional = NIK_OPTIONAL_RELATIONSHIPS.has(normalizedRelationship);
+
     owners = [
       {
         id: null,
         nama: nullableText(collateral.owner),
-        nik: nullableText(collateral?.ownerNik),
-        hubungan: nullableText(collateral?.relationship),
+        nik: nikOptional
+          ? null
+          : nullableText(
+              collateral?.ownerNik ??
+                collateral?.nikPemilik ??
+                collateral?.nik_pemilik,
+            ),
+        hubungan: relationship,
       },
     ];
   }
+
+  const isReusedAgunan = Boolean(
+    collateral?.isReusedAgunan ||
+    collateral?.isReused ||
+    collateral?.reuseFromLoanId,
+  );
+
+  const pernahAgunanPinjamanLama = Boolean(
+    collateral?.pernahAgunanPinjamanLama || isReusedAgunan,
+  );
 
   return {
     id: collateral?.id || null,
@@ -34,6 +75,9 @@ export function normalizeCollateralForSave(collateral) {
     agunanId: collateral?.agunanId || null,
 
     type: nullableText(collateral?.type),
+    tipeAgunan: nullableText(collateral?.tipeAgunan),
+    tipeAgunanLainnya: nullableText(collateral?.tipeAgunanLainnya),
+
     number: nullableText(collateral?.number),
     certificateType: nullableText(collateral?.certificateType),
     certificateLocation: nullableText(collateral?.certificateLocation),
@@ -44,21 +88,18 @@ export function normalizeCollateralForSave(collateral) {
     nomorPolisi: nullableText(
       collateral?.nomorPolisi ?? collateral?.nomor_polisi,
     ),
-
     nomorRangka: nullableText(
       collateral?.nomorRangka ?? collateral?.nomor_rangka,
     ),
-
     nomorMesin: nullableText(collateral?.nomorMesin ?? collateral?.nomor_mesin),
-
     merek: nullableText(collateral?.merek ?? collateral?.merk),
-
     tipe: nullableText(collateral?.tipe),
     tahun: nullableNumber(collateral?.tahun),
 
     owners,
     owner: nullableText(collateral?.owner),
-    relationship: nullableText(collateral?.relationship),
+    relationship,
+
     value: nullableNumber(collateral?.value),
 
     address: {
@@ -67,11 +108,9 @@ export function normalizeCollateralForSave(collateral) {
           collateral?.address?.desa ??
           collateral?.address?.kelurahan,
       ),
-
       district: nullableText(
         collateral?.address?.district ?? collateral?.address?.kecamatan,
       ),
-
       regency: nullableText(
         collateral?.address?.regency ?? collateral?.address?.kabupaten,
       ),
@@ -87,9 +126,7 @@ export function normalizeCollateralForSave(collateral) {
         : null,
 
       notaryName: nullableText(collateral?.binding?.notaryName),
-
       notaryCode: nullableText(collateral?.binding?.notaryCode),
-
       fee: nullableNumber(collateral?.binding?.fee),
 
       outgoingLetterNumber: nullableText(
@@ -97,6 +134,7 @@ export function normalizeCollateralForSave(collateral) {
       ),
 
       note: nullableText(collateral?.binding?.note),
+      covernote: nullableText(collateral?.binding?.covernote),
 
       status: nullableText(collateral?.binding?.status) || "BELUM_DIPROSES",
     },
@@ -111,26 +149,17 @@ export function normalizeCollateralForSave(collateral) {
 
     peranAgunan: nullableText(collateral?.peranAgunan),
 
-    pernahAgunanPinjamanLama: Boolean(
-      collateral?.pernahAgunanPinjamanLama ||
-      collateral?.isReusedAgunan ||
-      collateral?.isReused ||
-      collateral?.reuseFromLoanId,
-    ),
-
-    isReusedAgunan: Boolean(
-      collateral?.isReusedAgunan ||
-      collateral?.isReused ||
-      collateral?.reuseFromLoanId,
-    ),
-
+    pernahAgunanPinjamanLama,
+    isReusedAgunan,
     reuseFromLoanId: collateral?.reuseFromLoanId || null,
   };
 }
 
-export function validateCollateral(collateral, index) {
+export function validateCollateral(collateral, index = 0) {
+  const nomor = index + 1;
+
   if (!collateral) {
-    throw new Error(`Data Agunan ke-${index + 1} tidak valid.`);
+    throw new Error(`Data Agunan ke-${nomor} tidak valid.`);
   }
 
   const type = String(collateral.type || "")
@@ -138,25 +167,42 @@ export function validateCollateral(collateral, index) {
     .toUpperCase();
 
   if (!["SHM", "BPKB"].includes(type)) {
-    throw new Error(`Jenis Agunan ke-${index + 1} harus SHM atau BPKB.`);
+    throw new Error(`Jenis Agunan ke-${nomor} harus SHM atau BPKB.`);
   }
 
-  if (!collateral.number) {
-    throw new Error(`Nomor ${type} Agunan ke-${index + 1} wajib diisi.`);
+  if (!nullableText(collateral.number)) {
+    throw new Error(`Nomor ${type} Agunan ke-${nomor} wajib diisi.`);
   }
 
   if (!Array.isArray(collateral.owners) || !collateral.owners.length) {
-    throw new Error(`Pemilik Agunan ke-${index + 1} wajib diisi.`);
+    throw new Error(`Pemilik Agunan ke-${nomor} wajib diisi.`);
   }
 
-  if (!collateral.owners.some((owner) => owner?.nama?.trim())) {
-    throw new Error(`Nama Pemilik Agunan ke-${index + 1} wajib diisi.`);
+  if (
+    !collateral.owners.some((owner) => nullableText(owner?.nama ?? owner?.name))
+  ) {
+    throw new Error(`Nama Pemilik Agunan ke-${nomor} wajib diisi.`);
   }
 
-  if (collateral.isReusedAgunan && !collateral.agunanId) {
+  const isExplicitReuse = Boolean(
+    collateral.isReusedAgunan ||
+    collateral.pernahAgunanPinjamanLama ||
+    collateral.isReused ||
+    collateral.reuseFromLoanId,
+  );
+
+  if (isExplicitReuse && !isUuid(collateral.agunanId)) {
     throw new Error(
-      `Agunan pinjaman lama ke-${index + 1} tidak memiliki ID master agunan.`,
+      `Agunan pinjaman lama ke-${nomor} harus memiliki ID master agunan yang valid.`,
     );
+  }
+
+  const relationship = normalizeRelationship(collateral.relationship);
+
+  if (NIK_OPTIONAL_RELATIONSHIPS.has(relationship)) {
+    // NIK memang tidak diwajibkan untuk hubungan ini.
+    // Nilai NIK akan dinormalisasi menjadi null saat penyimpanan.
+    return;
   }
 }
 
@@ -193,13 +239,8 @@ export function mapCertificateTypeToDb(value) {
 
   const normalized = String(value).trim().toUpperCase();
 
-  if (normalized === "FISIK") {
-    return "FISIK";
-  }
-
-  if (normalized === "ELEKTRONIK") {
-    return "ELEKTRONIK";
-  }
+  if (normalized === "FISIK") return "FISIK";
+  if (normalized === "ELEKTRONIK") return "ELEKTRONIK";
 
   return normalized;
 }

@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import { supabase } from "@/lib/supabase";
 
@@ -240,87 +239,85 @@ export default function LokerPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* HEADER */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm text-zinc-500">
-              <Archive className="h-4 w-4" />
-              Master Data
-            </div>
-
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900">
-              Loker
-            </h1>
-
-            <p className="mt-1 text-sm text-zinc-500">
-              Pemetaan lokasi fisik agunan di{" "}
-              <span className="font-medium text-zinc-700">
-                {unitData?.nama_unit || activeUnit?.value || "-"}
-              </span>
-            </p>
+    <div className="space-y-6">
+      {/* HEADER */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm text-zinc-500">
+            <Archive className="h-4 w-4" />
+            Master Data
           </div>
 
-          <button
-            type="button"
-            onClick={() => loadData(true)}
-            disabled={refreshing}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <RefreshCw
-              className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
-            />
-            Refresh
-          </button>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900">
+            Loker
+          </h1>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            Pemetaan lokasi fisik agunan di{" "}
+            <span className="font-medium text-zinc-700">
+              {unitData?.nama_unit || activeUnit?.value || "-"}
+            </span>
+          </p>
         </div>
 
-        {/* SUMMARY */}
-        {!loading && (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <SummaryCard label="Total Slot" value={lokerData.length} />
-
-            <SummaryCard
-              label="Slot Aktif"
-              value={lokerData.filter((item) => item.aktif).length}
-            />
-
-            <SummaryCard label="Total Keterangan" value={totalKeterangan} />
-          </div>
-        )}
-
-        {/* ERROR */}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {/* CONTENT */}
-        {loading ? (
-          <LoadingCards />
-        ) : lokerData.length === 0 ? (
-          <EmptyState />
-        ) : (
-          <>
-            {/* LOKER 1 */}
-            <LokerGroup
-              title="Loker 1"
-              items={lokerData.filter((item) => item.nomor_loker === 1)}
-              onEdit={setEditingLoker}
-              onToggle={handleToggleLoker}
-            />
-
-            {/* LOKER 2 */}
-            <LokerGroup
-              title="Loker 2"
-              items={lokerData.filter((item) => item.nomor_loker === 2)}
-              onEdit={setEditingLoker}
-              onToggle={handleToggleLoker}
-            />
-          </>
-        )}
+        <button
+          type="button"
+          onClick={() => loadData(true)}
+          disabled={refreshing}
+          className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`}
+          />
+          Refresh
+        </button>
       </div>
+
+      {/* SUMMARY */}
+      {!loading && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          <SummaryCard label="Total Slot" value={lokerData.length} />
+
+          <SummaryCard
+            label="Slot Aktif"
+            value={lokerData.filter((item) => item.aktif).length}
+          />
+
+          <SummaryCard label="Total Keterangan" value={totalKeterangan} />
+        </div>
+      )}
+
+      {/* ERROR */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* CONTENT */}
+      {loading ? (
+        <LoadingCards />
+      ) : lokerData.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <>
+          {/* LOKER 1 */}
+          <LokerGroup
+            title="Loker 1"
+            items={lokerData.filter((item) => item.nomor_loker === 1)}
+            onEdit={setEditingLoker}
+            onToggle={handleToggleLoker}
+          />
+
+          {/* LOKER 2 */}
+          <LokerGroup
+            title="Loker 2"
+            items={lokerData.filter((item) => item.nomor_loker === 2)}
+            onEdit={setEditingLoker}
+            onToggle={handleToggleLoker}
+          />
+        </>
+      )}
 
       {/* EDIT MODAL */}
       {editingLoker && (
@@ -333,7 +330,7 @@ export default function LokerPage() {
           onSave={handleSaveKeterangan}
         />
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 

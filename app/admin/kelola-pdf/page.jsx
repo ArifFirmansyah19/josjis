@@ -2,7 +2,6 @@
 
 import { useMemo, useRef, useState } from "react";
 import { Archive, FileText, Loader2, Package, X } from "lucide-react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { ModeSelector, UploadArea, PdfNotes } from "./components/PdfShared";
 import SavePdfModal from "./components/SavePdfModal";
 import CompressPdf from "./features/CompressPdf";
@@ -388,160 +387,157 @@ export default function KelolaPdfPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="min-h-full space-y-5 pb-10">
-        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-white">
-                <FileText className="h-5 w-5" />
-              </div>
-              <div>
-                <h1 className="text-lg font-bold text-zinc-900">Kelola PDF</h1>
-                <p className="mt-0.5 text-xs text-zinc-500">
-                  Kompres, gabungkan, atur, pisahkan, dan ubah gambar menjadi
-                  PDF.
-                </p>
-              </div>
+    <div className="min-h-full space-y-5 pb-10">
+      <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-zinc-900 text-white">
+              <FileText className="h-5 w-5" />
             </div>
-            {(files.length > 0 || pages.length > 0) && (
-              <button
-                type="button"
-                onClick={resetWorkspace}
-                disabled={loading}
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
-              >
-                <X className="h-4 w-4" />
-                Bersihkan
-              </button>
-            )}
+            <div>
+              <h1 className="text-lg font-bold text-zinc-900">Kelola PDF</h1>
+              <p className="mt-0.5 text-xs text-zinc-500">
+                Kompres, gabungkan, atur, pisahkan, dan ubah gambar menjadi PDF.
+              </p>
+            </div>
           </div>
+          {(files.length > 0 || pages.length > 0) && (
+            <button
+              type="button"
+              onClick={resetWorkspace}
+              disabled={loading}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-xs font-semibold text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+            >
+              <X className="h-4 w-4" />
+              Bersihkan
+            </button>
+          )}
         </div>
-        <ModeSelector mode={mode} onChange={changeMode} />
-        {message && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
-            {message}
-          </div>
-        )}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
-            {error}
-          </div>
-        )}
-        {loading && progress && (
-          <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-600">
-            <Loader2 className="h-4 w-4 animate-spin" />
-            {progress}
-          </div>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept={PDF_ACCEPT}
-          multiple={mode === "merge"}
-          className="hidden"
-          onChange={(event) => {
-            void handleFiles(event.target.files);
-            event.target.value = "";
-          }}
-        />
-        <input
-          ref={imageInputRef}
-          type="file"
-          accept={IMAGE_ACCEPT}
-          multiple
-          className="hidden"
-          onChange={(event) => {
-            void handleFiles(event.target.files);
-            event.target.value = "";
-          }}
-        />
-        <UploadArea
-          mode={mode}
-          files={files}
-          loading={loading}
-          onClick={openFilePicker}
-        />
-        {mode === "compress" && (
-          <CompressPdf
-            level={compressionLevel}
-            setLevel={setCompressionLevel}
-            colorMode={colorMode}
-            setColorMode={setColorMode}
-            originalSize={files[0]?.size || 0}
-          />
-        )}
-        {mode === "image-to-pdf" && (
-          <ImageToPdf
-            colorMode={colorMode}
-            setColorMode={setColorMode}
-            files={files}
-          />
-        )}
-        {mode === "split" && (
-          <SplitPdf
-            ranges={splitRanges}
-            setRanges={setSplitRanges}
-            totalPages={totalPages}
-            selectedPages={selectedSplitPages}
-            pages={pages}
-            outputMode={splitOutputMode}
-            setOutputMode={setSplitOutputMode}
-          />
-        )}
-        {mode === "pages" && pages.length > 0 && (
-          <EditPdfPages
-            pages={pages}
-            zoom={zoom}
-            setZoom={setZoom}
-            onMove={movePage}
-            onRotate={rotatePage}
-            onDelete={toggleDeletePage}
-          />
-        )}
-        {mode === "merge" && files.length > 0 && (
-          <MergePdf
-            files={files}
-            onMove={moveMergeFile}
-            onRemove={(index) =>
-              setFiles((current) => current.filter((_, i) => i !== index))
-            }
-          />
-        )}
-        <div className="flex justify-end">
-          <button
-            type="button"
-            onClick={processCurrentMode}
-            disabled={loading || !files.length}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {loading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Memproses...
-              </>
-            ) : (
-              <>
-                <Package className="h-4 w-4" />
-                Proses PDF
-              </>
-            )}
-          </button>
-        </div>
-        <PdfNotes />
-        <SavePdfModal
-          open={saveModalOpen}
-          size={resultSize}
-          defaultName={outputName || "hasil-josjis.pdf"}
-          directoryName={selectedDirectoryName}
-          onClose={() => {
-            if (!savingFile) setSaveModalOpen(false);
-          }}
-          onSelectDirectory={selectDirectory}
-          onSave={saveResultFile}
-          saving={savingFile}
-        />
       </div>
-    </DashboardLayout>
+      <ModeSelector mode={mode} onChange={changeMode} />
+      {message && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-xs text-emerald-700">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-xs text-red-700">
+          {error}
+        </div>
+      )}
+      {loading && progress && (
+        <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 text-xs text-zinc-600">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {progress}
+        </div>
+      )}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={PDF_ACCEPT}
+        multiple={mode === "merge"}
+        className="hidden"
+        onChange={(event) => {
+          void handleFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <input
+        ref={imageInputRef}
+        type="file"
+        accept={IMAGE_ACCEPT}
+        multiple
+        className="hidden"
+        onChange={(event) => {
+          void handleFiles(event.target.files);
+          event.target.value = "";
+        }}
+      />
+      <UploadArea
+        mode={mode}
+        files={files}
+        loading={loading}
+        onClick={openFilePicker}
+      />
+      {mode === "compress" && (
+        <CompressPdf
+          level={compressionLevel}
+          setLevel={setCompressionLevel}
+          colorMode={colorMode}
+          setColorMode={setColorMode}
+          originalSize={files[0]?.size || 0}
+        />
+      )}
+      {mode === "image-to-pdf" && (
+        <ImageToPdf
+          colorMode={colorMode}
+          setColorMode={setColorMode}
+          files={files}
+        />
+      )}
+      {mode === "split" && (
+        <SplitPdf
+          ranges={splitRanges}
+          setRanges={setSplitRanges}
+          totalPages={totalPages}
+          selectedPages={selectedSplitPages}
+          pages={pages}
+          outputMode={splitOutputMode}
+          setOutputMode={setSplitOutputMode}
+        />
+      )}
+      {mode === "pages" && pages.length > 0 && (
+        <EditPdfPages
+          pages={pages}
+          zoom={zoom}
+          setZoom={setZoom}
+          onMove={movePage}
+          onRotate={rotatePage}
+          onDelete={toggleDeletePage}
+        />
+      )}
+      {mode === "merge" && files.length > 0 && (
+        <MergePdf
+          files={files}
+          onMove={moveMergeFile}
+          onRemove={(index) =>
+            setFiles((current) => current.filter((_, i) => i !== index))
+          }
+        />
+      )}
+      <div className="flex justify-end">
+        <button
+          type="button"
+          onClick={processCurrentMode}
+          disabled={loading || !files.length}
+          className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Memproses...
+            </>
+          ) : (
+            <>
+              <Package className="h-4 w-4" />
+              Proses PDF
+            </>
+          )}
+        </button>
+      </div>
+      <PdfNotes />
+      <SavePdfModal
+        open={saveModalOpen}
+        size={resultSize}
+        defaultName={outputName || "hasil-josjis.pdf"}
+        directoryName={selectedDirectoryName}
+        onClose={() => {
+          if (!savingFile) setSaveModalOpen(false);
+        }}
+        onSelectDirectory={selectDirectory}
+        onSave={saveResultFile}
+        saving={savingFile}
+      />
+    </div>
   );
 }

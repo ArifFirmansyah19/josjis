@@ -12,7 +12,6 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 
 const DUMMY_DATA = [
@@ -277,271 +276,269 @@ export default function PendingNotarisPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="w-full px-3 py-4 sm:px-5 lg:px-6">
-        {/* HEADER */}
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900 sm:text-xl">
-              Pending Notaris
-            </h1>
+    <div className="w-full px-3 py-4 sm:px-5 lg:px-6">
+      {/* HEADER */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900 sm:text-xl">
+            Pending Notaris
+          </h1>
 
-            <p className="mt-0.5 text-xs text-gray-500">
-              Monitoring pengikatan yang masih berproses di notaris.
-            </p>
+          <p className="mt-0.5 text-xs text-gray-500">
+            Monitoring pengikatan yang masih berproses di notaris.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={openAddModal}
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 text-xs font-medium text-white hover:bg-gray-800"
+        >
+          <Plus size={15} />
+          Tambah
+        </button>
+      </div>
+
+      {/* TOOLBAR */}
+      <div className="mb-3 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 flex-col gap-2 sm:flex-row">
+          {/* SEARCH */}
+          <div className="relative w-full sm:max-w-xs">
+            <Search
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            />
+
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari debitur / rekening..."
+              className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-xs outline-none focus:border-gray-400 focus:bg-white"
+            />
           </div>
+
+          {/* STATUS */}
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="h-9 rounded-lg border border-gray-200 bg-gray-50 px-3 text-xs outline-none focus:border-gray-400"
+          >
+            <option value="Semua">Semua Status</option>
+            <option value="Pending">Pending</option>
+            <option value="Selesai Sebagian">Selesai Sebagian</option>
+            <option value="Selesai">Selesai</option>
+          </select>
+        </div>
+
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleImport}
+            className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 hover:bg-gray-50 sm:flex-none"
+          >
+            <Upload size={14} />
+            Import Excel
+          </button>
 
           <button
             type="button"
-            onClick={openAddModal}
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg bg-gray-900 px-3 text-xs font-medium text-white hover:bg-gray-800"
+            onClick={handleExport}
+            className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 hover:bg-gray-50 sm:flex-none"
           >
-            <Plus size={15} />
-            Tambah
+            <Download size={14} />
+            Export
           </button>
         </div>
+      </div>
 
-        {/* TOOLBAR */}
-        <div className="mb-3 flex flex-col gap-2 rounded-xl border border-gray-200 bg-white p-2.5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-col gap-2 sm:flex-row">
-            {/* SEARCH */}
-            <div className="relative w-full sm:max-w-xs">
-              <Search
-                size={15}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-              />
+      {/* DESKTOP TABLE */}
+      <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[850px] border-collapse text-xs">
+            <thead>
+              <tr className="border-b border-gray-200 bg-gray-50 text-left text-[11px] font-medium text-gray-500">
+                <th className="px-3 py-2.5">Debitur</th>
+                <th className="px-3 py-2.5">Limit Pinjaman</th>
+                <th className="px-3 py-2.5">Tgl PK</th>
+                <th className="px-3 py-2.5">Pengikatan</th>
+                <th className="px-3 py-2.5">No. Rekening</th>
+                <th className="px-3 py-2.5">Keterangan</th>
+                <th className="px-3 py-2.5">Status</th>
+                <th className="w-20 px-3 py-2.5 text-right">Aksi</th>
+              </tr>
+            </thead>
 
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari debitur / rekening..."
-                className="h-9 w-full rounded-lg border border-gray-200 bg-gray-50 pl-9 pr-3 text-xs outline-none focus:border-gray-400 focus:bg-white"
-              />
-            </div>
-
-            {/* STATUS */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="h-9 rounded-lg border border-gray-200 bg-gray-50 px-3 text-xs outline-none focus:border-gray-400"
-            >
-              <option value="Semua">Semua Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Selesai Sebagian">Selesai Sebagian</option>
-              <option value="Selesai">Selesai</option>
-            </select>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={handleImport}
-              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 hover:bg-gray-50 sm:flex-none"
-            >
-              <Upload size={14} />
-              Import Excel
-            </button>
-
-            <button
-              type="button"
-              onClick={handleExport}
-              className="inline-flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-gray-200 px-3 text-xs font-medium text-gray-700 hover:bg-gray-50 sm:flex-none"
-            >
-              <Download size={14} />
-              Export
-            </button>
-          </div>
-        </div>
-
-        {/* DESKTOP TABLE */}
-        <div className="hidden overflow-hidden rounded-xl border border-gray-200 bg-white md:block">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] border-collapse text-xs">
-              <thead>
-                <tr className="border-b border-gray-200 bg-gray-50 text-left text-[11px] font-medium text-gray-500">
-                  <th className="px-3 py-2.5">Debitur</th>
-                  <th className="px-3 py-2.5">Limit Pinjaman</th>
-                  <th className="px-3 py-2.5">Tgl PK</th>
-                  <th className="px-3 py-2.5">Pengikatan</th>
-                  <th className="px-3 py-2.5">No. Rekening</th>
-                  <th className="px-3 py-2.5">Keterangan</th>
-                  <th className="px-3 py-2.5">Status</th>
-                  <th className="w-20 px-3 py-2.5 text-right">Aksi</th>
+            <tbody>
+              {filteredData.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={8}
+                    className="px-3 py-10 text-center text-xs text-gray-400"
+                  >
+                    Tidak ada data.
+                  </td>
                 </tr>
-              </thead>
+              ) : (
+                filteredData.map((item) => (
+                  <tr
+                    key={item.id}
+                    className="border-b border-gray-100 last:border-0 hover:bg-gray-50/70"
+                  >
+                    <td className="px-3 py-2.5 font-medium text-gray-900">
+                      {item.debitur}
+                    </td>
 
-              <tbody>
-                {filteredData.length === 0 ? (
-                  <tr>
+                    <td className="px-3 py-2.5 whitespace-nowrap text-gray-700">
+                      {formatRupiah(item.limit)}
+                    </td>
+
+                    <td className="px-3 py-2.5 whitespace-nowrap text-gray-600">
+                      {formatTanggal(item.tglPk)}
+                    </td>
+
+                    <td className="px-3 py-2.5 text-gray-700">
+                      {item.pengikatan || "-"}
+                    </td>
+
+                    <td className="px-3 py-2.5 whitespace-nowrap text-gray-600">
+                      {item.norek || "-"}
+                    </td>
+
+                    <td className="max-w-[240px] truncate px-3 py-2.5 text-gray-600">
+                      {item.keterangan || "-"}
+                    </td>
+
                     <td
-                      colSpan={8}
-                      className="px-3 py-10 text-center text-xs text-gray-400"
+                      className={`px-3 py-2.5 whitespace-nowrap ${getStatusClass(
+                        item.status,
+                      )}`}
                     >
-                      Tidak ada data.
+                      {item.status}
+                    </td>
+
+                    <td className="px-3 py-2.5">
+                      <div className="flex justify-end gap-1">
+                        <button
+                          type="button"
+                          onClick={() => openEditModal(item)}
+                          title="Edit"
+                          className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                        >
+                          <Pencil size={14} />
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(item.id)}
+                          title="Hapus"
+                          className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  filteredData.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-gray-100 last:border-0 hover:bg-gray-50/70"
-                    >
-                      <td className="px-3 py-2.5 font-medium text-gray-900">
-                        {item.debitur}
-                      </td>
-
-                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-700">
-                        {formatRupiah(item.limit)}
-                      </td>
-
-                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-600">
-                        {formatTanggal(item.tglPk)}
-                      </td>
-
-                      <td className="px-3 py-2.5 text-gray-700">
-                        {item.pengikatan || "-"}
-                      </td>
-
-                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-600">
-                        {item.norek || "-"}
-                      </td>
-
-                      <td className="max-w-[240px] truncate px-3 py-2.5 text-gray-600">
-                        {item.keterangan || "-"}
-                      </td>
-
-                      <td
-                        className={`px-3 py-2.5 whitespace-nowrap ${getStatusClass(
-                          item.status,
-                        )}`}
-                      >
-                        {item.status}
-                      </td>
-
-                      <td className="px-3 py-2.5">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            type="button"
-                            onClick={() => openEditModal(item)}
-                            title="Edit"
-                            className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                          >
-                            <Pencil size={14} />
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(item.id)}
-                            title="Hapus"
-                            className="rounded-md p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+      </div>
 
-        {/* MOBILE */}
-        <div className="space-y-2 md:hidden">
-          {filteredData.length === 0 ? (
-            <div className="rounded-xl border border-gray-200 bg-white px-4 py-10 text-center text-xs text-gray-400">
-              Tidak ada data.
-            </div>
-          ) : (
-            filteredData.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-xl border border-gray-200 bg-white p-3"
-              >
-                {/* ROW 1 */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="truncate text-sm font-semibold text-gray-900">
-                      {item.debitur}
-                    </div>
-
-                    <div className="mt-0.5 text-[11px] text-gray-500">
-                      {item.norek || "-"}
-                    </div>
+      {/* MOBILE */}
+      <div className="space-y-2 md:hidden">
+        {filteredData.length === 0 ? (
+          <div className="rounded-xl border border-gray-200 bg-white px-4 py-10 text-center text-xs text-gray-400">
+            Tidak ada data.
+          </div>
+        ) : (
+          filteredData.map((item) => (
+            <div
+              key={item.id}
+              className="rounded-xl border border-gray-200 bg-white p-3"
+            >
+              {/* ROW 1 */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="truncate text-sm font-semibold text-gray-900">
+                    {item.debitur}
                   </div>
 
-                  <div className="shrink-0 text-right text-xs text-gray-700">
-                    {formatRupiah(item.limit)}
+                  <div className="mt-0.5 text-[11px] text-gray-500">
+                    {item.norek || "-"}
                   </div>
                 </div>
 
-                {/* ROW 2 */}
-                <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 border-t border-gray-100 pt-2">
-                  <div>
-                    <div className="text-[10px] text-gray-400">Tgl PK</div>
+                <div className="shrink-0 text-right text-xs text-gray-700">
+                  {formatRupiah(item.limit)}
+                </div>
+              </div>
 
-                    <div className="text-[11px] text-gray-700">
-                      {formatTanggal(item.tglPk)}
-                    </div>
-                  </div>
+              {/* ROW 2 */}
+              <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5 border-t border-gray-100 pt-2">
+                <div>
+                  <div className="text-[10px] text-gray-400">Tgl PK</div>
 
-                  <div>
-                    <div className="text-[10px] text-gray-400">Pengikatan</div>
-
-                    <div className="text-[11px] text-gray-700">
-                      {item.pengikatan || "-"}
-                    </div>
+                  <div className="text-[11px] text-gray-700">
+                    {formatTanggal(item.tglPk)}
                   </div>
                 </div>
 
-                {/* KETERANGAN */}
-                <div className="mt-2 border-t border-gray-100 pt-2">
-                  <div className="text-[10px] text-gray-400">Keterangan</div>
+                <div>
+                  <div className="text-[10px] text-gray-400">Pengikatan</div>
 
-                  <div className="mt-0.5 text-[11px] leading-4 text-gray-700">
-                    {item.keterangan || "-"}
-                  </div>
-                </div>
-
-                {/* BOTTOM */}
-                <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
-                  <div
-                    className={`text-[11px] font-medium ${getStatusClass(
-                      item.status,
-                    )}`}
-                  >
-                    {item.status}
-                  </div>
-
-                  <div className="flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => openEditModal(item)}
-                      className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50"
-                    >
-                      <Pencil size={13} />
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(item.id)}
-                      className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50"
-                    >
-                      <Trash2 size={13} />
-                    </button>
+                  <div className="text-[11px] text-gray-700">
+                    {item.pengikatan || "-"}
                   </div>
                 </div>
               </div>
-            ))
-          )}
-        </div>
 
-        {/* FOOTER COUNT */}
-        <div className="mt-2 text-[11px] text-gray-400">
-          {filteredData.length} data ditampilkan
-        </div>
+              {/* KETERANGAN */}
+              <div className="mt-2 border-t border-gray-100 pt-2">
+                <div className="text-[10px] text-gray-400">Keterangan</div>
+
+                <div className="mt-0.5 text-[11px] leading-4 text-gray-700">
+                  {item.keterangan || "-"}
+                </div>
+              </div>
+
+              {/* BOTTOM */}
+              <div className="mt-2 flex items-center justify-between border-t border-gray-100 pt-2">
+                <div
+                  className={`text-[11px] font-medium ${getStatusClass(
+                    item.status,
+                  )}`}
+                >
+                  {item.status}
+                </div>
+
+                <div className="flex gap-1">
+                  <button
+                    type="button"
+                    onClick={() => openEditModal(item)}
+                    className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50"
+                  >
+                    <Pencil size={13} />
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(item.id)}
+                    className="rounded-md border border-gray-200 p-1.5 text-gray-500 hover:bg-gray-50"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* FOOTER COUNT */}
+      <div className="mt-2 text-[11px] text-gray-400">
+        {filteredData.length} data ditampilkan
       </div>
 
       {/* MODAL */}
@@ -730,6 +727,6 @@ export default function PendingNotarisPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }

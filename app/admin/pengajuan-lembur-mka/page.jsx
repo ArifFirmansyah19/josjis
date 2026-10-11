@@ -19,7 +19,6 @@ import {
   getRetentionLimit,
   getCalendarCells,
 } from "@/components/lembur-mka/utils/lemburHelpers";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import { supabase } from "@/lib/supabase";
 
@@ -448,82 +447,80 @@ export default function PengajuanLemburMkaPage() {
   const previewPageHeight = 794 * previewScale;
 
   return (
-    <DashboardLayout>
-      <div className="mx-auto max-w-[1500px] space-y-5">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
-              <Clock3 size={17} />
-              Operasional
-            </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
-              Pengajuan Lembur MKA
-            </h1>
-            <p className="mt-1 text-sm text-zinc-500">
-              Klik tanggal pada kalender untuk mengajukan atau melihat lembur.
-            </p>
+    <div className="mx-auto max-w-[1500px] space-y-5">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <div className="flex items-center gap-2 text-sm font-medium text-zinc-500">
+            <Clock3 size={17} />
+            Operasional
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setPreviewOpen(true)}
-              disabled={monthDates.length === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <FileText size={17} />
-              Preview SPKL
-            </button>
-            <button
-              type="button"
-              onClick={handleDownloadPdf}
-              disabled={monthDates.length === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <FileDown size={17} />
-              Unduh SPKL
-            </button>
-            <button
-              type="button"
-              onClick={handlePrint}
-              disabled={monthDates.length === 0}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Printer size={17} />
-              Print Langsung
-            </button>
-          </div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-zinc-900 sm:text-3xl">
+            Pengajuan Lembur MKA
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Klik tanggal pada kalender untuk mengajukan atau melihat lembur.
+          </p>
         </div>
-
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
-            {error}
-          </div>
-        )}
-
-        <KalenderLembur
-          calendarMonth={calendarMonth}
-          calendarYear={calendarYear}
-          goToday={goToday}
-          goPreviousMonth={goPreviousMonth}
-          goNextMonth={goNextMonth}
-          calendarCells={calendarCells}
-          selectedDate={selectedDate}
-          today={today}
-          getRecordsForDate={getRecordsForDate}
-          handleCalendarClick={handleCalendarClick}
-        />
-
-        <TabelLembur
-          calendarMonth={calendarMonth}
-          calendarYear={calendarYear}
-          currentUnitInfo={currentUnitInfo}
-          loading={loading}
-          monthRecords={monthRecords}
-          handleEdit={handleEdit}
-          handleDelete={handleDelete}
-          saving={saving}
-        />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setPreviewOpen(true)}
+            disabled={monthDates.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <FileText size={17} />
+            Preview SPKL
+          </button>
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            disabled={monthDates.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <FileDown size={17} />
+            Unduh SPKL
+          </button>
+          <button
+            type="button"
+            onClick={handlePrint}
+            disabled={monthDates.length === 0}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <Printer size={17} />
+            Print Langsung
+          </button>
+        </div>
       </div>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+          {error}
+        </div>
+      )}
+
+      <KalenderLembur
+        calendarMonth={calendarMonth}
+        calendarYear={calendarYear}
+        goToday={goToday}
+        goPreviousMonth={goPreviousMonth}
+        goNextMonth={goNextMonth}
+        calendarCells={calendarCells}
+        selectedDate={selectedDate}
+        today={today}
+        getRecordsForDate={getRecordsForDate}
+        handleCalendarClick={handleCalendarClick}
+      />
+
+      <TabelLembur
+        calendarMonth={calendarMonth}
+        calendarYear={calendarYear}
+        currentUnitInfo={currentUnitInfo}
+        loading={loading}
+        monthRecords={monthRecords}
+        handleEdit={handleEdit}
+        handleDelete={handleDelete}
+        saving={saving}
+      />
 
       <ModalFormLembur
         modal={modal}
@@ -579,6 +576,6 @@ export default function PengajuanLemburMkaPage() {
       </div>
 
       <SpklStyles />
-    </DashboardLayout>
+    </div>
   );
 }

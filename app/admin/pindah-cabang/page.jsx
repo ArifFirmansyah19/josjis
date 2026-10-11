@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import {
   AlertTriangle,
@@ -282,451 +281,447 @@ export default function PindahCabangPage() {
   ======================================================= */
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-slate-50 p-3 sm:p-5 lg:p-6">
-        <div className="mx-auto max-w-5xl space-y-5">
-          {/* =================================================
+    <div className="min-h-screen bg-slate-50 p-3 sm:p-5 lg:p-6">
+      <div className="mx-auto max-w-5xl space-y-5">
+        {/* =================================================
               HEADER
           ================================================== */}
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-slate-900 p-3 text-white">
-                  <Archive className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                    Pindah Cabang
-                  </h1>
-
-                  <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm">
-                    Persiapan untuk mengosongkan data operasional JOSJIS sebelum
-                    digunakan di cabang baru.
-                  </p>
-                </div>
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-slate-900 p-3 text-white">
+                <Archive className="h-5 w-5" />
               </div>
 
-              <div className="flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-                <Database className="h-4 w-4 text-slate-500" />
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                  Pindah Cabang
+                </h1>
 
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-slate-400">
-                    Unit Aktif
-                  </div>
+                <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm">
+                  Persiapan untuk mengosongkan data operasional JOSJIS sebelum
+                  digunakan di cabang baru.
+                </p>
+              </div>
+            </div>
 
-                  <div className="text-xs font-bold text-slate-800">
-                    {unitCode}
-                  </div>
+            <div className="flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+              <Database className="h-4 w-4 text-slate-500" />
+
+              <div>
+                <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                  Unit Aktif
+                </div>
+
+                <div className="text-xs font-bold text-slate-800">
+                  {unitCode}
                 </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* =================================================
+        {/* =================================================
               CABANG LAMA
           ================================================== */}
 
-          <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="flex items-center justify-between p-4 sm:p-5">
-              <div>
-                <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                  Cabang / Unit Saat Ini
-                </div>
-
-                <div className="mt-1 text-lg font-bold text-slate-900">
-                  {unitName}
-                </div>
-
-                <div className="mt-0.5 text-xs text-slate-500">
-                  Kode unit: {unitCode}
-                </div>
+        <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between p-4 sm:p-5">
+            <div>
+              <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                Cabang / Unit Saat Ini
               </div>
 
-              <div className="rounded-xl bg-amber-50 p-3 text-amber-600">
-                <FileArchive className="h-5 w-5" />
+              <div className="mt-1 text-lg font-bold text-slate-900">
+                {unitName}
+              </div>
+
+              <div className="mt-0.5 text-xs text-slate-500">
+                Kode unit: {unitCode}
               </div>
             </div>
-          </div>
 
-          {/* =================================================
+            <div className="rounded-xl bg-amber-50 p-3 text-amber-600">
+              <FileArchive className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+
+        {/* =================================================
               CHECKLIST
           ================================================== */}
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <button
-              type="button"
-              onClick={() => setShowChecklist((prev) => !prev)}
-              className="flex w-full items-center justify-between p-4 text-left sm:p-5"
-            >
-              <div>
-                <div className="flex items-center gap-2">
-                  <FileCheck2 className="h-5 w-5 text-blue-600" />
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setShowChecklist((prev) => !prev)}
+            className="flex w-full items-center justify-between p-4 text-left sm:p-5"
+          >
+            <div>
+              <div className="flex items-center gap-2">
+                <FileCheck2 className="h-5 w-5 text-blue-600" />
 
-                  <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                    Checklist Penyalinan Data
-                  </h2>
-                </div>
-
-                <p className="mt-1 text-xs text-slate-500">
-                  Pastikan seluruh data cabang lama sudah disalin sebelum JOSJIS
-                  dikosongkan.
-                </p>
+                <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                  Checklist Penyalinan Data
+                </h2>
               </div>
 
-              {showChecklist ? (
-                <ChevronUp className="h-5 w-5 text-slate-400" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-slate-400" />
-              )}
-            </button>
+              <p className="mt-1 text-xs text-slate-500">
+                Pastikan seluruh data cabang lama sudah disalin sebelum JOSJIS
+                dikosongkan.
+              </p>
+            </div>
 
-            {showChecklist && (
-              <div className="border-t border-slate-100">
-                {/* PROGRESS */}
-                <div className="border-b border-slate-100 bg-slate-50 p-4">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-slate-600">
-                      Progress
-                    </span>
+            {showChecklist ? (
+              <ChevronUp className="h-5 w-5 text-slate-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-slate-400" />
+            )}
+          </button>
 
-                    <span className="font-bold text-slate-900">
-                      {checkedCount}/{CHECKLIST_ITEMS.length}
-                    </span>
-                  </div>
+          {showChecklist && (
+            <div className="border-t border-slate-100">
+              {/* PROGRESS */}
+              <div className="border-b border-slate-100 bg-slate-50 p-4">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-600">Progress</span>
 
-                  <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
-                    <div
-                      className="h-full rounded-full bg-blue-600 transition-all"
-                      style={{ width: `${progress}%` }}
-                    />
-                  </div>
-
-                  <div className="mt-2 text-[10px] text-slate-400">
-                    {progress}% checklist selesai
-                  </div>
+                  <span className="font-bold text-slate-900">
+                    {checkedCount}/{CHECKLIST_ITEMS.length}
+                  </span>
                 </div>
 
-                {/* CHECKLIST */}
-                <div className="divide-y divide-slate-100">
-                  {CHECKLIST_ITEMS.map((item, index) => {
-                    const checked = Boolean(checkedItems[item.id]);
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-200">
+                  <div
+                    className="h-full rounded-full bg-blue-600 transition-all"
+                    style={{ width: `${progress}%` }}
+                  />
+                </div>
 
-                    return (
-                      <button
-                        type="button"
-                        key={item.id}
-                        onClick={() => toggleChecklist(item.id)}
-                        disabled={verified}
-                        className={`flex w-full items-start gap-3 p-4 text-left transition ${
-                          verified ? "cursor-default" : "hover:bg-slate-50"
+                <div className="mt-2 text-[10px] text-slate-400">
+                  {progress}% checklist selesai
+                </div>
+              </div>
+
+              {/* CHECKLIST */}
+              <div className="divide-y divide-slate-100">
+                {CHECKLIST_ITEMS.map((item, index) => {
+                  const checked = Boolean(checkedItems[item.id]);
+
+                  return (
+                    <button
+                      type="button"
+                      key={item.id}
+                      onClick={() => toggleChecklist(item.id)}
+                      disabled={verified}
+                      className={`flex w-full items-start gap-3 p-4 text-left transition ${
+                        verified ? "cursor-default" : "hover:bg-slate-50"
+                      }`}
+                    >
+                      <div
+                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition ${
+                          checked
+                            ? "border-blue-600 bg-blue-600 text-white"
+                            : "border-slate-300 bg-white"
                         }`}
                       >
-                        <div
-                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition ${
-                            checked
-                              ? "border-blue-600 bg-blue-600 text-white"
-                              : "border-slate-300 bg-white"
-                          }`}
-                        >
-                          {checked && <Check className="h-3.5 w-3.5" />}
+                        {checked && <Check className="h-3.5 w-3.5" />}
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-slate-400">
+                            {String(index + 1).padStart(2, "0")}
+                          </span>
+
+                          <span className="text-xs font-bold text-slate-800">
+                            {item.title}
+                          </span>
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-bold text-slate-400">
-                              {String(index + 1).padStart(2, "0")}
-                            </span>
+                        <p className="mt-1 text-[10px] leading-4 text-slate-500">
+                          {item.description}
+                        </p>
+                      </div>
 
-                            <span className="text-xs font-bold text-slate-800">
-                              {item.title}
-                            </span>
-                          </div>
-
-                          <p className="mt-1 text-[10px] leading-4 text-slate-500">
-                            {item.description}
-                          </p>
-                        </div>
-
-                        {checked && (
-                          <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* CHECKLIST ACTION */}
-                {!verified && (
-                  <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 p-4 sm:flex-row sm:justify-between">
-                    <button
-                      type="button"
-                      onClick={checkAll}
-                      className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
-                      Centang Semua
+                      {checked && (
+                        <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                      )}
                     </button>
-
-                    <button
-                      type="button"
-                      onClick={uncheckAll}
-                      className="flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-500 hover:bg-white"
-                    >
-                      <X className="h-4 w-4" />
-                      Hapus Semua Centang
-                    </button>
-                  </div>
-                )}
+                  );
+                })}
               </div>
-            )}
-          </div>
 
-          {/* =================================================
+              {/* CHECKLIST ACTION */}
+              {!verified && (
+                <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50 p-4 sm:flex-row sm:justify-between">
+                  <button
+                    type="button"
+                    onClick={checkAll}
+                    className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Centang Semua
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={uncheckAll}
+                    className="flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold text-slate-500 hover:bg-white"
+                  >
+                    <X className="h-4 w-4" />
+                    Hapus Semua Centang
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* =================================================
               VERIFICATION STATUS
           ================================================== */}
 
-          <div
-            className={`rounded-2xl border p-4 shadow-sm sm:p-5 ${
-              verified
-                ? "border-emerald-200 bg-emerald-50"
-                : allChecked
-                  ? "border-blue-200 bg-blue-50"
-                  : "border-slate-200 bg-white"
-            }`}
-          >
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="flex items-start gap-3">
-                <div
-                  className={`rounded-xl p-3 ${
-                    verified
-                      ? "bg-emerald-100 text-emerald-600"
-                      : allChecked
-                        ? "bg-blue-100 text-blue-600"
-                        : "bg-slate-100 text-slate-500"
-                  }`}
-                >
-                  {verified ? (
-                    <ShieldCheck className="h-5 w-5" />
-                  ) : (
-                    <UserCheck className="h-5 w-5" />
-                  )}
-                </div>
-
-                <div>
-                  <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                    Verifikasi
-                  </div>
-
-                  <h2 className="mt-1 text-sm font-bold text-slate-900">
-                    {statusText}
-                  </h2>
-
-                  <p className="mt-1 text-xs leading-5 text-slate-500">
-                    {verified
-                      ? `Admin ${adminUsername} telah melakukan verifikasi.`
-                      : allChecked
-                        ? "Seluruh checklist sudah selesai. Verifikasi admin diperlukan."
-                        : "Selesaikan seluruh checklist terlebih dahulu."}
-                  </p>
-                </div>
+        <div
+          className={`rounded-2xl border p-4 shadow-sm sm:p-5 ${
+            verified
+              ? "border-emerald-200 bg-emerald-50"
+              : allChecked
+                ? "border-blue-200 bg-blue-50"
+                : "border-slate-200 bg-white"
+          }`}
+        >
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-3">
+              <div
+                className={`rounded-xl p-3 ${
+                  verified
+                    ? "bg-emerald-100 text-emerald-600"
+                    : allChecked
+                      ? "bg-blue-100 text-blue-600"
+                      : "bg-slate-100 text-slate-500"
+                }`}
+              >
+                {verified ? (
+                  <ShieldCheck className="h-5 w-5" />
+                ) : (
+                  <UserCheck className="h-5 w-5" />
+                )}
               </div>
 
-              {!verified && (
-                <button
-                  type="button"
-                  onClick={openVerification}
-                  disabled={!allChecked}
-                  className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition ${
-                    allChecked
-                      ? "bg-blue-600 text-white hover:bg-blue-700"
-                      : "cursor-not-allowed bg-slate-200 text-slate-400"
-                  }`}
-                >
-                  <ShieldCheck className="h-4 w-4" />
-                  Verifikasi Admin
-                </button>
-              )}
-            </div>
-          </div>
+              <div>
+                <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                  Verifikasi
+                </div>
 
-          {/* =================================================
+                <h2 className="mt-1 text-sm font-bold text-slate-900">
+                  {statusText}
+                </h2>
+
+                <p className="mt-1 text-xs leading-5 text-slate-500">
+                  {verified
+                    ? `Admin ${adminUsername} telah melakukan verifikasi.`
+                    : allChecked
+                      ? "Seluruh checklist sudah selesai. Verifikasi admin diperlukan."
+                      : "Selesaikan seluruh checklist terlebih dahulu."}
+                </p>
+              </div>
+            </div>
+
+            {!verified && (
+              <button
+                type="button"
+                onClick={openVerification}
+                disabled={!allChecked}
+                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition ${
+                  allChecked
+                    ? "bg-blue-600 text-white hover:bg-blue-700"
+                    : "cursor-not-allowed bg-slate-200 text-slate-400"
+                }`}
+              >
+                <ShieldCheck className="h-4 w-4" />
+                Verifikasi Admin
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* =================================================
               DANGER ZONE
           ================================================== */}
 
-          <div className="overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm">
-            <button
-              type="button"
-              onClick={() => setShowDanger((prev) => !prev)}
-              className="flex w-full items-center justify-between bg-red-50 p-4 text-left sm:p-5"
-            >
-              <div className="flex items-start gap-3">
-                <div className="rounded-xl bg-red-100 p-3 text-red-600">
-                  <ShieldAlert className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <h2 className="text-sm font-bold text-red-900 sm:text-base">
-                    Zona Reset JOSJIS
-                  </h2>
-
-                  <p className="mt-1 text-xs leading-5 text-red-700">
-                    Area ini digunakan untuk mengosongkan data operasional
-                    cabang lama.
-                  </p>
-                </div>
+        <div className="overflow-hidden rounded-2xl border border-red-200 bg-white shadow-sm">
+          <button
+            type="button"
+            onClick={() => setShowDanger((prev) => !prev)}
+            className="flex w-full items-center justify-between bg-red-50 p-4 text-left sm:p-5"
+          >
+            <div className="flex items-start gap-3">
+              <div className="rounded-xl bg-red-100 p-3 text-red-600">
+                <ShieldAlert className="h-5 w-5" />
               </div>
 
-              {showDanger ? (
-                <ChevronUp className="h-5 w-5 text-red-400" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-red-400" />
-              )}
-            </button>
+              <div>
+                <h2 className="text-sm font-bold text-red-900 sm:text-base">
+                  Zona Reset JOSJIS
+                </h2>
 
-            {showDanger && (
-              <div className="p-4 sm:p-5">
-                {/* WARNING */}
-                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                  <div className="flex gap-3">
-                    <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
-
-                    <div>
-                      <h3 className="text-xs font-bold text-red-900">
-                        Perhatian
-                      </h3>
-
-                      <p className="mt-1 text-xs leading-5 text-red-700">
-                        Proses reset akan mengosongkan data operasional JOSJIS
-                        yang ditentukan untuk proses pindah cabang.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* WHAT REMAINS */}
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-
-                      <span className="text-xs font-bold text-emerald-800">
-                        Tetap dipertahankan
-                      </span>
-                    </div>
-
-                    <ul className="mt-3 space-y-2 text-[10px] leading-4 text-emerald-700">
-                      <li>• Struktur tabel database</li>
-                      <li>• Relasi dan foreign key</li>
-                      <li>• Konfigurasi sistem</li>
-                      <li>• Struktur aplikasi</li>
-                      <li>• RLS / policy database</li>
-                    </ul>
-                  </div>
-
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                    <div className="flex items-center gap-2">
-                      <Trash2 className="h-4 w-4 text-red-600" />
-
-                      <span className="text-xs font-bold text-red-800">
-                        Akan dikosongkan
-                      </span>
-                    </div>
-
-                    <ul className="mt-3 space-y-2 text-[10px] leading-4 text-red-700">
-                      <li>• Data operasional cabang lama</li>
-                      <li>• Transaksi dan proses lama</li>
-                      <li>• Data PK sesuai cakupan reset</li>
-                      <li>• Data agunan sesuai cakupan reset</li>
-                      <li>• Data proses operasional lainnya</li>
-                    </ul>
-                  </div>
-                </div>
-
-                {/* FINAL STATUS */}
-                <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className={`rounded-xl p-2.5 ${
-                        resetReady
-                          ? "bg-emerald-100 text-emerald-600"
-                          : "bg-slate-200 text-slate-500"
-                      }`}
-                    >
-                      {resetReady ? (
-                        <ShieldCheck className="h-5 w-5" />
-                      ) : (
-                        <Lock className="h-5 w-5" />
-                      )}
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                        Status Reset
-                      </div>
-
-                      <div className="mt-1 text-sm font-bold text-slate-800">
-                        {resetReady
-                          ? "Reset dapat diverifikasi"
-                          : "Reset masih terkunci"}
-                      </div>
-
-                      <div className="mt-1 text-[10px] text-slate-500">
-                        {resetReady
-                          ? "Checklist dan verifikasi admin telah selesai."
-                          : "Checklist lengkap dan verifikasi admin diperlukan."}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* RESET BUTTON */}
-                <button
-                  type="button"
-                  onClick={openFinalModal}
-                  disabled={!resetReady}
-                  className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold transition ${
-                    resetReady
-                      ? "bg-red-600 text-white shadow-sm hover:bg-red-700"
-                      : "cursor-not-allowed bg-slate-200 text-slate-400"
-                  }`}
-                >
-                  {resetReady ? (
-                    <>
-                      <Trash2 className="h-4 w-4" />
-                      Kosongkan JOSJIS
-                    </>
-                  ) : (
-                    <>
-                      <Lock className="h-4 w-4" />
-                      Kosongkan JOSJIS — Terkunci
-                    </>
-                  )}
-                </button>
+                <p className="mt-1 text-xs leading-5 text-red-700">
+                  Area ini digunakan untuk mengosongkan data operasional cabang
+                  lama.
+                </p>
               </div>
+            </div>
+
+            {showDanger ? (
+              <ChevronUp className="h-5 w-5 text-red-400" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-red-400" />
             )}
-          </div>
+          </button>
 
-          {/* =================================================
+          {showDanger && (
+            <div className="p-4 sm:p-5">
+              {/* WARNING */}
+              <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                <div className="flex gap-3">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+
+                  <div>
+                    <h3 className="text-xs font-bold text-red-900">
+                      Perhatian
+                    </h3>
+
+                    <p className="mt-1 text-xs leading-5 text-red-700">
+                      Proses reset akan mengosongkan data operasional JOSJIS
+                      yang ditentukan untuk proses pindah cabang.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* WHAT REMAINS */}
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+
+                    <span className="text-xs font-bold text-emerald-800">
+                      Tetap dipertahankan
+                    </span>
+                  </div>
+
+                  <ul className="mt-3 space-y-2 text-[10px] leading-4 text-emerald-700">
+                    <li>• Struktur tabel database</li>
+                    <li>• Relasi dan foreign key</li>
+                    <li>• Konfigurasi sistem</li>
+                    <li>• Struktur aplikasi</li>
+                    <li>• RLS / policy database</li>
+                  </ul>
+                </div>
+
+                <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+                  <div className="flex items-center gap-2">
+                    <Trash2 className="h-4 w-4 text-red-600" />
+
+                    <span className="text-xs font-bold text-red-800">
+                      Akan dikosongkan
+                    </span>
+                  </div>
+
+                  <ul className="mt-3 space-y-2 text-[10px] leading-4 text-red-700">
+                    <li>• Data operasional cabang lama</li>
+                    <li>• Transaksi dan proses lama</li>
+                    <li>• Data PK sesuai cakupan reset</li>
+                    <li>• Data agunan sesuai cakupan reset</li>
+                    <li>• Data proses operasional lainnya</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* FINAL STATUS */}
+              <div className="mt-5 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`rounded-xl p-2.5 ${
+                      resetReady
+                        ? "bg-emerald-100 text-emerald-600"
+                        : "bg-slate-200 text-slate-500"
+                    }`}
+                  >
+                    {resetReady ? (
+                      <ShieldCheck className="h-5 w-5" />
+                    ) : (
+                      <Lock className="h-5 w-5" />
+                    )}
+                  </div>
+
+                  <div className="flex-1">
+                    <div className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                      Status Reset
+                    </div>
+
+                    <div className="mt-1 text-sm font-bold text-slate-800">
+                      {resetReady
+                        ? "Reset dapat diverifikasi"
+                        : "Reset masih terkunci"}
+                    </div>
+
+                    <div className="mt-1 text-[10px] text-slate-500">
+                      {resetReady
+                        ? "Checklist dan verifikasi admin telah selesai."
+                        : "Checklist lengkap dan verifikasi admin diperlukan."}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* RESET BUTTON */}
+              <button
+                type="button"
+                onClick={openFinalModal}
+                disabled={!resetReady}
+                className={`mt-4 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold transition ${
+                  resetReady
+                    ? "bg-red-600 text-white shadow-sm hover:bg-red-700"
+                    : "cursor-not-allowed bg-slate-200 text-slate-400"
+                }`}
+              >
+                {resetReady ? (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Kosongkan JOSJIS
+                  </>
+                ) : (
+                  <>
+                    <Lock className="h-4 w-4" />
+                    Kosongkan JOSJIS — Terkunci
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* =================================================
               INFO
           ================================================== */}
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex gap-3">
-              <Database className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex gap-3">
+            <Database className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
 
-              <div>
-                <div className="text-xs font-bold text-slate-700">
-                  Kondisi setelah reset
-                </div>
-
-                <p className="mt-1 text-[10px] leading-5 text-slate-500">
-                  JOSJIS akan tetap memiliki struktur database dan aplikasi.
-                  Setelah digunakan di cabang baru, data dapat disusun kembali
-                  dari awal sesuai kebutuhan cabang tersebut.
-                </p>
+            <div>
+              <div className="text-xs font-bold text-slate-700">
+                Kondisi setelah reset
               </div>
+
+              <p className="mt-1 text-[10px] leading-5 text-slate-500">
+                JOSJIS akan tetap memiliki struktur database dan aplikasi.
+                Setelah digunakan di cabang baru, data dapat disusun kembali
+                dari awal sesuai kebutuhan cabang tersebut.
+              </p>
             </div>
           </div>
         </div>
@@ -962,7 +957,7 @@ export default function PindahCabangPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 

@@ -16,8 +16,6 @@ import {
   X,
 } from "lucide-react";
 
-import DashboardLayout from "@/components/DashboardLayout";
-
 /* =========================================================
    MOCK DATA
    SEMENTARA UNTUK TAMPILAN
@@ -461,26 +459,86 @@ export default function BlokiranPage() {
   ======================================================= */
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* =================================================
+    <div className="space-y-6">
+      {/* =================================================
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+              Blokiran
+            </h1>
+
+            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">
+              {activeUnit}
+            </span>
+          </div>
+
+          <p className="mt-1 text-sm text-zinc-500">
+            Pengelolaan blokiran debitur pada unit aktif.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setAddMode("search");
+            setShowAddPanel(true);
+          }}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+        >
+          <Plus className="h-4 w-4" />
+          Tambah Blokiran
+        </button>
+      </div>
+
+      {/* =================================================
+            SUMMARY
+        ================================================= */}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <SummaryCard
+          label="Total Data"
+          value={summary.totalData}
+          icon={LockKeyhole}
+        />
+
+        <SummaryCard
+          label="Total Blokiran"
+          value={formatRupiah(summary.totalBlokiran)}
+          icon={CircleDollarSign}
+          compact
+        />
+
+        <SummaryCard
+          label="Sudah Dibuka"
+          value={formatRupiah(summary.totalDibuka)}
+          icon={CheckCircle2}
+          compact
+        />
+
+        <SummaryCard
+          label="Belum Ditutup"
+          value={summary.belumDitutup}
+          icon={WalletCards}
+        />
+      </div>
+
+      {/* =================================================
+            TABLE
+        ================================================= */}
+
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+        {/* TABLE TOP */}
+
+        <div className="flex flex-col gap-3 border-b border-zinc-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-                Blokiran
-              </h1>
+            <h2 className="text-sm font-bold text-zinc-900">Data Blokiran</h2>
 
-              <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">
-                {activeUnit}
-              </span>
-            </div>
-
-            <p className="mt-1 text-sm text-zinc-500">
-              Pengelolaan blokiran debitur pada unit aktif.
+            <p className="mt-0.5 text-xs text-zinc-500">
+              Data unit {activeUnit}
             </p>
           </div>
 
@@ -490,271 +548,209 @@ export default function BlokiranPage() {
               setAddMode("search");
               setShowAddPanel(true);
             }}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
           >
-            <Plus className="h-4 w-4" />
-            Tambah Blokiran
+            <Search className="h-3.5 w-3.5" />
+            Cari Debitur
           </button>
         </div>
 
         {/* =================================================
-            SUMMARY
-        ================================================= */}
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <SummaryCard
-            label="Total Data"
-            value={summary.totalData}
-            icon={LockKeyhole}
-          />
-
-          <SummaryCard
-            label="Total Blokiran"
-            value={formatRupiah(summary.totalBlokiran)}
-            icon={CircleDollarSign}
-            compact
-          />
-
-          <SummaryCard
-            label="Sudah Dibuka"
-            value={formatRupiah(summary.totalDibuka)}
-            icon={CheckCircle2}
-            compact
-          />
-
-          <SummaryCard
-            label="Belum Ditutup"
-            value={summary.belumDitutup}
-            icon={WalletCards}
-          />
-        </div>
-
-        {/* =================================================
-            TABLE
-        ================================================= */}
-
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-          {/* TABLE TOP */}
-
-          <div className="flex flex-col gap-3 border-b border-zinc-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h2 className="text-sm font-bold text-zinc-900">Data Blokiran</h2>
-
-              <p className="mt-0.5 text-xs text-zinc-500">
-                Data unit {activeUnit}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => {
-                setAddMode("search");
-                setShowAddPanel(true);
-              }}
-              className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
-            >
-              <Search className="h-3.5 w-3.5" />
-              Cari Debitur
-            </button>
-          </div>
-
-          {/* =================================================
               DESKTOP
           ================================================= */}
 
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[950px] text-left">
-              <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50/70">
-                  <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                    Nama Debitur
-                  </th>
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[950px] text-left">
+            <thead>
+              <tr className="border-b border-zinc-200 bg-zinc-50/70">
+                <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Nama Debitur
+                </th>
 
-                  <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                    Rek Tabungan
-                  </th>
+                <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Rek Tabungan
+                </th>
 
-                  <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                    Jml Blokiran
-                  </th>
+                <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Jml Blokiran
+                </th>
 
-                  <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                    Jml Dibuka
-                  </th>
+                <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Jml Dibuka
+                </th>
 
-                  <th className="px-5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                    Status Bayar
-                  </th>
+                <th className="px-5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Status Bayar
+                </th>
 
-                  <th className="px-5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                    Tutup Blokiran
-                  </th>
+                <th className="px-5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Tutup Blokiran
+                </th>
 
-                  <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                    Aksi
-                  </th>
-                </tr>
-              </thead>
+                <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
+                  Aksi
+                </th>
+              </tr>
+            </thead>
 
-              <tbody className="divide-y divide-zinc-100">
-                {unitData.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => setSelectedRow(item)}
-                    className="cursor-pointer transition hover:bg-zinc-50"
+            <tbody className="divide-y divide-zinc-100">
+              {unitData.map((item) => (
+                <tr
+                  key={item.id}
+                  onClick={() => setSelectedRow(item)}
+                  className="cursor-pointer transition hover:bg-zinc-50"
+                >
+                  {/* NAMA */}
+
+                  <td className="px-5 py-4">
+                    <div className="font-semibold text-zinc-900">
+                      {item.nama}
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-zinc-400">
+                      {item.mks || "-"}
+                    </div>
+                  </td>
+
+                  {/* REK */}
+
+                  <td className="px-5 py-4">
+                    <span className="font-mono text-xs text-zinc-600">
+                      {item.rekTabungan}
+                    </span>
+                  </td>
+
+                  {/* BLOKIRAN */}
+
+                  <td className="px-5 py-4 text-right">
+                    <span className="font-semibold text-zinc-900">
+                      {formatRupiah(item.blokiranAwal)}
+                    </span>
+                  </td>
+
+                  {/* DIBUKA */}
+
+                  <td className="px-5 py-4 text-right">
+                    <span className="font-semibold text-emerald-600">
+                      {formatRupiah(item.jumlahDibuka)}
+                    </span>
+                  </td>
+
+                  {/* BAYAR */}
+
+                  <td className="px-5 py-4 text-center">
+                    <StatusBadge value={item.statusBayar} />
+                  </td>
+
+                  {/* TUTUP */}
+
+                  <td className="px-5 py-4 text-center">
+                    <StatusBadge value={item.tutupBlokiran} />
+                  </td>
+
+                  {/* AKSI */}
+
+                  <td
+                    className="px-5 py-4 text-right"
+                    onClick={(event) => event.stopPropagation()}
                   >
-                    {/* NAMA */}
+                    <div className="flex justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRow(item);
+                          setShowEdit(true);
+                        }}
+                        className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
+                        title="Edit"
+                      >
+                        <Edit3 className="h-4 w-4" />
+                      </button>
 
-                    <td className="px-5 py-4">
-                      <div className="font-semibold text-zinc-900">
-                        {item.nama}
-                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setSelectedRow(item);
+                          setShowDelete(true);
+                        }}
+                        className="rounded-lg p-2 text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
+                        title="Hapus"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
 
-                      <div className="mt-0.5 text-xs text-zinc-400">
-                        {item.mks || "-"}
-                      </div>
-                    </td>
+          {unitData.length === 0 && (
+            <EmptyState onAdd={() => setShowAddPanel(true)} />
+          )}
+        </div>
 
-                    {/* REK */}
-
-                    <td className="px-5 py-4">
-                      <span className="font-mono text-xs text-zinc-600">
-                        {item.rekTabungan}
-                      </span>
-                    </td>
-
-                    {/* BLOKIRAN */}
-
-                    <td className="px-5 py-4 text-right">
-                      <span className="font-semibold text-zinc-900">
-                        {formatRupiah(item.blokiranAwal)}
-                      </span>
-                    </td>
-
-                    {/* DIBUKA */}
-
-                    <td className="px-5 py-4 text-right">
-                      <span className="font-semibold text-emerald-600">
-                        {formatRupiah(item.jumlahDibuka)}
-                      </span>
-                    </td>
-
-                    {/* BAYAR */}
-
-                    <td className="px-5 py-4 text-center">
-                      <StatusBadge value={item.statusBayar} />
-                    </td>
-
-                    {/* TUTUP */}
-
-                    <td className="px-5 py-4 text-center">
-                      <StatusBadge value={item.tutupBlokiran} />
-                    </td>
-
-                    {/* AKSI */}
-
-                    <td
-                      className="px-5 py-4 text-right"
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <div className="flex justify-end gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedRow(item);
-                            setShowEdit(true);
-                          }}
-                          className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
-                          title="Edit"
-                        >
-                          <Edit3 className="h-4 w-4" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSelectedRow(item);
-                            setShowDelete(true);
-                          }}
-                          className="rounded-lg p-2 text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
-                          title="Hapus"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-
-            {unitData.length === 0 && (
-              <EmptyState onAdd={() => setShowAddPanel(true)} />
-            )}
-          </div>
-
-          {/* =================================================
+        {/* =================================================
               MOBILE
           ================================================= */}
 
-          <div className="divide-y divide-zinc-100 md:hidden">
-            {unitData.map((item) => (
-              <div
-                key={item.id}
-                onClick={() => setSelectedRow(item)}
-                className="flex cursor-pointer items-center gap-3 px-4 py-4 transition active:bg-zinc-50"
-              >
-                {/* ICON */}
+        <div className="divide-y divide-zinc-100 md:hidden">
+          {unitData.map((item) => (
+            <div
+              key={item.id}
+              onClick={() => setSelectedRow(item)}
+              className="flex cursor-pointer items-center gap-3 px-4 py-4 transition active:bg-zinc-50"
+            >
+              {/* ICON */}
 
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600">
-                  <UserRound className="h-5 w-5" />
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600">
+                <UserRound className="h-5 w-5" />
+              </div>
+
+              {/* NAMA */}
+
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-bold text-zinc-900">
+                  {item.nama}
                 </div>
 
-                {/* NAMA */}
-
-                <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-bold text-zinc-900">
-                    {item.nama}
-                  </div>
-
-                  <div className="mt-1 truncate font-mono text-[11px] text-zinc-500">
-                    {item.rekTabungan}
-                  </div>
-                </div>
-
-                {/* JUMLAH */}
-
-                <div className="shrink-0 text-right">
-                  <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">
-                    Blokiran
-                  </div>
-
-                  <div className="mt-1 text-sm font-bold text-zinc-900">
-                    {formatRupiah(item.blokiranAwal)}
-                  </div>
-                </div>
-
-                {/* ACTION */}
-
-                <div
-                  className="flex shrink-0 items-center"
-                  onClick={(event) => event.stopPropagation()}
-                >
-                  <button
-                    type="button"
-                    onClick={() => setSelectedRow(item)}
-                    className="rounded-lg p-1.5 text-zinc-300"
-                  >
-                    <ChevronDown className="h-4 w-4 -rotate-90" />
-                  </button>
+                <div className="mt-1 truncate font-mono text-[11px] text-zinc-500">
+                  {item.rekTabungan}
                 </div>
               </div>
-            ))}
 
-            {unitData.length === 0 && (
-              <EmptyState onAdd={() => setShowAddPanel(true)} />
-            )}
-          </div>
+              {/* JUMLAH */}
+
+              <div className="shrink-0 text-right">
+                <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">
+                  Blokiran
+                </div>
+
+                <div className="mt-1 text-sm font-bold text-zinc-900">
+                  {formatRupiah(item.blokiranAwal)}
+                </div>
+              </div>
+
+              {/* ACTION */}
+
+              <div
+                className="flex shrink-0 items-center"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <button
+                  type="button"
+                  onClick={() => setSelectedRow(item)}
+                  className="rounded-lg p-1.5 text-zinc-300"
+                >
+                  <ChevronDown className="h-4 w-4 -rotate-90" />
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {unitData.length === 0 && (
+            <EmptyState onAdd={() => setShowAddPanel(true)} />
+          )}
         </div>
       </div>
 
@@ -820,7 +816,7 @@ export default function BlokiranPage() {
           onDelete={deleteSelectedRow}
         />
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 

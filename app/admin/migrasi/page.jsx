@@ -21,7 +21,6 @@ import {
   X,
 } from "lucide-react";
 
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 
 const DUMMY_USERS = {
@@ -644,398 +643,395 @@ export default function MigrasiPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="min-h-full bg-slate-50">
-        <div className="mx-auto max-w-[1600px] p-4 sm:p-6">
-          {/* HEADER */}
-          <div className="mb-6">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-              <div>
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
-                    <Truck className="h-5 w-5" />
-                  </div>
+    <div className="min-h-full bg-slate-50">
+      <div className="mx-auto max-w-[1600px] p-4 sm:p-6">
+        {/* HEADER */}
+        <div className="mb-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+                  <Truck className="h-5 w-5" />
+                </div>
 
-                  <div>
-                    <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
-                      Migrasi
-                    </h1>
-                    <p className="text-xs text-slate-500">
-                      Pengelolaan data migrasi {unit}
-                    </p>
-                  </div>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">
+                    Migrasi
+                  </h1>
+                  <p className="text-xs text-slate-500">
+                    Pengelolaan data migrasi {unit}
+                  </p>
                 </div>
               </div>
+            </div>
 
-              <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm">
-                <span className="text-slate-500">Unit aktif</span>{" "}
-                <span className="font-bold text-slate-900">{unit}</span>
-              </div>
+            <div className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm shadow-sm">
+              <span className="text-slate-500">Unit aktif</span>{" "}
+              <span className="font-bold text-slate-900">{unit}</span>
             </div>
           </div>
+        </div>
 
-          {/* MAKER CHECKER */}
-          <div className="mb-6 grid gap-4 lg:grid-cols-2">
-            <UserCredentialCard type="Maker" data={users.maker} />
-            <UserCredentialCard type="Checker" data={users.checker} />
-          </div>
+        {/* MAKER CHECKER */}
+        <div className="mb-6 grid gap-4 lg:grid-cols-2">
+          <UserCredentialCard type="Maker" data={users.maker} />
+          <UserCredentialCard type="Checker" data={users.checker} />
+        </div>
 
-          {/* MODE */}
-          <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                onClick={() => changeMode("DMS")}
-                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
-                  mode === "DMS"
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-500 hover:bg-slate-50"
-                }`}
-              >
-                <FileSpreadsheet className="h-4 w-4" />
-                Migrasi DMS
-              </button>
-
-              <button
-                type="button"
-                onClick={() => changeMode("NON-DMS")}
-                className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
-                  mode === "NON-DMS"
-                    ? "bg-blue-600 text-white shadow-sm"
-                    : "text-slate-500 hover:bg-slate-50"
-                }`}
-              >
-                <Upload className="h-4 w-4" />
-                Migrasi NON-DMS
-              </button>
-            </div>
-          </div>
-
-          {/* INFO */}
-          <div className="mb-5 flex gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-            <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-
-            <div className="text-xs leading-5 text-blue-800">
-              <p className="font-bold">
-                {mode === "DMS" ? "Migrasi DMS" : "Migrasi NON-DMS"}
-              </p>
-
-              <p>
-                Pilih PK yang akan dimigrasikan. PK yang sudah pernah migrasi
-                tidak dapat dipilih kembali, kecuali masih memiliki kebutuhan
-                penyatuan dokumen/agunan.
-              </p>
-            </div>
-          </div>
-
-          {/* FILTER */}
-          <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="grid gap-3 lg:grid-cols-[1fr_240px_auto]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Cari nama, CIF, NIK, No PK, atau MKS..."
-                  className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
-                />
-              </div>
-
-              <select
-                value={conditionFilter}
-                onChange={(e) => setConditionFilter(e.target.value)}
-                className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 outline-none"
-              >
-                <option value="SEMUA">Semua kondisi</option>
-                <option value="PK Baru">PK Baru</option>
-                <option value="Dokumen belum lengkap">
-                  Dokumen belum lengkap
-                </option>
-                <option value="Legal di CO">Legal di CO</option>
-                <option value="SHM di Notaris">SHM di Notaris</option>
-                <option value="Perlu Penyatuan">Perlu Penyatuan</option>
-              </select>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  setConditionFilter("SEMUA");
-                }}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50"
-              >
-                <RefreshCw className="h-4 w-4" />
-                Reset
-              </button>
-            </div>
-          </div>
-
-          {/* SUMMARY */}
-          <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <SummaryCard label="PK ditampilkan" value={filteredData.length} />
-
-            <SummaryCard label="Bisa dipilih" value={selectableData.length} />
-
-            <SummaryCard label="Dipilih" value={selectedIds.length} active />
-
-            <SummaryCard label="Mode" value={mode} textValue />
-          </div>
-
-          {/* ACTION */}
-          <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+        {/* MODE */}
+        <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+          <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={toggleSelectAll}
-              disabled={!selectableData.length}
-              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              onClick={() => changeMode("DMS")}
+              className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
+                mode === "DMS"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-50"
+              }`}
             >
-              <Check className="h-4 w-4" />
-              {allSelectableSelected ? "Batalkan Semua" : "Pilih Semua"}
+              <FileSpreadsheet className="h-4 w-4" />
+              Migrasi DMS
             </button>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => changeMode("NON-DMS")}
+              className={`flex items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-bold transition ${
+                mode === "NON-DMS"
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "text-slate-500 hover:bg-slate-50"
+              }`}
+            >
+              <Upload className="h-4 w-4" />
+              Migrasi NON-DMS
+            </button>
+          </div>
+        </div>
+
+        {/* INFO */}
+        <div className="mb-5 flex gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
+          <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+
+          <div className="text-xs leading-5 text-blue-800">
+            <p className="font-bold">
+              {mode === "DMS" ? "Migrasi DMS" : "Migrasi NON-DMS"}
+            </p>
+
+            <p>
+              Pilih PK yang akan dimigrasikan. PK yang sudah pernah migrasi
+              tidak dapat dipilih kembali, kecuali masih memiliki kebutuhan
+              penyatuan dokumen/agunan.
+            </p>
+          </div>
+        </div>
+
+        {/* FILTER */}
+        <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="grid gap-3 lg:grid-cols-[1fr_240px_auto]">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cari nama, CIF, NIK, No PK, atau MKS..."
+                className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-4 text-sm outline-none transition focus:border-blue-400 focus:bg-white"
+              />
+            </div>
+
+            <select
+              value={conditionFilter}
+              onChange={(e) => setConditionFilter(e.target.value)}
+              className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 outline-none"
+            >
+              <option value="SEMUA">Semua kondisi</option>
+              <option value="PK Baru">PK Baru</option>
+              <option value="Dokumen belum lengkap">
+                Dokumen belum lengkap
+              </option>
+              <option value="Legal di CO">Legal di CO</option>
+              <option value="SHM di Notaris">SHM di Notaris</option>
+              <option value="Perlu Penyatuan">Perlu Penyatuan</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setConditionFilter("SEMUA");
+              }}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Reset
+            </button>
+          </div>
+        </div>
+
+        {/* SUMMARY */}
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <SummaryCard label="PK ditampilkan" value={filteredData.length} />
+
+          <SummaryCard label="Bisa dipilih" value={selectableData.length} />
+
+          <SummaryCard label="Dipilih" value={selectedIds.length} active />
+
+          <SummaryCard label="Mode" value={mode} textValue />
+        </div>
+
+        {/* ACTION */}
+        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <button
+            type="button"
+            onClick={toggleSelectAll}
+            disabled={!selectableData.length}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Check className="h-4 w-4" />
+            {allSelectableSelected ? "Batalkan Semua" : "Pilih Semua"}
+          </button>
+
+          <div className="flex flex-col gap-2 sm:flex-row">
+            {mode === "DMS" ? (
+              <button
+                type="button"
+                onClick={handleDmsExport}
+                disabled={!selectedIds.length}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Download className="h-4 w-4" />
+                Export Excel
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setTemplateModal(true)}
+                disabled={!selectedIds.length}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                Isi Template
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* TABLE */}
+        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="overflow-x-auto">
+            <table className="min-w-[1250px] w-full">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-left">
+                  <th className="w-12 px-4 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={allSelectableSelected}
+                      onChange={toggleSelectAll}
+                      disabled={!selectableData.length}
+                      className="h-4 w-4 rounded border-slate-300"
+                    />
+                  </th>
+
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Debitur
+                  </th>
+
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    CIF / NIK
+                  </th>
+
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    PK
+                  </th>
+
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    MKS
+                  </th>
+
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Limit
+                  </th>
+
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Kondisi
+                  </th>
+
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Status
+                  </th>
+
+                  <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Riwayat
+                  </th>
+
+                  <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wide text-slate-500">
+                    Detail
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {filteredData.map((pk) => {
+                  const selectable = canSelectForMigration(pk, mode);
+                  const checked = selectedIds.includes(pk.id);
+                  const state = getMigrationState(pk);
+
+                  return (
+                    <tr
+                      key={pk.id}
+                      className={`transition ${
+                        checked ? "bg-blue-50/60" : "hover:bg-slate-50/70"
+                      }`}
+                    >
+                      <td className="px-4 py-4 text-center">
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!selectable}
+                          onChange={() => toggleSelect(pk)}
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <p className="text-sm font-bold text-slate-900">
+                          {pk.nama}
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-500">
+                          {pk.tglPk ? formatTanggal(pk.tglPk) : "-"}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <p className="text-xs font-semibold text-slate-700">
+                          {pk.cif}
+                        </p>
+
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          {pk.nik}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <p className="text-xs font-semibold text-slate-700">
+                          {pk.noPk}
+                        </p>
+
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          {formatTanggal(pk.tglPk)}
+                        </p>
+                      </td>
+
+                      <td className="px-4 py-4 text-xs font-medium text-slate-700">
+                        {pk.mks}
+                      </td>
+
+                      <td className="px-4 py-4 text-xs font-bold text-slate-800">
+                        {formatRupiah(pk.limit)}
+                      </td>
+
+                      <td className="max-w-[230px] px-4 py-4">
+                        <div className="flex flex-wrap gap-1.5">
+                          {pk.kondisi.map((item) => (
+                            <span
+                              key={item}
+                              className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600"
+                            >
+                              {item}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <div className="space-y-2">
+                          <StatusBadge state={state} />
+
+                          {pk.penyatuan && (
+                            <p className="text-[10px] font-medium text-blue-600">
+                              Dapat migrasi ulang
+                            </p>
+                          )}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-4">
+                        <MigrationHistory pk={pk} />
+                      </td>
+
+                      <td className="px-4 py-4 text-center">
+                        <button
+                          type="button"
+                          onClick={() => setDetailPk(pk)}
+                          className="inline-flex items-center justify-center rounded-xl border border-slate-200 p-2 text-slate-500 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
+                          title="Lihat detail"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+
+                {!filteredData.length && (
+                  <tr>
+                    <td colSpan={10} className="px-6 py-16 text-center">
+                      <div className="mx-auto flex max-w-sm flex-col items-center">
+                        <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                          <Search className="h-5 w-5" />
+                        </div>
+
+                        <p className="text-sm font-bold text-slate-700">
+                          Tidak ada PK
+                        </p>
+
+                        <p className="mt-1 text-xs text-slate-400">
+                          Tidak ada data yang memenuhi filter migrasi saat ini.
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* MOBILE SELECTED BAR */}
+        {selectedIds.length > 0 && (
+          <div className="fixed bottom-4 left-4 right-4 z-40 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl sm:hidden">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm font-bold text-slate-900">
+                  {selectedIds.length} PK dipilih
+                </p>
+
+                <p className="text-[10px] text-slate-500">Mode {mode}</p>
+              </div>
+
               {mode === "DMS" ? (
                 <button
                   type="button"
                   onClick={handleDmsExport}
-                  disabled={!selectedIds.length}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white"
                 >
-                  <Download className="h-4 w-4" />
                   Export Excel
                 </button>
               ) : (
                 <button
                   type="button"
                   onClick={() => setTemplateModal(true)}
-                  disabled={!selectedIds.length}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+                  className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white"
                 >
-                  <FileSpreadsheet className="h-4 w-4" />
                   Isi Template
                 </button>
               )}
             </div>
           </div>
-
-          {/* TABLE */}
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="min-w-[1250px] w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50 text-left">
-                    <th className="w-12 px-4 py-3 text-center">
-                      <input
-                        type="checkbox"
-                        checked={allSelectableSelected}
-                        onChange={toggleSelectAll}
-                        disabled={!selectableData.length}
-                        className="h-4 w-4 rounded border-slate-300"
-                      />
-                    </th>
-
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Debitur
-                    </th>
-
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                      CIF / NIK
-                    </th>
-
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                      PK
-                    </th>
-
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                      MKS
-                    </th>
-
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Limit
-                    </th>
-
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Kondisi
-                    </th>
-
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Status
-                    </th>
-
-                    <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Riwayat
-                    </th>
-
-                    <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wide text-slate-500">
-                      Detail
-                    </th>
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {filteredData.map((pk) => {
-                    const selectable = canSelectForMigration(pk, mode);
-                    const checked = selectedIds.includes(pk.id);
-                    const state = getMigrationState(pk);
-
-                    return (
-                      <tr
-                        key={pk.id}
-                        className={`transition ${
-                          checked ? "bg-blue-50/60" : "hover:bg-slate-50/70"
-                        }`}
-                      >
-                        <td className="px-4 py-4 text-center">
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={!selectable}
-                            onChange={() => toggleSelect(pk)}
-                            className="h-4 w-4 rounded border-slate-300"
-                          />
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <p className="text-sm font-bold text-slate-900">
-                            {pk.nama}
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-500">
-                            {pk.tglPk ? formatTanggal(pk.tglPk) : "-"}
-                          </p>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <p className="text-xs font-semibold text-slate-700">
-                            {pk.cif}
-                          </p>
-
-                          <p className="mt-1 text-[11px] text-slate-400">
-                            {pk.nik}
-                          </p>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <p className="text-xs font-semibold text-slate-700">
-                            {pk.noPk}
-                          </p>
-
-                          <p className="mt-1 text-[11px] text-slate-400">
-                            {formatTanggal(pk.tglPk)}
-                          </p>
-                        </td>
-
-                        <td className="px-4 py-4 text-xs font-medium text-slate-700">
-                          {pk.mks}
-                        </td>
-
-                        <td className="px-4 py-4 text-xs font-bold text-slate-800">
-                          {formatRupiah(pk.limit)}
-                        </td>
-
-                        <td className="max-w-[230px] px-4 py-4">
-                          <div className="flex flex-wrap gap-1.5">
-                            {pk.kondisi.map((item) => (
-                              <span
-                                key={item}
-                                className="rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600"
-                              >
-                                {item}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <div className="space-y-2">
-                            <StatusBadge state={state} />
-
-                            {pk.penyatuan && (
-                              <p className="text-[10px] font-medium text-blue-600">
-                                Dapat migrasi ulang
-                              </p>
-                            )}
-                          </div>
-                        </td>
-
-                        <td className="px-4 py-4">
-                          <MigrationHistory pk={pk} />
-                        </td>
-
-                        <td className="px-4 py-4 text-center">
-                          <button
-                            type="button"
-                            onClick={() => setDetailPk(pk)}
-                            className="inline-flex items-center justify-center rounded-xl border border-slate-200 p-2 text-slate-500 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600"
-                            title="Lihat detail"
-                          >
-                            <Eye className="h-4 w-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-
-                  {!filteredData.length && (
-                    <tr>
-                      <td colSpan={10} className="px-6 py-16 text-center">
-                        <div className="mx-auto flex max-w-sm flex-col items-center">
-                          <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-                            <Search className="h-5 w-5" />
-                          </div>
-
-                          <p className="text-sm font-bold text-slate-700">
-                            Tidak ada PK
-                          </p>
-
-                          <p className="mt-1 text-xs text-slate-400">
-                            Tidak ada data yang memenuhi filter migrasi saat
-                            ini.
-                          </p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* MOBILE SELECTED BAR */}
-          {selectedIds.length > 0 && (
-            <div className="fixed bottom-4 left-4 right-4 z-40 rounded-2xl border border-slate-200 bg-white p-3 shadow-2xl sm:hidden">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-bold text-slate-900">
-                    {selectedIds.length} PK dipilih
-                  </p>
-
-                  <p className="text-[10px] text-slate-500">Mode {mode}</p>
-                </div>
-
-                {mode === "DMS" ? (
-                  <button
-                    type="button"
-                    onClick={handleDmsExport}
-                    className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white"
-                  >
-                    Export Excel
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setTemplateModal(true)}
-                    className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white"
-                  >
-                    Isi Template
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* DETAIL MODAL */}
@@ -1090,7 +1086,7 @@ export default function MigrasiPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 

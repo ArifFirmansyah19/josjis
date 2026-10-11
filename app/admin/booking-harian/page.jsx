@@ -2,7 +2,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import BookingHarian from "./components/BookingHarian";
 import LaporanAktivasi from "./components/LaporanAktivasi";
 
@@ -58,11 +57,9 @@ export default function BookingHarianPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-5 overflow-x-clip pb-8">
-        <BookingHarian bookings={bookings} setBookings={updateBookings} />
-        <LaporanAktivasi bookings={bookings} revision={revision} />
-      </div>
-    </DashboardLayout>
+    <div className="mx-auto w-full max-w-7xl space-y-5 overflow-x-clip pb-8">
+      <BookingHarian bookings={bookings} setBookings={updateBookings} />
+      <LaporanAktivasi bookings={bookings} revision={revision} />
+    </div>
   );
 }

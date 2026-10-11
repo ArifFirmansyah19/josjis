@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import { supabase } from "@/lib/supabase";
 import {
@@ -445,137 +444,132 @@ export default function MasterPegawaiPage() {
     }
   }
   if (loading) {
-    return (
-      <DashboardLayout>
-        <Loading />
-      </DashboardLayout>
-    );
+    return <Loading />;
   }
   return (
-    <DashboardLayout>
-      <div className="space-y-5">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">Master Pegawai</h1>
-            <p className="mt-1 text-sm text-slate-500">
-              Kelola data pegawai berdasarkan unit aktif.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={loadData}
-            disabled={loading || saving}
-            className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
-          >
-            <RefreshCw size={16} />
-            Refresh
-          </button>
+    <div className="space-y-5">
+      <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-900">Master Pegawai</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Kelola data pegawai berdasarkan unit aktif.
+          </p>
         </div>
-        {error && (
-          <Alert type="error" message={error} onClose={() => setError("")} />
-        )}
-        {success && (
-          <Alert
-            type="success"
-            message={success}
-            onClose={() => setSuccess("")}
-          />
-        )}
-        {!unitData ? (
-          <EmptyState
-            title="Unit tidak ditemukan"
-            description="Pilih unit JKK1 atau JKK2 terlebih dahulu."
-          />
-        ) : (
-          <>
-            <SectionCard
-              title="Informasi Unit"
-              icon={<MapPin size={18} />}
-              action={
-                <button
-                  type="button"
-                  onClick={openUnitEdit}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  <Pencil size={15} />
-                  Edit Unit
-                </button>
-              }
-            >
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-                <InfoBox
-                  label="Kode Kawasan"
-                  value={unitData.kode_kawasan}
-                  highlight
-                />
-                <InfoBox label="Nama Unit" value={unitData.nama_unit} />
-                <InfoBox label="Kode Unit" value={unitData.kode_unit} />
-                <InfoBox label="Kode Legacy" value={unitData.kode_legacy} />
-              </div>
-            </SectionCard>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <SummaryCard
-                icon={<ShieldCheck size={19} />}
-                label="Branch Manager"
-                value={branchManagers.length}
-              />
-              <SummaryCard
-                icon={<UserCog size={19} />}
-                label="Pengawas"
-                value={pengawasList.length}
-              />
-              <SummaryCard
-                icon={<BriefcaseBusiness size={19} />}
-                label="MKA"
-                value={mkaList.length}
-              />
-              <SummaryCard
-                icon={<KeyRound size={19} />}
-                label="MKS"
-                value={mksPegawaiList.length}
-              />
-            </div>
-            <EmployeeSection
-              title="Branch Manager"
-              icon={<ShieldCheck size={18} />}
-              data={branchManagers}
-              onDetail={openDetail}
-              onEdit={openPegawaiEdit}
-              onDelete={deletePegawai}
-              onToggle={toggleAktif}
-              showUnit={false}
-            />
-            <EmployeeSection
-              title="Pengawas"
-              icon={<UserCog size={18} />}
-              data={pengawasList}
-              onDetail={openDetail}
-              onEdit={openPegawaiEdit}
-              onDelete={deletePegawai}
-              onToggle={toggleAktif}
-              showUnit={false}
-            />
-            <EmployeeSection
-              title="MKA"
-              icon={<BriefcaseBusiness size={18} />}
-              data={mkaList}
-              onAdd={openMkaAdd}
-              onDetail={openDetail}
-              onEdit={openMkaEdit}
-              onDelete={deletePegawai}
-              onToggle={toggleAktif}
-              showUnit={false}
-            />
-            <MksSection
-              data={mksList}
-              onDetail={openDetail}
-              onEdit={openMksEdit}
-              onDelete={deletePegawai}
-              onToggle={toggleAktif}
-            />
-          </>
-        )}
+        <button
+          type="button"
+          onClick={loadData}
+          disabled={loading || saving}
+          className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+        >
+          <RefreshCw size={16} />
+          Refresh
+        </button>
       </div>
+      {error && (
+        <Alert type="error" message={error} onClose={() => setError("")} />
+      )}
+      {success && (
+        <Alert
+          type="success"
+          message={success}
+          onClose={() => setSuccess("")}
+        />
+      )}
+      {!unitData ? (
+        <EmptyState
+          title="Unit tidak ditemukan"
+          description="Pilih unit JKK1 atau JKK2 terlebih dahulu."
+        />
+      ) : (
+        <>
+          <SectionCard
+            title="Informasi Unit"
+            icon={<MapPin size={18} />}
+            action={
+              <button
+                type="button"
+                onClick={openUnitEdit}
+                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+              >
+                <Pencil size={15} />
+                Edit Unit
+              </button>
+            }
+          >
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <InfoBox
+                label="Kode Kawasan"
+                value={unitData.kode_kawasan}
+                highlight
+              />
+              <InfoBox label="Nama Unit" value={unitData.nama_unit} />
+              <InfoBox label="Kode Unit" value={unitData.kode_unit} />
+              <InfoBox label="Kode Legacy" value={unitData.kode_legacy} />
+            </div>
+          </SectionCard>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+            <SummaryCard
+              icon={<ShieldCheck size={19} />}
+              label="Branch Manager"
+              value={branchManagers.length}
+            />
+            <SummaryCard
+              icon={<UserCog size={19} />}
+              label="Pengawas"
+              value={pengawasList.length}
+            />
+            <SummaryCard
+              icon={<BriefcaseBusiness size={19} />}
+              label="MKA"
+              value={mkaList.length}
+            />
+            <SummaryCard
+              icon={<KeyRound size={19} />}
+              label="MKS"
+              value={mksPegawaiList.length}
+            />
+          </div>
+          <EmployeeSection
+            title="Branch Manager"
+            icon={<ShieldCheck size={18} />}
+            data={branchManagers}
+            onDetail={openDetail}
+            onEdit={openPegawaiEdit}
+            onDelete={deletePegawai}
+            onToggle={toggleAktif}
+            showUnit={false}
+          />
+          <EmployeeSection
+            title="Pengawas"
+            icon={<UserCog size={18} />}
+            data={pengawasList}
+            onDetail={openDetail}
+            onEdit={openPegawaiEdit}
+            onDelete={deletePegawai}
+            onToggle={toggleAktif}
+            showUnit={false}
+          />
+          <EmployeeSection
+            title="MKA"
+            icon={<BriefcaseBusiness size={18} />}
+            data={mkaList}
+            onAdd={openMkaAdd}
+            onDetail={openDetail}
+            onEdit={openMkaEdit}
+            onDelete={deletePegawai}
+            onToggle={toggleAktif}
+            showUnit={false}
+          />
+          <MksSection
+            data={mksList}
+            onDetail={openDetail}
+            onEdit={openMksEdit}
+            onDelete={deletePegawai}
+            onToggle={toggleAktif}
+          />
+        </>
+      )}
+
       {showUnitModal && (
         <Modal title="Edit Unit" onClose={() => setShowUnitModal(false)}>
           <div className="grid gap-4 md:grid-cols-2">
@@ -716,7 +710,7 @@ export default function MasterPegawaiPage() {
           </div>
         </Modal>
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 function EmployeeSection({

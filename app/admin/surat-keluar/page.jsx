@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
-import DashboardLayout from "@/components/DashboardLayout";
-
 import SuratKeluarToolbar from "./components/SuratKeluarToolbar";
 import SuratKeluarBook from "./components/SuratKeluarBook";
 import SuratKeluarForm from "./components/SuratKeluarForm";
@@ -18,27 +15,18 @@ import {
 } from "./services/suratKeluarSupabase";
 
 import { exportSuratKeluarPdf } from "./services/suratKeluarPdf";
-
 const ROWS_PER_PAGE = 10;
-
 export default function SuratKeluarPage() {
   const [unit, setUnit] = useState("JKK 1");
   const [tahun, setTahun] = useState(new Date().getFullYear());
-
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-
   const [page, setPage] = useState(1);
-
   const [formOpen, setFormOpen] = useState(false);
   const [numberSettingsOpen, setNumberSettingsOpen] = useState(false);
-
   const [editingRecord, setEditingRecord] = useState(null);
-
-  // Record yang sedang dilihat pada popup detail
   const [viewingRecord, setViewingRecord] = useState(null);
-
   const totalPages = useMemo(() => {
     return Math.max(1, Math.ceil(records.length / ROWS_PER_PAGE));
   }, [records.length]);
@@ -193,92 +181,90 @@ export default function SuratKeluarPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-5">
-        {/* =====================================================
+    <div className="space-y-5">
+      {/* =====================================================
             HEADER
             ===================================================== */}
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Surat Keluar
-          </h1>
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+          Surat Keluar
+        </h1>
 
-          <p className="mt-1 text-sm text-zinc-500">
-            Buku register surat keluar resmi JKK 1 dan JKK 2.
-          </p>
-        </div>
+        <p className="mt-1 text-sm text-zinc-500">
+          Buku register surat keluar resmi JKK 1 dan JKK 2.
+        </p>
+      </div>
 
-        {/* =====================================================
+      {/* =====================================================
             TOOLBAR
             ===================================================== */}
-        <SuratKeluarToolbar
-          unit={unit}
-          tahun={tahun}
-          onUnitChange={handleUnitChange}
-          onTahunChange={handleTahunChange}
-          onAdd={handleAdd}
-          onSettings={() => setNumberSettingsOpen(true)}
-          onExport={handleExport}
-        />
+      <SuratKeluarToolbar
+        unit={unit}
+        tahun={tahun}
+        onUnitChange={handleUnitChange}
+        onTahunChange={handleTahunChange}
+        onAdd={handleAdd}
+        onSettings={() => setNumberSettingsOpen(true)}
+        onExport={handleExport}
+      />
 
-        {/* =====================================================
+      {/* =====================================================
             ERROR
             ===================================================== */}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-        {/* =====================================================
+      {/* =====================================================
             BUKU SURAT KELUAR
             ===================================================== */}
-        <SuratKeluarBook
-          unit={unit}
-          tahun={tahun}
-          records={records}
-          page={page}
-          totalPages={totalPages}
-          rowsPerPage={ROWS_PER_PAGE}
-          loading={loading}
-          onPageChange={setPage}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
+      <SuratKeluarBook
+        unit={unit}
+        tahun={tahun}
+        records={records}
+        page={page}
+        totalPages={totalPages}
+        rowsPerPage={ROWS_PER_PAGE}
+        loading={loading}
+        onPageChange={setPage}
+        onView={handleView}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
 
-        {/* =====================================================
+      {/* =====================================================
             FORM TAMBAH / EDIT
             ===================================================== */}
-        <SuratKeluarForm
-          open={formOpen}
-          editingRecord={editingRecord}
-          selectedYear={tahun}
-          onClose={handleCloseForm}
-          onSave={handleSave}
-        />
+      <SuratKeluarForm
+        open={formOpen}
+        editingRecord={editingRecord}
+        selectedYear={tahun}
+        onClose={handleCloseForm}
+        onSave={handleSave}
+      />
 
-        {/* =====================================================
+      {/* =====================================================
             PENGATURAN NOMOR
             ===================================================== */}
-        <SuratKeluarNumberSettings
-          open={numberSettingsOpen}
-          unit={unit}
-          tahun={tahun}
-          onClose={() => setNumberSettingsOpen(false)}
-          onSaved={async () => {
-            await loadData();
-          }}
-        />
+      <SuratKeluarNumberSettings
+        open={numberSettingsOpen}
+        unit={unit}
+        tahun={tahun}
+        onClose={() => setNumberSettingsOpen(false)}
+        onSaved={async () => {
+          await loadData();
+        }}
+      />
 
-        {/* =====================================================
+      {/* =====================================================
             DETAIL SURAT
             ===================================================== */}
-        <SuratKeluarDetailModal
-          record={viewingRecord}
-          onClose={handleCloseDetail}
-        />
-      </div>
-    </DashboardLayout>
+      <SuratKeluarDetailModal
+        record={viewingRecord}
+        onClose={handleCloseDetail}
+      />
+    </div>
   );
 }

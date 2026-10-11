@@ -9,11 +9,6 @@ const guaranteeProviders = [
   { value: "Jamkrindo", label: "Jamkrindo" },
 ];
 
-const insuranceTypes = [
-  { value: "AFMS", label: "AFMS" },
-  { value: "AJK", label: "AJK" },
-];
-
 const orderStatuses = [
   { value: "SUDAH_DIORDER", label: "Sudah Diorder" },
   { value: "BELUM_DIORDER", label: "Belum Diorder" },
@@ -42,27 +37,58 @@ function getAgreementDate(pk) {
   );
 }
 
+function getPkIdentity(pk) {
+  return pk?.id || pk?.pkId || pk?.nomorPK || pk?.noPK || pk?.nomorPk || "";
+}
+
+function PremiumField({ label, value, onChange, disabled }) {
+  return (
+    <div>
+      <PkInput
+        label={label}
+        type="number"
+        value={value ?? ""}
+        onChange={onChange}
+        disabled={disabled}
+        placeholder="Masukkan nominal premi"
+      />
+
+      {value !== "" && value != null && Number(value) > 0 && (
+        <p className="mt-1.5 text-xs text-zinc-500">{formatRupiah(value)}</p>
+      )}
+    </div>
+  );
+}
+
 export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
   const insurance = pk?.insurance || {};
-  const isKUR = String(pk?.loanType || "").toUpperCase() === "KUR";
+  const isKUR =
+    String(pk?.loanType || pk?.jenisKredit || "")
+      .trim()
+      .toUpperCase() === "KUR";
 
-  const axaEnabled = Boolean(insurance.axa?.enabled);
   const agreementDate = getAgreementDate(pk);
+  const pkIdentity = getPkIdentity(pk);
+  const disabled = !canEdit || locked;
 
-  const updateInsurance = (field, value) => {
-    if (!canEdit || locked) return;
+  // Semua perubahan diarahkan ke objek PK yang sedang aktif.
+  function updateInsuranceSection(section, field, value) {
+    if (disabled) return;
 
     setPk((prev) => ({
       ...prev,
       insurance: {
         ...(prev.insurance || {}),
-        [field]: value,
+        [section]: {
+          ...(prev.insurance?.[section] || {}),
+          [field]: value,
+        },
       },
     }));
-  };
+  }
 
-  const updateGuarantee = (field, value) => {
-    if (!canEdit || locked) return;
+  function updateGuarantee(field, value) {
+    if (disabled) return;
 
     setPk((prev) => ({
       ...prev,
@@ -74,83 +100,41 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
         },
       },
     }));
-  };
-
-  const updateLifeInsurance = (field, value) => {
-    if (!canEdit || locked) return;
-
-    setPk((prev) => ({
-      ...prev,
-      insurance: {
-        ...(prev.insurance || {}),
-        life: {
-          ...(prev.insurance?.life || {}),
-          [field]: value,
-        },
-      },
-    }));
-  };
-
-  const updateAxa = (field, value) => {
-    if (!canEdit || locked) return;
-
-    setPk((prev) => ({
-      ...prev,
-      insurance: {
-        ...(prev.insurance || {}),
-        axa: {
-          ...(prev.insurance?.axa || {}),
-          [field]: value,
-        },
-      },
-    }));
-  };
-
-  const updateMagi = (field, value) => {
-    if (!canEdit || locked) return;
-
-    setPk((prev) => ({
-      ...prev,
-      insurance: {
-        ...(prev.insurance || {}),
-        magi: {
-          ...(prev.insurance?.magi || {}),
-          [field]: value,
-        },
-      },
-    }));
-  };
-
-  const updateSijitu = (field, value) => {
-    if (!canEdit || locked) return;
-
-    setPk((prev) => ({
-      ...prev,
-      insurance: {
-        ...(prev.insurance || {}),
-        sijitu: {
-          ...(prev.insurance?.sijitu || {}),
-          [field]: value,
-        },
-      },
-    }));
-  };
+  }
 
   return (
     <PkSection
       title="Asuransi & Penjaminan"
-      description="Data penjaminan dan asuransi pada fasilitas PK."
+      description="Data asuransi dan penjaminan untuk PK yang sedang dibuka."
       locked={locked}
     >
       <div className="space-y-6">
+        {/* Identitas PK aktif */}
+        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+          <p className="text-xs font-medium uppercase tracking-wide text-blue-700">
+            Data PK aktif
+          </p>
+
+          <p className="mt-1 break-all text-sm font-semibold text-blue-950">
+            {pkIdentity || "PK baru — belum memiliki ID"}
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-blue-800">
+            Data yang diedit pada bagian ini mengikuti PK yang diberikan oleh
+            halaman induk. Pastikan halaman induk memuat dan menyimpan data
+            berdasarkan ID PK yang sama.
+          </p>
+        </div>
+
+        {/* Penjaminan KUR */}
         {isKUR && (
           <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
             <div className="mb-4">
               <p className="text-sm font-semibold text-zinc-900">
-                Polis Penjaminan
+                Polis Penjaminan KUR
               </p>
               <p className="mt-1 text-xs text-zinc-500">
-                Wajib untuk fasilitas KUR.
+                Data perusahaan penjamin dan nomor polis untuk fasilitas KUR.
               </p>
             </div>
 
@@ -159,7 +143,7 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
                 label="Perusahaan Penjamin"
                 value={insurance.guarantee?.provider || ""}
                 onChange={(e) => updateGuarantee("provider", e.target.value)}
-                disabled={!canEdit || locked}
+                disabled={disabled}
                 options={guaranteeProviders}
               />
 
@@ -169,29 +153,25 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
                 onChange={(e) =>
                   updateGuarantee("policyNumber", e.target.value)
                 }
-                disabled={!canEdit || locked}
+                disabled={disabled}
               />
 
               <PkInput
-                label="Tanggal Pengajuan Polis"
+                label="Tanggal Perjanjian Kredit"
                 type="date"
                 value={agreementDate}
                 disabled
               />
             </div>
-
-            <p className="mt-3 text-xs text-zinc-500">
-              Tanggal pengajuan polis otomatis mengikuti tanggal perjanjian
-              kredit / akad.
-            </p>
           </div>
         )}
 
+        {/* SIJITU */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
           <div className="mb-4">
             <p className="text-sm font-semibold text-zinc-900">SIJITU</p>
             <p className="mt-1 text-xs text-zinc-500">
-              Pantau status order dan posting SIJITU.
+              Status order dan posting SIJITU untuk PK ini.
             </p>
           </div>
 
@@ -199,26 +179,36 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
             <PkSelect
               label="Status Order"
               value={insurance.sijitu?.orderStatus || "BELUM_DIORDER"}
-              onChange={(e) => updateSijitu("orderStatus", e.target.value)}
-              disabled={!canEdit || locked}
+              onChange={(e) =>
+                updateInsuranceSection("sijitu", "orderStatus", e.target.value)
+              }
+              disabled={disabled}
               options={orderStatuses}
             />
 
             <PkSelect
               label="Status Posting"
               value={insurance.sijitu?.postingStatus || "BELUM_POSTING"}
-              onChange={(e) => updateSijitu("postingStatus", e.target.value)}
-              disabled={!canEdit || locked}
+              onChange={(e) =>
+                updateInsuranceSection(
+                  "sijitu",
+                  "postingStatus",
+                  e.target.value,
+                )
+              }
+              disabled={disabled}
               options={postingStatuses}
             />
           </div>
         </div>
 
+        {/* AII MAGI */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
           <div className="mb-4">
-            <p className="text-sm font-semibold text-zinc-900">MAGI</p>
+            <p className="text-sm font-semibold text-zinc-900">AII MAGI</p>
             <p className="mt-1 text-xs text-zinc-500">
-              Status order, posting, dan premi MAGI.
+              AII MAGI dicatat sebagai satu pasangan nama, bukan dua pilihan
+              asuransi terpisah.
             </p>
           </div>
 
@@ -226,62 +216,52 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
             <PkSelect
               label="Status Order"
               value={insurance.magi?.orderStatus || "BELUM_DIORDER"}
-              onChange={(e) => updateMagi("orderStatus", e.target.value)}
-              disabled={!canEdit || locked}
+              onChange={(e) =>
+                updateInsuranceSection("magi", "orderStatus", e.target.value)
+              }
+              disabled={disabled}
               options={orderStatuses}
             />
 
             <PkSelect
               label="Status Posting"
               value={insurance.magi?.postingStatus || "BELUM_POSTING"}
-              onChange={(e) => updateMagi("postingStatus", e.target.value)}
-              disabled={!canEdit || locked}
+              onChange={(e) =>
+                updateInsuranceSection("magi", "postingStatus", e.target.value)
+              }
+              disabled={disabled}
               options={postingStatuses}
             />
 
-            <div>
-              <PkInput
-                label="Premi Dibayarkan"
-                type="number"
-                value={insurance.magi?.premium ?? ""}
-                onChange={(e) => updateMagi("premium", e.target.value)}
-                disabled={!canEdit || locked}
-                placeholder="50000"
-              />
-
-              {insurance.magi?.premium && (
-                <p className="mt-1.5 text-xs text-zinc-500">
-                  {formatRupiah(insurance.magi.premium)}
-                </p>
-              )}
-            </div>
+            <PremiumField
+              label="Premi AII MAGI"
+              value={insurance.magi?.premium ?? ""}
+              onChange={(e) =>
+                updateInsuranceSection("magi", "premium", e.target.value)
+              }
+              disabled={disabled}
+            />
           </div>
         </div>
 
+        {/* AJK AMFS */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
           <div className="mb-4">
-            <p className="text-sm font-semibold text-zinc-900">Asuransi Jiwa</p>
+            <p className="text-sm font-semibold text-zinc-900">AJK AMFS</p>
             <p className="mt-1 text-xs text-zinc-500">
-              Pilih AFMS atau AJK, kemudian lengkapi status dan premi.
+              AJK AMFS dicatat sebagai satu pasangan nama, bukan pilihan
+              terpisah antara AJK dan AMFS.
             </p>
           </div>
 
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             <PkSelect
-              label="Jenis Asuransi"
-              value={insurance.life?.type || ""}
-              onChange={(e) => updateLifeInsurance("type", e.target.value)}
-              disabled={!canEdit || locked}
-              options={insuranceTypes}
-            />
-
-            <PkSelect
               label="Status Order"
               value={insurance.life?.orderStatus || "BELUM_DIORDER"}
               onChange={(e) =>
-                updateLifeInsurance("orderStatus", e.target.value)
+                updateInsuranceSection("life", "orderStatus", e.target.value)
               }
-              disabled={!canEdit || locked}
+              disabled={disabled}
               options={orderStatuses}
             />
 
@@ -289,82 +269,71 @@ export default function PkInsuranceSection({ pk, setPk, canEdit, locked }) {
               label="Status Posting"
               value={insurance.life?.postingStatus || "BELUM_POSTING"}
               onChange={(e) =>
-                updateLifeInsurance("postingStatus", e.target.value)
+                updateInsuranceSection("life", "postingStatus", e.target.value)
               }
-              disabled={!canEdit || locked}
+              disabled={disabled}
               options={postingStatuses}
             />
 
-            <div>
-              <PkInput
-                label="Premi Dibayarkan"
-                type="number"
-                value={insurance.life?.premium ?? ""}
-                onChange={(e) => updateLifeInsurance("premium", e.target.value)}
-                disabled={!canEdit || locked}
-                placeholder="50000"
-              />
+            <PremiumField
+              label="Premi AJK AMFS"
+              value={insurance.life?.premium ?? ""}
+              onChange={(e) =>
+                updateInsuranceSection("life", "premium", e.target.value)
+              }
+              disabled={disabled}
+            />
 
-              {insurance.life?.premium && (
-                <p className="mt-1.5 text-xs text-zinc-500">
-                  {formatRupiah(insurance.life.premium)}
-                </p>
-              )}
-            </div>
+            <PkInput
+              label="Nomor Polis AJK AMFS"
+              value={insurance.life?.policyNumber || ""}
+              onChange={(e) =>
+                updateInsuranceSection("life", "policyNumber", e.target.value)
+              }
+              disabled={disabled}
+            />
           </div>
         </div>
 
+        {/* MMS */}
         <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-          <div className="flex items-start gap-3">
-            <input
-              id="include-axa"
-              type="checkbox"
-              checked={axaEnabled}
-              onChange={(e) => updateAxa("enabled", e.target.checked)}
-              disabled={!canEdit || locked}
-              className="mt-1 h-4 w-4 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-300"
-            />
-
-            <div>
-              <label
-                htmlFor="include-axa"
-                className="cursor-pointer text-sm font-semibold text-zinc-900"
-              >
-                Sertakan AXA?
-              </label>
-
-              <p className="mt-1 text-xs text-zinc-500">
-                Opsional. Aktifkan jika fasilitas menggunakan AXA.
-              </p>
-            </div>
+          <div className="mb-4">
+            <p className="text-sm font-semibold text-zinc-900">MMS</p>
+            <p className="mt-1 text-xs text-zinc-500">
+              Catat status MMS apabila skema ini digunakan pada PK.
+            </p>
           </div>
 
-          {axaEnabled && (
-            <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <PkInput
-                label="Nomor Polis AXA"
-                value={insurance.axa?.policyNumber || ""}
-                onChange={(e) => updateAxa("policyNumber", e.target.value)}
-                disabled={!canEdit || locked}
-              />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <PkSelect
+              label="Status Order"
+              value={insurance.mms?.orderStatus || "BELUM_DIORDER"}
+              onChange={(e) =>
+                updateInsuranceSection("mms", "orderStatus", e.target.value)
+              }
+              disabled={disabled}
+              options={orderStatuses}
+            />
 
-              <PkSelect
-                label="Status Order"
-                value={insurance.axa?.orderStatus || "BELUM_DIORDER"}
-                onChange={(e) => updateAxa("orderStatus", e.target.value)}
-                disabled={!canEdit || locked}
-                options={orderStatuses}
-              />
+            <PkSelect
+              label="Status Posting"
+              value={insurance.mms?.postingStatus || "BELUM_POSTING"}
+              onChange={(e) =>
+                updateInsuranceSection("mms", "postingStatus", e.target.value)
+              }
+              disabled={disabled}
+              options={postingStatuses}
+            />
 
-              <PkSelect
-                label="Status Posting"
-                value={insurance.axa?.postingStatus || "BELUM_POSTING"}
-                onChange={(e) => updateAxa("postingStatus", e.target.value)}
-                disabled={!canEdit || locked}
-                options={postingStatuses}
-              />
-            </div>
-          )}
+            <PremiumField
+              label="Premi MMS"
+              value={insurance.mms?.premium ?? ""}
+              onChange={(e) =>
+                updateInsuranceSection("mms", "premium", e.target.value)
+              }
+              disabled={disabled}
+            />
+          </div>
         </div>
       </div>
     </PkSection>

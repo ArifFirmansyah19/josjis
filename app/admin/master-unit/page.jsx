@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { supabase } from "@/lib/supabase";
 import {
   Archive,
@@ -579,343 +578,327 @@ export default function MasterUnitPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div>
-            <p className="text-sm font-medium text-zinc-500">Master Data</p>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
-              Master Unit
-            </h1>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p className="text-sm font-medium text-zinc-500">Master Data</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
+            Master Unit
+          </h1>
+          <p className="mt-1 text-sm text-zinc-500">
+            Kelola unit kerja, status unit, perpindahan data, dan histori.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={loadAll}
+            disabled={loading}
+            className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+
+          <button
+            type="button"
+            onClick={openAdd}
+            className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
+          >
+            <Plus className="h-4 w-4" />
+            Tambah Unit
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          <XCircle className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>{error}</div>
+        </div>
+      )}
+
+      {success && (
+        <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+          <div>{success}</div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <SummaryCard label="Total Unit" value={summary.total} icon={Landmark} />
+
+        <SummaryCard
+          label="Unit Aktif"
+          value={summary.aktif}
+          icon={CheckCircle2}
+        />
+
+        <SummaryCard label="Nonaktif" value={summary.nonaktif} icon={XCircle} />
+
+        <SummaryCard label="Arsip" value={summary.arsip} icon={Archive} />
+      </div>
+
+      <div className="rounded-2xl border border-zinc-200 bg-white">
+        <div className="border-b border-zinc-200 p-4">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative min-w-0 flex-1 lg:max-w-xl">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Cari nama unit, kode, legacy, kawasan..."
+                className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400"
+              />
+            </div>
+
+            <div className="relative">
+              <select
+                value={statusFilter}
+                onChange={(event) => setStatusFilter(event.target.value)}
+                className="h-10 min-w-[150px] appearance-none rounded-lg border border-zinc-200 bg-white pl-3 pr-9 text-sm text-zinc-700 outline-none focus:border-zinc-400"
+              >
+                <option value="SEMUA">Semua Status</option>
+                {STATUS_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+            </div>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center px-6 py-16 text-sm text-zinc-500">
+            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+            Memuat data unit...
+          </div>
+        ) : filteredUnits.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <Landmark className="h-10 w-10 text-zinc-300" />
+            <p className="mt-3 text-sm font-medium text-zinc-700">
+              Tidak ada unit ditemukan
+            </p>
             <p className="mt-1 text-sm text-zinc-500">
-              Kelola unit kerja, status unit, perpindahan data, dan histori.
+              Coba ubah kata pencarian atau filter status.
             </p>
           </div>
+        ) : (
+          <>
+            <div className="hidden overflow-x-auto lg:block">
+              <table className="w-full min-w-[1050px] text-sm">
+                <thead>
+                  <tr className="border-b border-zinc-200 bg-zinc-50/70 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
+                    <th className="px-5 py-3">Unit</th>
+                    <th className="px-5 py-3">Kode Unit</th>
+                    <th className="px-5 py-3">Cabang</th>
+                    <th className="px-5 py-3">Kawasan</th>
+                    <th className="px-5 py-3">Legacy</th>
+                    <th className="px-5 py-3">Status</th>
+                    <th className="px-5 py-3 text-right">Aksi</th>
+                  </tr>
+                </thead>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={loadAll}
-              disabled={loading}
-              className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <RefreshCw
-                className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
-              />
-              Refresh
-            </button>
+                <tbody className="divide-y divide-zinc-100">
+                  {filteredUnits.map((unit) => {
+                    const cabang = cabangMap[unit.cabang_id];
 
-            <button
-              type="button"
-              onClick={openAdd}
-              className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
-            >
-              <Plus className="h-4 w-4" />
-              Tambah Unit
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            <XCircle className="mt-0.5 h-5 w-5 shrink-0" />
-            <div>{error}</div>
-          </div>
-        )}
-
-        {success && (
-          <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-            <div>{success}</div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <SummaryCard
-            label="Total Unit"
-            value={summary.total}
-            icon={Landmark}
-          />
-
-          <SummaryCard
-            label="Unit Aktif"
-            value={summary.aktif}
-            icon={CheckCircle2}
-          />
-
-          <SummaryCard
-            label="Nonaktif"
-            value={summary.nonaktif}
-            icon={XCircle}
-          />
-
-          <SummaryCard label="Arsip" value={summary.arsip} icon={Archive} />
-        </div>
-
-        <div className="rounded-2xl border border-zinc-200 bg-white">
-          <div className="border-b border-zinc-200 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-              <div className="relative min-w-0 flex-1 lg:max-w-xl">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Cari nama unit, kode, legacy, kawasan..."
-                  className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400"
-                />
-              </div>
-
-              <div className="relative">
-                <select
-                  value={statusFilter}
-                  onChange={(event) => setStatusFilter(event.target.value)}
-                  className="h-10 min-w-[150px] appearance-none rounded-lg border border-zinc-200 bg-white pl-3 pr-9 text-sm text-zinc-700 outline-none focus:border-zinc-400"
-                >
-                  <option value="SEMUA">Semua Status</option>
-                  {STATUS_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-
-                <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-              </div>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="flex items-center justify-center px-6 py-16 text-sm text-zinc-500">
-              <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-              Memuat data unit...
-            </div>
-          ) : filteredUnits.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-              <Landmark className="h-10 w-10 text-zinc-300" />
-              <p className="mt-3 text-sm font-medium text-zinc-700">
-                Tidak ada unit ditemukan
-              </p>
-              <p className="mt-1 text-sm text-zinc-500">
-                Coba ubah kata pencarian atau filter status.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="hidden overflow-x-auto lg:block">
-                <table className="w-full min-w-[1050px] text-sm">
-                  <thead>
-                    <tr className="border-b border-zinc-200 bg-zinc-50/70 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                      <th className="px-5 py-3">Unit</th>
-                      <th className="px-5 py-3">Kode Unit</th>
-                      <th className="px-5 py-3">Cabang</th>
-                      <th className="px-5 py-3">Kawasan</th>
-                      <th className="px-5 py-3">Legacy</th>
-                      <th className="px-5 py-3">Status</th>
-                      <th className="px-5 py-3 text-right">Aksi</th>
-                    </tr>
-                  </thead>
-
-                  <tbody className="divide-y divide-zinc-100">
-                    {filteredUnits.map((unit) => {
-                      const cabang = cabangMap[unit.cabang_id];
-
-                      return (
-                        <tr
-                          key={unit.id}
-                          className="transition hover:bg-zinc-50/60"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="font-medium text-zinc-900">
-                              {unit.nama_unit}
-                            </div>
-                            <div className="mt-0.5 text-xs text-zinc-400">
-                              ID: {unit.id}
-                            </div>
-                          </td>
-
-                          <td className="px-5 py-4 font-medium text-zinc-700">
-                            {unit.kode_unit || "-"}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <div className="text-zinc-700">
-                              {cabang?.nama_cabang || "-"}
-                            </div>
-                            <div className="text-xs text-zinc-400">
-                              {cabang?.kode_cabang || ""}
-                            </div>
-                          </td>
-
-                          <td className="px-5 py-4 text-zinc-600">
-                            {unit.kode_kawasan || "-"}
-                          </td>
-
-                          <td className="px-5 py-4 text-zinc-600">
-                            {unit.kode_legacy || "-"}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <span
-                              className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass(
-                                unit.status,
-                              )}`}
-                            >
-                              {statusLabel(unit.status)}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <div className="flex justify-end gap-1">
-                              <ActionButton
-                                icon={Edit3}
-                                label="Edit"
-                                onClick={() => openEdit(unit)}
-                              />
-
-                              <ActionButton
-                                icon={ArrowRightLeft}
-                                label="Pindahkan Data"
-                                onClick={() => openMove(unit)}
-                              />
-
-                              {unit.status === STATUS.AKTIF ? (
-                                <ActionButton
-                                  icon={XCircle}
-                                  label="Nonaktifkan"
-                                  onClick={() =>
-                                    updateStatus(unit, STATUS.NONAKTIF)
-                                  }
-                                />
-                              ) : unit.status === STATUS.NONAKTIF ? (
-                                <ActionButton
-                                  icon={CheckCircle2}
-                                  label="Aktifkan"
-                                  onClick={() =>
-                                    updateStatus(unit, STATUS.AKTIF)
-                                  }
-                                />
-                              ) : null}
-
-                              {unit.status !== STATUS.ARSIP && (
-                                <ActionButton
-                                  icon={Archive}
-                                  label="Arsipkan"
-                                  onClick={() =>
-                                    updateStatus(unit, STATUS.ARSIP)
-                                  }
-                                />
-                              )}
-
-                              <ActionButton
-                                icon={Trash2}
-                                label="Hapus Permanen"
-                                danger
-                                onClick={() => openPermanentDelete(unit)}
-                              />
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="divide-y divide-zinc-100 lg:hidden">
-                {filteredUnits.map((unit) => {
-                  const cabang = cabangMap[unit.cabang_id];
-
-                  return (
-                    <div key={unit.id} className="space-y-4 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="min-w-0">
-                          <div className="font-semibold text-zinc-900">
+                    return (
+                      <tr
+                        key={unit.id}
+                        className="transition hover:bg-zinc-50/60"
+                      >
+                        <td className="px-5 py-4">
+                          <div className="font-medium text-zinc-900">
                             {unit.nama_unit}
                           </div>
-
-                          <div className="mt-1 text-sm text-zinc-500">
-                            {unit.kode_unit || "-"}
+                          <div className="mt-0.5 text-xs text-zinc-400">
+                            ID: {unit.id}
                           </div>
+                        </td>
+
+                        <td className="px-5 py-4 font-medium text-zinc-700">
+                          {unit.kode_unit || "-"}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <div className="text-zinc-700">
+                            {cabang?.nama_cabang || "-"}
+                          </div>
+                          <div className="text-xs text-zinc-400">
+                            {cabang?.kode_cabang || ""}
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-4 text-zinc-600">
+                          {unit.kode_kawasan || "-"}
+                        </td>
+
+                        <td className="px-5 py-4 text-zinc-600">
+                          {unit.kode_legacy || "-"}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass(
+                              unit.status,
+                            )}`}
+                          >
+                            {statusLabel(unit.status)}
+                          </span>
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <div className="flex justify-end gap-1">
+                            <ActionButton
+                              icon={Edit3}
+                              label="Edit"
+                              onClick={() => openEdit(unit)}
+                            />
+
+                            <ActionButton
+                              icon={ArrowRightLeft}
+                              label="Pindahkan Data"
+                              onClick={() => openMove(unit)}
+                            />
+
+                            {unit.status === STATUS.AKTIF ? (
+                              <ActionButton
+                                icon={XCircle}
+                                label="Nonaktifkan"
+                                onClick={() =>
+                                  updateStatus(unit, STATUS.NONAKTIF)
+                                }
+                              />
+                            ) : unit.status === STATUS.NONAKTIF ? (
+                              <ActionButton
+                                icon={CheckCircle2}
+                                label="Aktifkan"
+                                onClick={() => updateStatus(unit, STATUS.AKTIF)}
+                              />
+                            ) : null}
+
+                            {unit.status !== STATUS.ARSIP && (
+                              <ActionButton
+                                icon={Archive}
+                                label="Arsipkan"
+                                onClick={() => updateStatus(unit, STATUS.ARSIP)}
+                              />
+                            )}
+
+                            <ActionButton
+                              icon={Trash2}
+                              label="Hapus Permanen"
+                              danger
+                              onClick={() => openPermanentDelete(unit)}
+                            />
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="divide-y divide-zinc-100 lg:hidden">
+              {filteredUnits.map((unit) => {
+                const cabang = cabangMap[unit.cabang_id];
+
+                return (
+                  <div key={unit.id} className="space-y-4 p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold text-zinc-900">
+                          {unit.nama_unit}
                         </div>
 
-                        <span
-                          className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass(
-                            unit.status,
-                          )}`}
-                        >
-                          {statusLabel(unit.status)}
-                        </span>
+                        <div className="mt-1 text-sm text-zinc-500">
+                          {unit.kode_unit || "-"}
+                        </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-3 rounded-xl bg-zinc-50 p-3 text-sm">
-                        <InfoItem
-                          label="Cabang"
-                          value={cabang?.nama_cabang || "-"}
-                        />
-                        <InfoItem
-                          label="Legacy"
-                          value={unit.kode_legacy || "-"}
-                        />
-                        <InfoItem
-                          label="Kawasan"
-                          value={unit.kode_kawasan || "-"}
-                        />
-                        <InfoItem label="Kode" value={unit.kode_unit || "-"} />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <MobileAction
-                          icon={Edit3}
-                          label="Edit"
-                          onClick={() => openEdit(unit)}
-                        />
-
-                        <MobileAction
-                          icon={ArrowRightLeft}
-                          label="Pindahkan"
-                          onClick={() => openMove(unit)}
-                        />
-
-                        {unit.status === STATUS.AKTIF ? (
-                          <MobileAction
-                            icon={XCircle}
-                            label="Nonaktifkan"
-                            onClick={() => updateStatus(unit, STATUS.NONAKTIF)}
-                          />
-                        ) : unit.status === STATUS.NONAKTIF ? (
-                          <MobileAction
-                            icon={CheckCircle2}
-                            label="Aktifkan"
-                            onClick={() => updateStatus(unit, STATUS.AKTIF)}
-                          />
-                        ) : null}
-
-                        {unit.status !== STATUS.ARSIP && (
-                          <MobileAction
-                            icon={Archive}
-                            label="Arsipkan"
-                            onClick={() => updateStatus(unit, STATUS.ARSIP)}
-                          />
-                        )}
-
-                        <MobileAction
-                          icon={Trash2}
-                          label="Hapus Permanen"
-                          danger
-                          onClick={() => openPermanentDelete(unit)}
-                        />
-                      </div>
+                      <span
+                        className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass(
+                          unit.status,
+                        )}`}
+                      >
+                        {statusLabel(unit.status)}
+                      </span>
                     </div>
-                  );
-                })}
-              </div>
-            </>
-          )}
 
-          <div className="border-t border-zinc-200 px-5 py-3 text-xs text-zinc-400">
-            Menampilkan {filteredUnits.length} dari {units.length} unit.
-          </div>
+                    <div className="grid grid-cols-2 gap-3 rounded-xl bg-zinc-50 p-3 text-sm">
+                      <InfoItem
+                        label="Cabang"
+                        value={cabang?.nama_cabang || "-"}
+                      />
+                      <InfoItem
+                        label="Legacy"
+                        value={unit.kode_legacy || "-"}
+                      />
+                      <InfoItem
+                        label="Kawasan"
+                        value={unit.kode_kawasan || "-"}
+                      />
+                      <InfoItem label="Kode" value={unit.kode_unit || "-"} />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <MobileAction
+                        icon={Edit3}
+                        label="Edit"
+                        onClick={() => openEdit(unit)}
+                      />
+
+                      <MobileAction
+                        icon={ArrowRightLeft}
+                        label="Pindahkan"
+                        onClick={() => openMove(unit)}
+                      />
+
+                      {unit.status === STATUS.AKTIF ? (
+                        <MobileAction
+                          icon={XCircle}
+                          label="Nonaktifkan"
+                          onClick={() => updateStatus(unit, STATUS.NONAKTIF)}
+                        />
+                      ) : unit.status === STATUS.NONAKTIF ? (
+                        <MobileAction
+                          icon={CheckCircle2}
+                          label="Aktifkan"
+                          onClick={() => updateStatus(unit, STATUS.AKTIF)}
+                        />
+                      ) : null}
+
+                      {unit.status !== STATUS.ARSIP && (
+                        <MobileAction
+                          icon={Archive}
+                          label="Arsipkan"
+                          onClick={() => updateStatus(unit, STATUS.ARSIP)}
+                        />
+                      )}
+
+                      <MobileAction
+                        icon={Trash2}
+                        label="Hapus Permanen"
+                        danger
+                        onClick={() => openPermanentDelete(unit)}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <div className="border-t border-zinc-200 px-5 py-3 text-xs text-zinc-400">
+          Menampilkan {filteredUnits.length} dari {units.length} unit.
         </div>
       </div>
 
@@ -1601,7 +1584,7 @@ export default function MasterUnitPage() {
           </div>
         </ModalOverlay>
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 

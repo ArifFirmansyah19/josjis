@@ -32,11 +32,11 @@ export function isUuid(value) {
 }
 
 export function generateFallbackOwnerId(owner, index = 0) {
-  const nama = String(owner?.nama || "OWNER")
-    .trim()
-    .replace(/\s+/g, "-")
-    .replace(/[^A-Z0-9_-]/gi, "")
-    .toUpperCase();
+  // Jika sudah ada ID lokal, pertahankan agar identitas form stabil.
+  if (owner?.id && !isUuid(owner.id)) {
+    return owner.id;
+  }
 
-  return `OWNER-${nama || "OWNER"}-${index}`;
+  // ID ini hanya untuk form, bukan ID database.
+  return `OWNER-LOCAL-${index}`;
 }

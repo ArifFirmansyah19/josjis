@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import {
   Archive,
@@ -829,271 +828,266 @@ export default function AgunanLunasPage() {
   }, [unitCode]);
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-slate-50">
-        {/* HEADER */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-                    <Archive size={19} />
-                  </div>
-
-                  <div>
-                    <h1 className="text-xl font-bold text-slate-900">
-                      Agunan Lunas
-                    </h1>
-
-                    <p className="mt-0.5 text-xs text-slate-500">{unitLabel}</p>
-                  </div>
-                </div>
-              </div>
-
-              <a
-                href="/admin/agunan-lunas/history"
-                className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                <History size={17} />
-                History Penyerahan
-              </a>
-            </div>
-          </div>
-        </div>
-
-        {/* CONTENT */}
+    <div className="min-h-screen bg-slate-50">
+      {/* HEADER */}
+      <div className="border-b border-slate-200 bg-white">
         <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
-          {/* SUMMARY */}
-          <div className="grid grid-cols-3 gap-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <p className="text-xs text-slate-500">Debitur</p>
-
-              <p className="mt-2 text-2xl font-bold text-slate-900">
-                {summary.debitur}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-              <p className="text-xs text-emerald-700">Bisa Diserahkan</p>
-
-              <p className="mt-2 text-2xl font-bold text-emerald-800">
-                {summary.bisa}
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-              <p className="text-xs text-amber-700">Masih Proses</p>
-
-              <p className="mt-2 text-2xl font-bold text-amber-800">
-                {summary.proses}
-              </p>
-            </div>
-          </div>
-
-          {/* SEARCH */}
-          <div className="mt-5">
-            <div className="relative">
-              <Search
-                size={17}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
-
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari nama debitur, rekening, atau SHM..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none shadow-sm focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-              />
-            </div>
-          </div>
-
-          {/* SIMPLE TABLE */}
-          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-4 py-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900">
-                    Agunan Lunas
-                  </h2>
-
-                  <p className="mt-0.5 text-xs text-slate-500">
-                    Klik nama debitur untuk melihat detail.
-                  </p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+                  <Archive size={19} />
                 </div>
 
-                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
-                  {filteredData.length}
-                </span>
+                <div>
+                  <h1 className="text-xl font-bold text-slate-900">
+                    Agunan Lunas
+                  </h1>
+
+                  <p className="mt-0.5 text-xs text-slate-500">{unitLabel}</p>
+                </div>
               </div>
             </div>
 
-            {/* DESKTOP */}
-            <div className="hidden md:block">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
-                      Debitur
-                    </th>
+            <a
+              href="/admin/agunan-lunas/history"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+            >
+              <History size={17} />
+              History Penyerahan
+            </a>
+          </div>
+        </div>
+      </div>
 
-                    <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
-                      No. Rekening
-                    </th>
+      {/* CONTENT */}
+      <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
+        {/* SUMMARY */}
+        <div className="grid grid-cols-3 gap-3">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <p className="text-xs text-slate-500">Debitur</p>
 
-                    <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
-                      Tgl Lunas
-                    </th>
+            <p className="mt-2 text-2xl font-bold text-slate-900">
+              {summary.debitur}
+            </p>
+          </div>
 
-                    <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
-                      Status
-                    </th>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <p className="text-xs text-emerald-700">Bisa Diserahkan</p>
 
-                    <th className="w-10 px-5 py-3" />
-                  </tr>
-                </thead>
+            <p className="mt-2 text-2xl font-bold text-emerald-800">
+              {summary.bisa}
+            </p>
+          </div>
 
-                <tbody className="divide-y divide-slate-100">
-                  {filteredData.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="px-5 py-16 text-center">
-                        <Archive size={28} className="mx-auto text-slate-300" />
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs text-amber-700">Masih Proses</p>
 
-                        <p className="mt-3 text-sm font-semibold text-slate-700">
-                          Tidak ada data
-                        </p>
-
-                        <p className="mt-1 text-xs text-slate-400">
-                          Tidak ada agunan lunas yang masih perlu ditangani.
-                        </p>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredData.map((item) => {
-                      const aktif = item.agunan.filter(
-                        (x) =>
-                          ![
-                            "SUDAH_DISERAHKAN",
-                            "DIGUNAKAN_PINJAMAN_LAIN",
-                            "DIGUNAKAN_TOPUP",
-                          ].includes(x.status),
-                      );
-
-                      const bisa = aktif.some(
-                        (x) => x.status === "BISA_DISERAHKAN",
-                      );
-
-                      return (
-                        <tr
-                          key={item.id}
-                          onClick={() => setSelectedItem(item)}
-                          className="cursor-pointer transition hover:bg-slate-50"
-                        >
-                          <td className="px-5 py-4">
-                            <p className="text-sm font-bold text-slate-900">
-                              {item.debitur}
-                            </p>
-                          </td>
-
-                          <td className="px-5 py-4 font-mono text-xs text-slate-600">
-                            {item.rekening}
-                          </td>
-
-                          <td className="px-5 py-4 text-sm text-slate-600">
-                            {item.tglLunas}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            {bisa ? (
-                              <StatusBadge status="BISA_DISERAHKAN" />
-                            ) : (
-                              <StatusBadge status={aktif[0]?.status} />
-                            )}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <ChevronRight
-                              size={17}
-                              className="text-slate-400"
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* MOBILE */}
-            <div className="divide-y divide-slate-100 md:hidden">
-              {filteredData.map((item) => {
-                const aktif = item.agunan.filter(
-                  (x) =>
-                    ![
-                      "SUDAH_DISERAHKAN",
-                      "DIGUNAKAN_PINJAMAN_LAIN",
-                      "DIGUNAKAN_TOPUP",
-                    ].includes(x.status),
-                );
-
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setSelectedItem(item)}
-                    className="w-full p-4 text-left"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">
-                          {item.debitur}
-                        </p>
-
-                        <p className="mt-1 font-mono text-xs text-slate-500">
-                          {item.rekening}
-                        </p>
-
-                        <p className="mt-2 text-xs text-slate-400">
-                          Lunas {item.tglLunas}
-                        </p>
-                      </div>
-
-                      <ChevronRight size={17} className="text-slate-400" />
-                    </div>
-
-                    <div className="mt-3">
-                      <StatusBadge status={aktif[0]?.status} />
-                    </div>
-                  </button>
-                );
-              })}
-
-              {filteredData.length === 0 && (
-                <div className="px-5 py-16 text-center">
-                  <Archive size={28} className="mx-auto text-slate-300" />
-
-                  <p className="mt-3 text-sm font-semibold text-slate-700">
-                    Tidak ada data
-                  </p>
-                </div>
-              )}
-            </div>
+            <p className="mt-2 text-2xl font-bold text-amber-800">
+              {summary.proses}
+            </p>
           </div>
         </div>
 
-        {/* DETAIL MODAL */}
-        <DetailModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-          onSubmit={(data) => {
-            console.log("DATA PENYERAHAN:", data);
-            alert(
-              "Data penyerahan berhasil disiapkan. Nanti akan disimpan ke Supabase.",
-            );
-          }}
-        />
+        {/* SEARCH */}
+        <div className="mt-5">
+          <div className="relative">
+            <Search
+              size={17}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
+
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari nama debitur, rekening, atau SHM..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none shadow-sm focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
+            />
+          </div>
+        </div>
+
+        {/* SIMPLE TABLE */}
+        <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-900">
+                  Agunan Lunas
+                </h2>
+
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Klik nama debitur untuk melihat detail.
+                </p>
+              </div>
+
+              <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">
+                {filteredData.length}
+              </span>
+            </div>
+          </div>
+
+          {/* DESKTOP */}
+          <div className="hidden md:block">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
+                    Debitur
+                  </th>
+
+                  <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
+                    No. Rekening
+                  </th>
+
+                  <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
+                    Tgl Lunas
+                  </th>
+
+                  <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
+                    Status
+                  </th>
+
+                  <th className="w-10 px-5 py-3" />
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-slate-100">
+                {filteredData.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-16 text-center">
+                      <Archive size={28} className="mx-auto text-slate-300" />
+
+                      <p className="mt-3 text-sm font-semibold text-slate-700">
+                        Tidak ada data
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        Tidak ada agunan lunas yang masih perlu ditangani.
+                      </p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredData.map((item) => {
+                    const aktif = item.agunan.filter(
+                      (x) =>
+                        ![
+                          "SUDAH_DISERAHKAN",
+                          "DIGUNAKAN_PINJAMAN_LAIN",
+                          "DIGUNAKAN_TOPUP",
+                        ].includes(x.status),
+                    );
+
+                    const bisa = aktif.some(
+                      (x) => x.status === "BISA_DISERAHKAN",
+                    );
+
+                    return (
+                      <tr
+                        key={item.id}
+                        onClick={() => setSelectedItem(item)}
+                        className="cursor-pointer transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-4">
+                          <p className="text-sm font-bold text-slate-900">
+                            {item.debitur}
+                          </p>
+                        </td>
+
+                        <td className="px-5 py-4 font-mono text-xs text-slate-600">
+                          {item.rekening}
+                        </td>
+
+                        <td className="px-5 py-4 text-sm text-slate-600">
+                          {item.tglLunas}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          {bisa ? (
+                            <StatusBadge status="BISA_DISERAHKAN" />
+                          ) : (
+                            <StatusBadge status={aktif[0]?.status} />
+                          )}
+                        </td>
+
+                        <td className="px-5 py-4">
+                          <ChevronRight size={17} className="text-slate-400" />
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* MOBILE */}
+          <div className="divide-y divide-slate-100 md:hidden">
+            {filteredData.map((item) => {
+              const aktif = item.agunan.filter(
+                (x) =>
+                  ![
+                    "SUDAH_DISERAHKAN",
+                    "DIGUNAKAN_PINJAMAN_LAIN",
+                    "DIGUNAKAN_TOPUP",
+                  ].includes(x.status),
+              );
+
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => setSelectedItem(item)}
+                  className="w-full p-4 text-left"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-bold text-slate-900">
+                        {item.debitur}
+                      </p>
+
+                      <p className="mt-1 font-mono text-xs text-slate-500">
+                        {item.rekening}
+                      </p>
+
+                      <p className="mt-2 text-xs text-slate-400">
+                        Lunas {item.tglLunas}
+                      </p>
+                    </div>
+
+                    <ChevronRight size={17} className="text-slate-400" />
+                  </div>
+
+                  <div className="mt-3">
+                    <StatusBadge status={aktif[0]?.status} />
+                  </div>
+                </button>
+              );
+            })}
+
+            {filteredData.length === 0 && (
+              <div className="px-5 py-16 text-center">
+                <Archive size={28} className="mx-auto text-slate-300" />
+
+                <p className="mt-3 text-sm font-semibold text-slate-700">
+                  Tidak ada data
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
-    </DashboardLayout>
+
+      {/* DETAIL MODAL */}
+      <DetailModal
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+        onSubmit={(data) => {
+          console.log("DATA PENYERAHAN:", data);
+          alert(
+            "Data penyerahan berhasil disiapkan. Nanti akan disimpan ke Supabase.",
+          );
+        }}
+      />
+    </div>
   );
 }

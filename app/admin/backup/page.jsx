@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import {
   Archive,
@@ -269,469 +268,462 @@ export default function BackupExportPage() {
   ======================================================= */
 
   return (
-    <DashboardLayout>
-      <div className="min-h-full bg-slate-50">
-        <div className="mx-auto max-w-7xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
-          {/* =================================================
+    <div className="min-h-full bg-slate-50">
+      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
+        {/* =================================================
               HEADER
           ================================================= */}
 
-          <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-                <Database className="h-5 w-5" />
-              </div>
-
-              <div>
-                <h1 className="text-lg font-bold text-slate-900 sm:text-xl">
-                  Backup & Export
-                </h1>
-
-                <p className="text-xs text-slate-500 sm:text-sm">
-                  Cadangkan dan keluarkan data JOSJIS
-                </p>
-              </div>
+        <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+              <Database className="h-5 w-5" />
             </div>
 
-            <div className="flex items-center gap-2">
-              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm">
-                {unitCode}
-              </div>
+            <div>
+              <h1 className="text-lg font-bold text-slate-900 sm:text-xl">
+                Backup & Export
+              </h1>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setSearch("");
-                  setMessage("");
-                }}
-                className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50"
-                title="Refresh"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </button>
+              <p className="text-xs text-slate-500 sm:text-sm">
+                Cadangkan dan keluarkan data JOSJIS
+              </p>
             </div>
           </div>
 
-          {/* =================================================
+          <div className="flex items-center gap-2">
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm">
+              {unitCode}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setMessage("");
+              }}
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50"
+              title="Refresh"
+            >
+              <RefreshCw className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* =================================================
               MESSAGE
           ================================================= */}
 
-          {message && (
-            <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+        {message && (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
 
-              <div className="flex-1 text-xs leading-5 text-emerald-800 sm:text-sm">
-                {message}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setMessage("")}
-                className="text-emerald-500 hover:text-emerald-700"
-              >
-                <X className="h-4 w-4" />
-              </button>
+            <div className="flex-1 text-xs leading-5 text-emerald-800 sm:text-sm">
+              {message}
             </div>
-          )}
 
-          {/* =================================================
+            <button
+              type="button"
+              onClick={() => setMessage("")}
+              className="text-emerald-500 hover:text-emerald-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* =================================================
               TABS
           ================================================= */}
 
-          <div className="mb-5 flex overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab("backup")}
-              className={`flex min-w-[130px] flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition ${
-                activeTab === "backup"
-                  ? "bg-slate-900 text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-50"
-              }`}
-            >
-              <Archive className="h-4 w-4" />
-              Backup
-            </button>
+        <div className="mb-5 flex overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab("backup")}
+            className={`flex min-w-[130px] flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition ${
+              activeTab === "backup"
+                ? "bg-slate-900 text-white shadow-sm"
+                : "text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            <Archive className="h-4 w-4" />
+            Backup
+          </button>
 
-            <button
-              type="button"
-              onClick={() => setActiveTab("export")}
-              className={`flex min-w-[130px] flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition ${
-                activeTab === "export"
-                  ? "bg-slate-900 text-white shadow-sm"
-                  : "text-slate-500 hover:bg-slate-50"
-              }`}
-            >
-              <Download className="h-4 w-4" />
-              Export Data
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={() => setActiveTab("export")}
+            className={`flex min-w-[130px] flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-xs font-bold transition ${
+              activeTab === "export"
+                ? "bg-slate-900 text-white shadow-sm"
+                : "text-slate-500 hover:bg-slate-50"
+            }`}
+          >
+            <Download className="h-4 w-4" />
+            Export Data
+          </button>
+        </div>
 
-          {/* =================================================
+        {/* =================================================
               BACKUP TAB
           ================================================= */}
 
-          {activeTab === "backup" && (
-            <>
-              {/* BACKUP ACTION */}
+        {activeTab === "backup" && (
+          <>
+            {/* BACKUP ACTION */}
 
-              <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                      <ShieldCheck className="h-5 w-5" />
-                    </div>
-
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                        Backup Data JOSJIS
-                      </h2>
-
-                      <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm">
-                        Buat salinan data sistem untuk menjaga keamanan dan
-                        memudahkan pemulihan apabila diperlukan.
-                      </p>
-                    </div>
+            <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+                    <ShieldCheck className="h-5 w-5" />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setShowBackupModal(true)}
-                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white shadow-sm hover:bg-slate-800"
-                  >
-                    <Archive className="h-4 w-4" />
-                    Buat Backup
-                  </button>
-                </div>
-              </section>
-
-              {/* INFO CARDS */}
-
-              <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
-                <SummaryCard
-                  icon={Archive}
-                  label="Backup Tersimpan"
-                  value={filteredBackups.length}
-                />
-
-                <SummaryCard icon={Database} label="Unit" value={unitCode} />
-
-                <SummaryCard
-                  icon={HardDrive}
-                  label="Backup Terakhir"
-                  value={
-                    filteredBackups.length > 0
-                      ? filteredBackups[0].tanggal
-                      : "-"
-                  }
-                  small
-                />
-
-                <SummaryCard icon={ShieldCheck} label="Status" value="Aman" />
-              </div>
-
-              {/* HISTORY */}
-
-              <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                   <div>
                     <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                      Riwayat Backup
+                      Backup Data JOSJIS
                     </h2>
 
-                    <p className="text-xs text-slate-500">
-                      Backup yang pernah dibuat untuk unit aktif.
+                    <p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500 sm:text-sm">
+                      Buat salinan data sistem untuk menjaga keamanan dan
+                      memudahkan pemulihan apabila diperlukan.
                     </p>
                   </div>
-
-                  <div className="relative w-full sm:w-64">
-                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Cari backup..."
-                      className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
-                    />
-                  </div>
                 </div>
 
-                {/* DESKTOP */}
+                <button
+                  type="button"
+                  onClick={() => setShowBackupModal(true)}
+                  className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white shadow-sm hover:bg-slate-800"
+                >
+                  <Archive className="h-4 w-4" />
+                  Buat Backup
+                </button>
+              </div>
+            </section>
 
-                <div className="hidden overflow-x-auto md:block">
-                  <table className="w-full min-w-[850px] text-left">
-                    <thead>
-                      <tr className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400">
-                        <th className="px-5 py-3 font-bold">Backup</th>
-                        <th className="px-5 py-3 font-bold">Tanggal</th>
-                        <th className="px-5 py-3 font-bold">Jenis</th>
-                        <th className="px-5 py-3 font-bold">Ukuran</th>
-                        <th className="px-5 py-3 font-bold">Dibuat Oleh</th>
-                        <th className="px-5 py-3 font-bold">Status</th>
-                        <th className="px-5 py-3 text-right font-bold">Aksi</th>
-                      </tr>
-                    </thead>
+            {/* INFO CARDS */}
 
-                    <tbody>
-                      {filteredBackups.map((item) => (
-                        <tr
-                          key={item.id}
-                          className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"
-                        >
-                          <td className="px-5 py-4">
-                            <div className="flex items-center gap-3">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                                <FolderArchive className="h-4 w-4" />
+            <div className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
+              <SummaryCard
+                icon={Archive}
+                label="Backup Tersimpan"
+                value={filteredBackups.length}
+              />
+
+              <SummaryCard icon={Database} label="Unit" value={unitCode} />
+
+              <SummaryCard
+                icon={HardDrive}
+                label="Backup Terakhir"
+                value={
+                  filteredBackups.length > 0 ? filteredBackups[0].tanggal : "-"
+                }
+                small
+              />
+
+              <SummaryCard icon={ShieldCheck} label="Status" value="Aman" />
+            </div>
+
+            {/* HISTORY */}
+
+            <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                    Riwayat Backup
+                  </h2>
+
+                  <p className="text-xs text-slate-500">
+                    Backup yang pernah dibuat untuk unit aktif.
+                  </p>
+                </div>
+
+                <div className="relative w-full sm:w-64">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Cari backup..."
+                    className="h-9 w-full rounded-lg border border-slate-200 bg-slate-50 pl-9 pr-3 text-xs outline-none focus:border-blue-400 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+
+              {/* DESKTOP */}
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[850px] text-left">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50 text-[10px] uppercase tracking-wide text-slate-400">
+                      <th className="px-5 py-3 font-bold">Backup</th>
+                      <th className="px-5 py-3 font-bold">Tanggal</th>
+                      <th className="px-5 py-3 font-bold">Jenis</th>
+                      <th className="px-5 py-3 font-bold">Ukuran</th>
+                      <th className="px-5 py-3 font-bold">Dibuat Oleh</th>
+                      <th className="px-5 py-3 font-bold">Status</th>
+                      <th className="px-5 py-3 text-right font-bold">Aksi</th>
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    {filteredBackups.map((item) => (
+                      <tr
+                        key={item.id}
+                        className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"
+                      >
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                              <FolderArchive className="h-4 w-4" />
+                            </div>
+
+                            <div>
+                              <div className="text-xs font-bold text-slate-800">
+                                {item.nama}
                               </div>
 
-                              <div>
-                                <div className="text-xs font-bold text-slate-800">
-                                  {item.nama}
-                                </div>
-
-                                <div className="mt-0.5 text-[10px] text-slate-400">
-                                  {item.file}
-                                </div>
+                              <div className="mt-0.5 text-[10px] text-slate-400">
+                                {item.file}
                               </div>
                             </div>
-                          </td>
-
-                          <td className="px-5 py-4 text-xs text-slate-600">
-                            {item.tanggal}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
-                              {item.jenis}
-                            </span>
-                          </td>
-
-                          <td className="px-5 py-4 text-xs text-slate-600">
-                            {item.ukuran}
-                          </td>
-
-                          <td className="px-5 py-4 text-xs text-slate-600">
-                            {item.dibuatOleh}
-                          </td>
-
-                          <td className="px-5 py-4">
-                            <StatusBadge status={item.status} />
-                          </td>
-
-                          <td className="px-5 py-4 text-right">
-                            <button
-                              type="button"
-                              onClick={() => handleDownload(item)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                              Download
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* MOBILE */}
-
-                <div className="space-y-2 p-3 md:hidden">
-                  {filteredBackups.map((item) => (
-                    <div
-                      key={item.id}
-                      className="rounded-xl border border-slate-200 bg-white p-3"
-                    >
-                      <div className="flex items-start gap-3">
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                          <FolderArchive className="h-4 w-4" />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="text-xs font-bold text-slate-800">
-                            {item.nama}
                           </div>
+                        </td>
 
-                          <div className="mt-1 break-all text-[10px] text-slate-400">
-                            {item.file}
-                          </div>
+                        <td className="px-5 py-4 text-xs text-slate-600">
+                          {item.tanggal}
+                        </td>
 
-                          <div className="mt-3 grid grid-cols-2 gap-2">
-                            <MobileMeta label="Tanggal" value={item.tanggal} />
+                        <td className="px-5 py-4">
+                          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
+                            {item.jenis}
+                          </span>
+                        </td>
 
-                            <MobileMeta label="Ukuran" value={item.ukuran} />
+                        <td className="px-5 py-4 text-xs text-slate-600">
+                          {item.ukuran}
+                        </td>
 
-                            <MobileMeta label="Jenis" value={item.jenis} />
+                        <td className="px-5 py-4 text-xs text-slate-600">
+                          {item.dibuatOleh}
+                        </td>
 
-                            <MobileMeta
-                              label="Dibuat"
-                              value={item.dibuatOleh}
-                            />
-                          </div>
+                        <td className="px-5 py-4">
+                          <StatusBadge status={item.status} />
+                        </td>
 
-                          <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
-                            <StatusBadge status={item.status} />
+                        <td className="px-5 py-4 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(item)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Download
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-                            <button
-                              type="button"
-                              onClick={() => handleDownload(item)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-700"
-                            >
-                              <Download className="h-3.5 w-3.5" />
-                              Download
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+              {/* MOBILE */}
 
-                  {filteredBackups.length === 0 && (
-                    <EmptyState text="Belum ada backup." />
-                  )}
-                </div>
-              </section>
-
-              {/* RESTORE */}
-
-              <section className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
-                      <Upload className="h-4 w-4" />
-                    </div>
-
-                    <div>
-                      <div className="text-sm font-bold text-amber-900">
-                        Restore Data
+              <div className="space-y-2 p-3 md:hidden">
+                {filteredBackups.map((item) => (
+                  <div
+                    key={item.id}
+                    className="rounded-xl border border-slate-200 bg-white p-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                        <FolderArchive className="h-4 w-4" />
                       </div>
 
-                      <p className="mt-1 text-xs leading-5 text-amber-800">
-                        Restore dapat mengganti data yang sedang digunakan.
-                        Fitur ini sebaiknya hanya tersedia untuk Superadmin.
-                      </p>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-xs font-bold text-slate-800">
+                          {item.nama}
+                        </div>
+
+                        <div className="mt-1 break-all text-[10px] text-slate-400">
+                          {item.file}
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <MobileMeta label="Tanggal" value={item.tanggal} />
+
+                          <MobileMeta label="Ukuran" value={item.ukuran} />
+
+                          <MobileMeta label="Jenis" value={item.jenis} />
+
+                          <MobileMeta label="Dibuat" value={item.dibuatOleh} />
+                        </div>
+
+                        <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                          <StatusBadge status={item.status} />
+
+                          <button
+                            type="button"
+                            onClick={() => handleDownload(item)}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-700"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                            Download
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
+                ))}
 
-                  <button
-                    type="button"
-                    onClick={() => setShowRestoreModal(true)}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-amber-300 bg-white px-4 text-xs font-bold text-amber-800 hover:bg-amber-100"
-                  >
+                {filteredBackups.length === 0 && (
+                  <EmptyState text="Belum ada backup." />
+                )}
+              </div>
+            </section>
+
+            {/* RESTORE */}
+
+            <section className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
                     <Upload className="h-4 w-4" />
-                    Restore
-                  </button>
-                </div>
-              </section>
-            </>
-          )}
+                  </div>
 
-          {/* =================================================
+                  <div>
+                    <div className="text-sm font-bold text-amber-900">
+                      Restore Data
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-amber-800">
+                      Restore dapat mengganti data yang sedang digunakan. Fitur
+                      ini sebaiknya hanya tersedia untuk Superadmin.
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowRestoreModal(true)}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-amber-300 bg-white px-4 text-xs font-bold text-amber-800 hover:bg-amber-100"
+                >
+                  <Upload className="h-4 w-4" />
+                  Restore
+                </button>
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* =================================================
               EXPORT TAB
           ================================================= */}
 
-          {activeTab === "export" && (
-            <>
-              <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        {activeTab === "export" && (
+          <>
+            <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+                  <FileSpreadsheet className="h-5 w-5" />
+                </div>
+
+                <div>
+                  <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                    Export Data
+                  </h2>
+
+                  <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
+                    Pilih jenis data yang ingin dikeluarkan. Data mengikuti unit
+                    aktif di Topbar.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {EXPORT_ITEMS.map((item) => {
+                const Icon = item.icon;
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => handleExport(item)}
+                    disabled={exporting}
+                    className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-blue-300 hover:bg-blue-50/20 disabled:cursor-wait disabled:opacity-60 sm:p-5"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition group-hover:bg-blue-100 group-hover:text-blue-600">
+                        <Icon className="h-5 w-5" />
+                      </div>
+
+                      <Download className="h-4 w-4 text-slate-300 transition group-hover:text-blue-500" />
+                    </div>
+
+                    <div className="mt-4 text-sm font-bold text-slate-900">
+                      {item.title}
+                    </div>
+
+                    <p className="mt-1 text-xs leading-5 text-slate-500">
+                      {item.description}
+                    </p>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+                        {unitCode}
+                      </span>
+
+                      <span className="text-[11px] font-bold text-blue-600">
+                        Export
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* EXPORT ALL */}
+
+            <section className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:p-5">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                    <FileSpreadsheet className="h-5 w-5" />
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
+                    <FileArchive className="h-4 w-4" />
                   </div>
 
                   <div>
-                    <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                      Export Data
-                    </h2>
+                    <div className="text-sm font-bold text-blue-900">
+                      Export Semua Data
+                    </div>
 
-                    <p className="mt-1 text-xs leading-5 text-slate-500 sm:text-sm">
-                      Pilih jenis data yang ingin dikeluarkan. Data mengikuti
-                      unit aktif di Topbar.
+                    <p className="mt-1 text-xs leading-5 text-blue-800">
+                      Membuat satu paket ZIP berisi seluruh data yang tersedia
+                      untuk unit aktif.
                     </p>
                   </div>
                 </div>
-              </section>
 
-              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {EXPORT_ITEMS.map((item) => {
-                  const Icon = item.icon;
-
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleExport(item)}
-                      disabled={exporting}
-                      className="group rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-blue-300 hover:bg-blue-50/20 disabled:cursor-wait disabled:opacity-60 sm:p-5"
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-600 transition group-hover:bg-blue-100 group-hover:text-blue-600">
-                          <Icon className="h-5 w-5" />
-                        </div>
-
-                        <Download className="h-4 w-4 text-slate-300 transition group-hover:text-blue-500" />
-                      </div>
-
-                      <div className="mt-4 text-sm font-bold text-slate-900">
-                        {item.title}
-                      </div>
-
-                      <p className="mt-1 text-xs leading-5 text-slate-500">
-                        {item.description}
-                      </p>
-
-                      <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
-                        <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-                          {unitCode}
-                        </span>
-
-                        <span className="text-[11px] font-bold text-blue-600">
-                          Export
-                        </span>
-                      </div>
-                    </button>
-                  );
-                })}
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleExport({
+                      id: "all",
+                      title: "Semua Data",
+                    })
+                  }
+                  disabled={exporting}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-xs font-bold text-white hover:bg-blue-800 disabled:opacity-60"
+                >
+                  <FileArchive className="h-4 w-4" />
+                  Export Semua
+                </button>
               </div>
-
-              {/* EXPORT ALL */}
-
-              <section className="mt-5 rounded-2xl border border-blue-200 bg-blue-50 p-4 sm:p-5">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
-                      <FileArchive className="h-4 w-4" />
-                    </div>
-
-                    <div>
-                      <div className="text-sm font-bold text-blue-900">
-                        Export Semua Data
-                      </div>
-
-                      <p className="mt-1 text-xs leading-5 text-blue-800">
-                        Membuat satu paket ZIP berisi seluruh data yang tersedia
-                        untuk unit aktif.
-                      </p>
-                    </div>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleExport({
-                        id: "all",
-                        title: "Semua Data",
-                      })
-                    }
-                    disabled={exporting}
-                    className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-blue-700 px-4 text-xs font-bold text-white hover:bg-blue-800 disabled:opacity-60"
-                  >
-                    <FileArchive className="h-4 w-4" />
-                    Export Semua
-                  </button>
-                </div>
-              </section>
-            </>
-          )}
-        </div>
+            </section>
+          </>
+        )}
       </div>
 
       {/* =====================================================
@@ -905,7 +897,7 @@ export default function BackupExportPage() {
           </div>
         </Modal>
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 

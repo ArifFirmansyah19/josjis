@@ -14,7 +14,6 @@ import {
   X,
 } from "lucide-react";
 
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 
 // ============================================================
@@ -1765,44 +1764,42 @@ export default function CetakAdvisPage() {
   // ==========================================================
 
   return (
-    <DashboardLayout>
-      <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-5 lg:px-6">
-        <div className="mb-5 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-xs text-slate-500">
-            <span>Cetak Advis</span>
+    <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-5 lg:px-6">
+      <div className="mb-5 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span>Cetak Advis</span>
 
-            {mode && (
-              <>
-                <ChevronRight size={14} />
+          {mode && (
+            <>
+              <ChevronRight size={14} />
 
-                <span className="font-medium text-slate-700">
-                  {mode === "manual"
-                    ? "Advis Manual"
-                    : mode === "2a"
-                      ? "Advis 2A"
-                      : mode === "easycall"
-                        ? "Advis EC / Easy Call"
-                        : "Advis Pelunasan"}
-                </span>
-              </>
-            )}
-          </div>
-
-          <div className="hidden text-xs text-slate-400 sm:block">
-            {tanggalHariIni}
-          </div>
+              <span className="font-medium text-slate-700">
+                {mode === "manual"
+                  ? "Advis Manual"
+                  : mode === "2a"
+                    ? "Advis 2A"
+                    : mode === "easycall"
+                      ? "Advis EC / Easy Call"
+                      : "Advis Pelunasan"}
+              </span>
+            </>
+          )}
         </div>
 
-        {mode === null && renderLanding()}
-
-        {mode === "manual" && renderManual()}
-
-        {mode === "2a" && render2A()}
-
-        {mode === "easycall" && renderEasyCall()}
-
-        {mode === "pelunasan" && renderPelunasan()}
+        <div className="hidden text-xs text-slate-400 sm:block">
+          {tanggalHariIni}
+        </div>
       </div>
-    </DashboardLayout>
+
+      {mode === null && renderLanding()}
+
+      {mode === "manual" && renderManual()}
+
+      {mode === "2a" && render2A()}
+
+      {mode === "easycall" && renderEasyCall()}
+
+      {mode === "pelunasan" && renderPelunasan()}
+    </div>
   );
 }

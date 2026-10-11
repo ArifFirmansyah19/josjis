@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import {
   Calculator,
@@ -458,559 +457,557 @@ export default function KalkulatorAfmsAjkPage() {
   ======================================================= */
 
   return (
-    <DashboardLayout>
-      <div className="min-h-full bg-slate-50">
-        <div className="mx-auto max-w-7xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
-          {/* =================================================
+    <div className="min-h-full bg-slate-50">
+      <div className="mx-auto max-w-7xl px-3 py-4 sm:px-5 sm:py-6 lg:px-6">
+        {/* =================================================
               HEADER
           ================================================= */}
 
-          <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
-                  <Calculator className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <h1 className="text-lg font-bold text-slate-900 sm:text-xl">
-                    Kalkulator AFMS / AJK
-                  </h1>
-
-                  <p className="text-xs text-slate-500 sm:text-sm">
-                    Perhitungan berdasarkan data PK dan template Excel
-                  </p>
-                </div>
-              </div>
-            </div>
-
+        <div className="mb-5 flex flex-col gap-3 sm:mb-6 sm:flex-row sm:items-center sm:justify-between">
+          <div>
             <div className="flex items-center gap-2">
-              {activeUnit && (
-                <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
-                  {activeUnit.nama_unit ||
-                    activeUnit.nama ||
-                    activeUnit.kode_unit ||
-                    "-"}
-                </div>
-              )}
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm">
+                <Calculator className="h-5 w-5" />
+              </div>
 
-              <button
-                type="button"
-                onClick={loadPk}
-                disabled={loadingPk}
-                className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <RefreshCw
-                  className={`h-4 w-4 ${loadingPk ? "animate-spin" : ""}`}
-                />
-                <span className="hidden sm:inline">Refresh PK</span>
-              </button>
+              <div>
+                <h1 className="text-lg font-bold text-slate-900 sm:text-xl">
+                  Kalkulator AFMS / AJK
+                </h1>
+
+                <p className="text-xs text-slate-500 sm:text-sm">
+                  Perhitungan berdasarkan data PK dan template Excel
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* =================================================
+          <div className="flex items-center gap-2">
+            {activeUnit && (
+              <div className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm">
+                {activeUnit.nama_unit ||
+                  activeUnit.nama ||
+                  activeUnit.kode_unit ||
+                  "-"}
+              </div>
+            )}
+
+            <button
+              type="button"
+              onClick={loadPk}
+              disabled={loadingPk}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-4 w-4 ${loadingPk ? "animate-spin" : ""}`}
+              />
+              <span className="hidden sm:inline">Refresh PK</span>
+            </button>
+          </div>
+        </div>
+
+        {/* =================================================
               ERROR
           ================================================= */}
 
-          {error && (
-            <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+        {error && (
+          <div className="mb-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" />
 
-              <div className="flex-1">{error}</div>
+            <div className="flex-1">{error}</div>
 
-              <button
-                type="button"
-                onClick={() => setError("")}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => setError("")}
+              className="text-red-500 hover:text-red-700"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        )}
 
-          {/* =================================================
+        {/* =================================================
               STEP 1 - PILIH PK
           ================================================= */}
 
-          <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
-                  <Database className="h-4 w-4" />
-                </div>
+        <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                <Database className="h-4 w-4" />
+              </div>
 
-                <div>
-                  <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                    1. Pilih Data PK
-                  </h2>
+              <div>
+                <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                  1. Pilih Data PK
+                </h2>
 
-                  <p className="text-xs text-slate-500">
-                    Data debitur dan pinjaman akan diambil dari database PK.
-                  </p>
-                </div>
+                <p className="text-xs text-slate-500">
+                  Data debitur dan pinjaman akan diambil dari database PK.
+                </p>
               </div>
             </div>
+          </div>
 
-            <div className="p-4 sm:p-5">
-              {!normalizedPk ? (
-                <button
-                  type="button"
-                  onClick={() => setShowPkPicker(true)}
-                  className="flex w-full items-center justify-between rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-left transition hover:border-blue-400 hover:bg-blue-50/30"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm">
-                      <Search className="h-5 w-5" />
-                    </div>
-
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-slate-800">
-                        Cari dan pilih debitur
-                      </div>
-
-                      <div className="mt-0.5 text-xs text-slate-500">
-                        Nama, NIK, CIF, nomor rekening, atau nomor PK
-                      </div>
-                    </div>
+          <div className="p-4 sm:p-5">
+            {!normalizedPk ? (
+              <button
+                type="button"
+                onClick={() => setShowPkPicker(true)}
+                className="flex w-full items-center justify-between rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-4 text-left transition hover:border-blue-400 hover:bg-blue-50/30"
+              >
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-slate-500 shadow-sm">
+                    <Search className="h-5 w-5" />
                   </div>
 
-                  <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
-                </button>
-              ) : (
-                <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
-                      <UserRound className="h-5 w-5" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-800">
+                      Cari dan pilih debitur
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                        <div>
-                          <div className="text-base font-bold text-slate-900">
-                            {normalizedPk.namaDebitur || "-"}
-                          </div>
-
-                          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
-                            {normalizedPk.nik && (
-                              <span>NIK: {normalizedPk.nik}</span>
-                            )}
-
-                            {normalizedPk.cif && (
-                              <span>CIF: {normalizedPk.cif}</span>
-                            )}
-                          </div>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => setShowPkPicker(true)}
-                          className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
-                        >
-                          <Search className="h-3.5 w-3.5" />
-                          Ganti PK
-                        </button>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                        <MiniInfo
-                          label="No. Rekening"
-                          value={normalizedPk.noRekening}
-                        />
-
-                        <MiniInfo
-                          label="Limit"
-                          value={
-                            normalizedPk.limit != null
-                              ? formatRupiah(normalizedPk.limit)
-                              : "-"
-                          }
-                        />
-
-                        <MiniInfo
-                          label="Tenor"
-                          value={
-                            normalizedPk.tenor
-                              ? `${formatNumber(normalizedPk.tenor)} bulan`
-                              : "-"
-                          }
-                        />
-
-                        <MiniInfo
-                          label="Jenis"
-                          value={normalizedPk.jenisPinjaman}
-                        />
-                      </div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      Nama, NIK, CIF, nomor rekening, atau nomor PK
                     </div>
                   </div>
                 </div>
-              )}
-            </div>
-          </section>
 
-          {/* =================================================
+                <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" />
+              </button>
+            ) : (
+              <div className="rounded-xl border border-blue-200 bg-blue-50/40 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                    <UserRound className="h-5 w-5" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <div className="text-base font-bold text-slate-900">
+                          {normalizedPk.namaDebitur || "-"}
+                        </div>
+
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-500">
+                          {normalizedPk.nik && (
+                            <span>NIK: {normalizedPk.nik}</span>
+                          )}
+
+                          {normalizedPk.cif && (
+                            <span>CIF: {normalizedPk.cif}</span>
+                          )}
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => setShowPkPicker(true)}
+                        className="inline-flex w-fit items-center gap-1.5 rounded-lg border border-blue-200 bg-white px-3 py-2 text-xs font-semibold text-blue-700 hover:bg-blue-50"
+                      >
+                        <Search className="h-3.5 w-3.5" />
+                        Ganti PK
+                      </button>
+                    </div>
+
+                    <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                      <MiniInfo
+                        label="No. Rekening"
+                        value={normalizedPk.noRekening}
+                      />
+
+                      <MiniInfo
+                        label="Limit"
+                        value={
+                          normalizedPk.limit != null
+                            ? formatRupiah(normalizedPk.limit)
+                            : "-"
+                        }
+                      />
+
+                      <MiniInfo
+                        label="Tenor"
+                        value={
+                          normalizedPk.tenor
+                            ? `${formatNumber(normalizedPk.tenor)} bulan`
+                            : "-"
+                        }
+                      />
+
+                      <MiniInfo
+                        label="Jenis"
+                        value={normalizedPk.jenisPinjaman}
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
+
+        {/* =================================================
               DATA PK
           ================================================= */}
 
-          {normalizedPk && (
-            <>
-              <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-                      <UserRound className="h-4 w-4" />
-                    </div>
+        {normalizedPk && (
+          <>
+            <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
+                    <UserRound className="h-4 w-4" />
+                  </div>
 
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                        2. Data Debitur
-                      </h2>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                      2. Data Debitur
+                    </h2>
 
-                      <p className="text-xs text-slate-500">
-                        Data berasal dari PK dan tidak diedit dari halaman ini.
-                      </p>
-                    </div>
+                    <p className="text-xs text-slate-500">
+                      Data berasal dari PK dan tidak diedit dari halaman ini.
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4 sm:grid-cols-3 sm:px-5 lg:grid-cols-4">
-                  <DataField
-                    label="Nama Debitur"
-                    value={normalizedPk.namaDebitur}
-                    full
-                  />
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4 sm:grid-cols-3 sm:px-5 lg:grid-cols-4">
+                <DataField
+                  label="Nama Debitur"
+                  value={normalizedPk.namaDebitur}
+                  full
+                />
 
-                  <DataField label="NIK" value={normalizedPk.nik} />
+                <DataField label="NIK" value={normalizedPk.nik} />
 
-                  <DataField label="CIF" value={normalizedPk.cif} />
+                <DataField label="CIF" value={normalizedPk.cif} />
 
-                  <DataField
-                    label="Tempat Lahir"
-                    value={normalizedPk.tempatLahir}
-                  />
+                <DataField
+                  label="Tempat Lahir"
+                  value={normalizedPk.tempatLahir}
+                />
 
-                  <DataField
-                    label="Tanggal Lahir"
-                    value={formatDate(normalizedPk.tanggalLahir)}
-                  />
+                <DataField
+                  label="Tanggal Lahir"
+                  value={formatDate(normalizedPk.tanggalLahir)}
+                />
 
-                  <DataField
-                    label="Umur"
-                    value={
-                      normalizedPk.umur !== null
-                        ? `${normalizedPk.umur} tahun`
-                        : "-"
-                    }
-                    highlight
-                  />
+                <DataField
+                  label="Umur"
+                  value={
+                    normalizedPk.umur !== null
+                      ? `${normalizedPk.umur} tahun`
+                      : "-"
+                  }
+                  highlight
+                />
 
-                  <DataField
-                    label="Jenis Kelamin"
-                    value={normalizedPk.jenisKelamin}
-                  />
+                <DataField
+                  label="Jenis Kelamin"
+                  value={normalizedPk.jenisKelamin}
+                />
 
-                  <DataField
-                    label="Status Perkawinan"
-                    value={normalizedPk.statusPerkawinan}
-                  />
-                </div>
-              </section>
+                <DataField
+                  label="Status Perkawinan"
+                  value={normalizedPk.statusPerkawinan}
+                />
+              </div>
+            </section>
 
-              {/* =================================================
+            {/* =================================================
                   DATA PINJAMAN
               ================================================= */}
 
-              <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
-                      <CreditCard className="h-4 w-4" />
-                    </div>
+            <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-violet-600">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
 
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                        3. Data Pinjaman
-                      </h2>
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                      3. Data Pinjaman
+                    </h2>
 
-                      <p className="text-xs text-slate-500">
-                        Informasi pinjaman diambil langsung dari PK.
-                      </p>
-                    </div>
+                    <p className="text-xs text-slate-500">
+                      Informasi pinjaman diambil langsung dari PK.
+                    </p>
                   </div>
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4 sm:grid-cols-3 sm:px-5 lg:grid-cols-4">
-                  <DataField
-                    label="No. Rekening"
-                    value={normalizedPk.noRekening}
-                  />
+              <div className="grid grid-cols-2 gap-x-4 gap-y-4 p-4 sm:grid-cols-3 sm:px-5 lg:grid-cols-4">
+                <DataField
+                  label="No. Rekening"
+                  value={normalizedPk.noRekening}
+                />
 
-                  <DataField label="No. PK" value={normalizedPk.noPk} />
+                <DataField label="No. PK" value={normalizedPk.noPk} />
 
-                  <DataField
-                    label="Tanggal PK"
-                    value={formatDate(normalizedPk.tanggalPk)}
-                  />
+                <DataField
+                  label="Tanggal PK"
+                  value={formatDate(normalizedPk.tanggalPk)}
+                />
 
-                  <DataField
-                    label="No. Aplikasi"
-                    value={normalizedPk.nomorAplikasi}
-                  />
+                <DataField
+                  label="No. Aplikasi"
+                  value={normalizedPk.nomorAplikasi}
+                />
 
-                  <DataField
-                    label="Tanggal Aplikasi"
-                    value={formatDate(normalizedPk.tanggalAplikasi)}
-                  />
+                <DataField
+                  label="Tanggal Aplikasi"
+                  value={formatDate(normalizedPk.tanggalAplikasi)}
+                />
 
-                  <DataField
-                    label="Limit Pinjaman"
-                    value={
-                      normalizedPk.limit != null
-                        ? formatRupiah(normalizedPk.limit)
-                        : "-"
-                    }
-                    highlight
-                  />
+                <DataField
+                  label="Limit Pinjaman"
+                  value={
+                    normalizedPk.limit != null
+                      ? formatRupiah(normalizedPk.limit)
+                      : "-"
+                  }
+                  highlight
+                />
 
-                  <DataField
-                    label="Tenor"
-                    value={
-                      normalizedPk.tenor
-                        ? `${formatNumber(normalizedPk.tenor)} bulan`
-                        : "-"
-                    }
-                  />
+                <DataField
+                  label="Tenor"
+                  value={
+                    normalizedPk.tenor
+                      ? `${formatNumber(normalizedPk.tenor)} bulan`
+                      : "-"
+                  }
+                />
 
-                  <DataField
-                    label="Jenis Pinjaman"
-                    value={normalizedPk.jenisPinjaman}
-                  />
-                </div>
-              </section>
+                <DataField
+                  label="Jenis Pinjaman"
+                  value={normalizedPk.jenisPinjaman}
+                />
+              </div>
+            </section>
 
-              {/* =================================================
+            {/* =================================================
                   RUMUS
               ================================================= */}
 
-              <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
-                      <FileSpreadsheet className="h-4 w-4" />
+            <section className="mb-5 rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-100 px-4 py-4 sm:px-5">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+                    <FileSpreadsheet className="h-4 w-4" />
+                  </div>
+
+                  <div>
+                    <h2 className="text-sm font-bold text-slate-900 sm:text-base">
+                      4. Tabel Rumus AFMS / AJK
+                    </h2>
+
+                    <p className="text-xs text-slate-500">
+                      Template Excel akan menjadi sumber perhitungan.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5">
+                <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={() => setJenisPerhitungan("AFMS_AJK")}
+                    className={`rounded-xl border p-4 text-left transition ${
+                      jenisPerhitungan === "AFMS_AJK"
+                        ? "border-blue-300 bg-blue-50 ring-1 ring-blue-200"
+                        : "border-slate-200 bg-white hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
+                        <Calculator className="h-4 w-4" />
+                      </div>
+
+                      <div>
+                        <div className="text-sm font-bold text-slate-900">
+                          AFMS / AJK
+                        </div>
+
+                        <div className="mt-0.5 text-xs text-slate-500">
+                          Menggunakan template rumus Excel
+                        </div>
+                      </div>
                     </div>
+                  </button>
 
-                    <div>
-                      <h2 className="text-sm font-bold text-slate-900 sm:text-base">
-                        4. Tabel Rumus AFMS / AJK
-                      </h2>
+                  <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-start gap-3">
+                      <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
 
-                      <p className="text-xs text-slate-500">
-                        Template Excel akan menjadi sumber perhitungan.
-                      </p>
+                      <div className="text-xs leading-5 text-slate-500">
+                        Perhitungan belum dilakukan di browser. Setelah template
+                        Excel tersedia, data PK akan dikirim ke Excel Engine
+                        untuk mengisi tabel dan menjalankan rumus yang sudah ada
+                        di file tersebut.
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="p-4 sm:p-5">
-                  <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() => setJenisPerhitungan("AFMS_AJK")}
-                      className={`rounded-xl border p-4 text-left transition ${
-                        jenisPerhitungan === "AFMS_AJK"
-                          ? "border-blue-300 bg-blue-50 ring-1 ring-blue-200"
-                          : "border-slate-200 bg-white hover:bg-slate-50"
-                      }`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white text-blue-600 shadow-sm">
-                          <Calculator className="h-4 w-4" />
-                        </div>
+                {/* TEMPLATE PREVIEW */}
 
-                        <div>
-                          <div className="text-sm font-bold text-slate-900">
-                            AFMS / AJK
-                          </div>
+                <div className="overflow-hidden rounded-xl border border-slate-200">
+                  <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
 
-                          <div className="mt-0.5 text-xs text-slate-500">
-                            Menggunakan template rumus Excel
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-
-                    <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-start gap-3">
-                        <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-
-                        <div className="text-xs leading-5 text-slate-500">
-                          Perhitungan belum dilakukan di browser. Setelah
-                          template Excel tersedia, data PK akan dikirim ke Excel
-                          Engine untuk mengisi tabel dan menjalankan rumus yang
-                          sudah ada di file tersebut.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* TEMPLATE PREVIEW */}
-
-                  <div className="overflow-hidden rounded-xl border border-slate-200">
-                    <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
-
-                        <span className="text-xs font-bold text-slate-700">
-                          Template AFMS / AJK
-                        </span>
-                      </div>
-
-                      <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-500">
-                        EXCEL ENGINE
+                      <span className="text-xs font-bold text-slate-700">
+                        Template AFMS / AJK
                       </span>
                     </div>
 
-                    <div className="min-h-[180px] bg-white p-4">
-                      <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200">
-                        <TablePlaceholder title="Parameter" />
-                        <TablePlaceholder title="Nilai" />
-                        <TablePlaceholder title="Hasil" />
+                    <span className="rounded-full bg-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-500">
+                      EXCEL ENGINE
+                    </span>
+                  </div>
 
-                        <TablePlaceholder value="Nama Debitur" />
-                        <TablePlaceholder
-                          value={normalizedPk.namaDebitur || "-"}
-                        />
-                        <TablePlaceholder value="—" />
+                  <div className="min-h-[180px] bg-white p-4">
+                    <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-slate-200 bg-slate-200">
+                      <TablePlaceholder title="Parameter" />
+                      <TablePlaceholder title="Nilai" />
+                      <TablePlaceholder title="Hasil" />
 
-                        <TablePlaceholder value="Umur" />
-                        <TablePlaceholder
-                          value={
-                            normalizedPk.umur !== null
-                              ? `${normalizedPk.umur} tahun`
-                              : "-"
-                          }
-                        />
-                        <TablePlaceholder value="—" />
+                      <TablePlaceholder value="Nama Debitur" />
+                      <TablePlaceholder
+                        value={normalizedPk.namaDebitur || "-"}
+                      />
+                      <TablePlaceholder value="—" />
 
-                        <TablePlaceholder value="Limit" />
-                        <TablePlaceholder
-                          value={
-                            normalizedPk.limit != null
-                              ? formatRupiah(normalizedPk.limit)
-                              : "-"
-                          }
-                        />
-                        <TablePlaceholder value="—" />
+                      <TablePlaceholder value="Umur" />
+                      <TablePlaceholder
+                        value={
+                          normalizedPk.umur !== null
+                            ? `${normalizedPk.umur} tahun`
+                            : "-"
+                        }
+                      />
+                      <TablePlaceholder value="—" />
 
-                        <TablePlaceholder value="Tenor" />
-                        <TablePlaceholder
-                          value={
-                            normalizedPk.tenor
-                              ? `${normalizedPk.tenor} bulan`
-                              : "-"
-                          }
-                        />
-                        <TablePlaceholder value="—" />
-                      </div>
+                      <TablePlaceholder value="Limit" />
+                      <TablePlaceholder
+                        value={
+                          normalizedPk.limit != null
+                            ? formatRupiah(normalizedPk.limit)
+                            : "-"
+                        }
+                      />
+                      <TablePlaceholder value="—" />
+
+                      <TablePlaceholder value="Tenor" />
+                      <TablePlaceholder
+                        value={
+                          normalizedPk.tenor
+                            ? `${normalizedPk.tenor} bulan`
+                            : "-"
+                        }
+                      />
+                      <TablePlaceholder value="—" />
                     </div>
                   </div>
                 </div>
-              </section>
+              </div>
+            </section>
 
-              {/* =================================================
+            {/* =================================================
                   ACTION
               ================================================= */}
 
-              <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                  <div>
-                    <div className="text-sm font-bold text-slate-900">
-                      Siap diproses
-                    </div>
-
-                    <div className="mt-1 text-xs leading-5 text-slate-500">
-                      Data PK akan digunakan untuk mengisi template Excel
-                      AFMS/AJK. Hasil akhirnya akan menjadi dokumen PDF.
-                    </div>
+            <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                  <div className="text-sm font-bold text-slate-900">
+                    Siap diproses
                   </div>
 
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <button
-                      type="button"
-                      onClick={handleReset}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                      Reset
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleProcess}
-                      disabled={loading}
-                      className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                          Menyiapkan...
-                        </>
-                      ) : (
-                        <>
-                          <Calculator className="h-4 w-4" />
-                          Proses AFMS / AJK
-                        </>
-                      )}
-                    </button>
+                  <div className="mt-1 text-xs leading-5 text-slate-500">
+                    Data PK akan digunakan untuk mengisi template Excel
+                    AFMS/AJK. Hasil akhirnya akan menjadi dokumen PDF.
                   </div>
                 </div>
-              </section>
 
-              {/* =================================================
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <button
+                    type="button"
+                    onClick={handleReset}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    <RefreshCw className="h-4 w-4" />
+                    Reset
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleProcess}
+                    disabled={loading}
+                    className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-slate-900 px-6 text-sm font-bold text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Menyiapkan...
+                      </>
+                    ) : (
+                      <>
+                        <Calculator className="h-4 w-4" />
+                        Proses AFMS / AJK
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </section>
+
+            {/* =================================================
                   RESULT
               ================================================= */}
 
-              {result && (
-                <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:p-5">
-                  <div className="flex items-start gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
-                      <CheckCircle2 className="h-5 w-5" />
+            {result && (
+              <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm sm:p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-600">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-bold text-emerald-900">
+                      Data siap diproses
                     </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-bold text-emerald-900">
-                        Data siap diproses
-                      </div>
+                    <p className="mt-1 text-xs leading-5 text-emerald-800">
+                      {result.message}
+                    </p>
 
-                      <p className="mt-1 text-xs leading-5 text-emerald-800">
-                        {result.message}
-                      </p>
+                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                      <button
+                        type="button"
+                        disabled
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-4 text-xs font-semibold text-emerald-700 opacity-60"
+                      >
+                        <FileText className="h-4 w-4" />
+                        Lihat PDF
+                      </button>
 
-                      <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                        <button
-                          type="button"
-                          disabled
-                          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-4 text-xs font-semibold text-emerald-700 opacity-60"
-                        >
-                          <FileText className="h-4 w-4" />
-                          Lihat PDF
-                        </button>
-
-                        <button
-                          type="button"
-                          disabled
-                          className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-4 text-xs font-semibold text-emerald-700 opacity-60"
-                        >
-                          <FileSpreadsheet className="h-4 w-4" />
-                          Buka Excel
-                        </button>
-                      </div>
+                      <button
+                        type="button"
+                        disabled
+                        className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-emerald-200 bg-white px-4 text-xs font-semibold text-emerald-700 opacity-60"
+                      >
+                        <FileSpreadsheet className="h-4 w-4" />
+                        Buka Excel
+                      </button>
                     </div>
                   </div>
-                </section>
-              )}
-            </>
-          )}
-        </div>
+                </div>
+              </section>
+            )}
+          </>
+        )}
       </div>
 
       {/* =======================================================
@@ -1210,7 +1207,7 @@ export default function KalkulatorAfmsAjkPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 

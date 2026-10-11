@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import {
   AlertCircle,
@@ -572,617 +571,467 @@ export default function ImportDataPage() {
   ======================================================= */
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-slate-50 p-3 sm:p-5 lg:p-6">
-        <div className="mx-auto max-w-[1500px] space-y-5">
-          {/* HEADER */}
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div className="min-h-screen bg-slate-50 p-3 sm:p-5 lg:p-6">
+      <div className="mx-auto max-w-[1500px] space-y-5">
+        {/* HEADER */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl bg-blue-600 p-2.5 text-white shadow-sm">
+                <FileSpreadsheet className="h-5 w-5" />
+              </div>
+
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                  Template & Import
+                </h1>
+
+                <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
+                  Kelola template dan import data JOSJIS
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <Database className="h-4 w-4 text-blue-600" />
+
             <div>
-              <div className="flex items-center gap-2">
-                <div className="rounded-xl bg-blue-600 p-2.5 text-white shadow-sm">
-                  <FileSpreadsheet className="h-5 w-5" />
-                </div>
+              <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                Unit Aktif
+              </div>
+
+              <div className="text-sm font-bold text-slate-800">{unitCode}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* TABS */}
+        <div className="flex overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+          <button
+            type="button"
+            onClick={() => setActiveTab("IMPORT")}
+            className={`flex min-w-[140px] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
+              activeTab === "IMPORT"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <Upload className="h-4 w-4" />
+            Import Data
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab("TEMPLATE")}
+            className={`flex min-w-[140px] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
+              activeTab === "TEMPLATE"
+                ? "bg-blue-600 text-white shadow-sm"
+                : "text-slate-600 hover:bg-slate-50"
+            }`}
+          >
+            <FileSpreadsheet className="h-4 w-4" />
+            Template
+          </button>
+        </div>
+
+        {/* =================================================
+              TEMPLATE TAB
+          ================================================== */}
+
+        {activeTab === "TEMPLATE" && (
+          <div className="space-y-5">
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <div className="flex gap-3">
+                <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
 
                 <div>
-                  <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                    Template & Import
-                  </h1>
+                  <h2 className="text-sm font-bold text-blue-900">
+                    Template Import JOSJIS
+                  </h2>
 
-                  <p className="mt-0.5 text-xs text-slate-500 sm:text-sm">
-                    Kelola template dan import data JOSJIS
+                  <p className="mt-1 text-xs leading-5 text-blue-700">
+                    Gunakan template yang sesuai dengan jenis data. Jangan
+                    mengubah nama kolom agar proses validasi dapat berjalan
+                    dengan benar.
                   </p>
                 </div>
               </div>
             </div>
 
-            <div className="flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <Database className="h-4 w-4 text-blue-600" />
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {TEMPLATE_TYPES.map((template) => {
+                const Icon = template.icon;
 
-              <div>
-                <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
-                  Unit Aktif
-                </div>
+                return (
+                  <div
+                    key={template.id}
+                    className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="rounded-xl bg-slate-100 p-3 text-slate-700">
+                        <Icon className="h-5 w-5" />
+                      </div>
 
-                <div className="text-sm font-bold text-slate-800">
-                  {unitCode}
-                </div>
-              </div>
+                      <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">
+                        {template.format}
+                      </span>
+                    </div>
+
+                    <h3 className="mt-4 text-base font-bold text-slate-900">
+                      {template.title}
+                    </h3>
+
+                    <p className="mt-1 min-h-[40px] text-xs leading-5 text-slate-500">
+                      {template.description}
+                    </p>
+
+                    <div className="mt-4 border-t border-slate-100 pt-4">
+                      <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
+                        Kolom utama
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5">
+                        {template.fields.slice(0, 5).map((field) => (
+                          <span
+                            key={field}
+                            className="rounded-md bg-slate-50 px-2 py-1 text-[10px] text-slate-600"
+                          >
+                            {field}
+                          </span>
+                        ))}
+
+                        {template.fields.length > 5 && (
+                          <span className="rounded-md bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-500">
+                            +{template.fields.length - 5} lainnya
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => downloadTemplate(template)}
+                      className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+                    >
+                      <Download className="h-4 w-4" />
+                      Download Template
+                    </button>
+                  </div>
+                );
+              })}
             </div>
           </div>
+        )}
 
-          {/* TABS */}
-          <div className="flex overflow-x-auto rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-            <button
-              type="button"
-              onClick={() => setActiveTab("IMPORT")}
-              className={`flex min-w-[140px] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
-                activeTab === "IMPORT"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <Upload className="h-4 w-4" />
-              Import Data
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab("TEMPLATE")}
-              className={`flex min-w-[140px] items-center justify-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold transition ${
-                activeTab === "TEMPLATE"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              Template
-            </button>
-          </div>
-
-          {/* =================================================
-              TEMPLATE TAB
+        {/* =================================================
+              IMPORT TAB
           ================================================== */}
 
-          {activeTab === "TEMPLATE" && (
-            <div className="space-y-5">
-              <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                <div className="flex gap-3">
-                  <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+        {activeTab === "IMPORT" && (
+          <div className="space-y-5">
+            {/* TYPE SELECTOR */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-4">
+                <h2 className="text-sm font-bold text-slate-900">Jenis Data</h2>
 
-                  <div>
-                    <h2 className="text-sm font-bold text-blue-900">
-                      Template Import JOSJIS
-                    </h2>
-
-                    <p className="mt-1 text-xs leading-5 text-blue-700">
-                      Gunakan template yang sesuai dengan jenis data. Jangan
-                      mengubah nama kolom agar proses validasi dapat berjalan
-                      dengan benar.
-                    </p>
-                  </div>
-                </div>
+                <p className="mt-1 text-xs text-slate-500">
+                  Pilih jenis data sebelum mengupload file.
+                </p>
               </div>
 
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="flex gap-2 overflow-x-auto pb-1">
                 {TEMPLATE_TYPES.map((template) => {
                   const Icon = template.icon;
 
+                  const active = selectedType === template.id;
+
                   return (
-                    <div
+                    <button
                       key={template.id}
-                      className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                      type="button"
+                      onClick={() => {
+                        setSelectedType(template.id);
+                        clearFile();
+                      }}
+                      className={`flex min-w-[150px] items-center gap-2 rounded-xl border px-3 py-3 text-left transition ${
+                        active
+                          ? "border-blue-500 bg-blue-50 text-blue-700"
+                          : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                      }`}
                     >
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="rounded-xl bg-slate-100 p-3 text-slate-700">
-                          <Icon className="h-5 w-5" />
+                      <Icon className="h-4 w-4 shrink-0" />
+
+                      <div className="min-w-0">
+                        <div className="truncate text-xs font-bold">
+                          {template.title}
                         </div>
 
-                        <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-500">
+                        <div className="mt-0.5 text-[10px] opacity-70">
                           {template.format}
-                        </span>
-                      </div>
-
-                      <h3 className="mt-4 text-base font-bold text-slate-900">
-                        {template.title}
-                      </h3>
-
-                      <p className="mt-1 min-h-[40px] text-xs leading-5 text-slate-500">
-                        {template.description}
-                      </p>
-
-                      <div className="mt-4 border-t border-slate-100 pt-4">
-                        <div className="mb-2 text-[10px] font-bold uppercase tracking-wide text-slate-400">
-                          Kolom utama
-                        </div>
-
-                        <div className="flex flex-wrap gap-1.5">
-                          {template.fields.slice(0, 5).map((field) => (
-                            <span
-                              key={field}
-                              className="rounded-md bg-slate-50 px-2 py-1 text-[10px] text-slate-600"
-                            >
-                              {field}
-                            </span>
-                          ))}
-
-                          {template.fields.length > 5 && (
-                            <span className="rounded-md bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-500">
-                              +{template.fields.length - 5} lainnya
-                            </span>
-                          )}
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => downloadTemplate(template)}
-                        className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800"
-                      >
-                        <Download className="h-4 w-4" />
-                        Download Template
-                      </button>
-                    </div>
+                      {active && (
+                        <CheckCircle2 className="ml-auto h-4 w-4 shrink-0" />
+                      )}
+                    </button>
                   );
                 })}
               </div>
             </div>
-          )}
 
-          {/* =================================================
-              IMPORT TAB
-          ================================================== */}
-
-          {activeTab === "IMPORT" && (
-            <div className="space-y-5">
-              {/* TYPE SELECTOR */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="mb-4">
+            {/* UPLOAD AREA */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+              <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+                <div>
                   <h2 className="text-sm font-bold text-slate-900">
-                    Jenis Data
+                    Upload {currentTemplate?.title}
                   </h2>
 
-                  <p className="mt-1 text-xs text-slate-500">
-                    Pilih jenis data sebelum mengupload file.
+                  <p className="text-xs text-slate-500">
+                    File akan diperiksa sebelum data dimasukkan.
                   </p>
                 </div>
 
-                <div className="flex gap-2 overflow-x-auto pb-1">
-                  {TEMPLATE_TYPES.map((template) => {
-                    const Icon = template.icon;
-
-                    const active = selectedType === template.id;
-
-                    return (
-                      <button
-                        key={template.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedType(template.id);
-                          clearFile();
-                        }}
-                        className={`flex min-w-[150px] items-center gap-2 rounded-xl border px-3 py-3 text-left transition ${
-                          active
-                            ? "border-blue-500 bg-blue-50 text-blue-700"
-                            : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                        }`}
-                      >
-                        <Icon className="h-4 w-4 shrink-0" />
-
-                        <div className="min-w-0">
-                          <div className="truncate text-xs font-bold">
-                            {template.title}
-                          </div>
-
-                          <div className="mt-0.5 text-[10px] opacity-70">
-                            {template.format}
-                          </div>
-                        </div>
-
-                        {active && (
-                          <CheckCircle2 className="ml-auto h-4 w-4 shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => downloadTemplate(currentTemplate)}
+                  className="flex w-fit items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-700"
+                >
+                  <Download className="h-4 w-4" />
+                  Download template
+                </button>
               </div>
 
-              {/* UPLOAD AREA */}
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-                <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <h2 className="text-sm font-bold text-slate-900">
-                      Upload {currentTemplate?.title}
-                    </h2>
-
-                    <p className="text-xs text-slate-500">
-                      File akan diperiksa sebelum data dimasukkan.
-                    </p>
+              {!selectedFile ? (
+                <div
+                  onDragOver={(event) => {
+                    event.preventDefault();
+                    setIsDragging(true);
+                  }}
+                  onDragLeave={() => setIsDragging(false)}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition sm:p-12 ${
+                    isDragging
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40"
+                  }`}
+                >
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
+                    <Upload className="h-6 w-6" />
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => downloadTemplate(currentTemplate)}
-                    className="flex w-fit items-center gap-2 text-xs font-semibold text-blue-600 hover:text-blue-700"
-                  >
-                    <Download className="h-4 w-4" />
-                    Download template
-                  </button>
+                  <h3 className="mt-4 text-sm font-bold text-slate-800">
+                    Tarik file ke sini
+                  </h3>
+
+                  <p className="mt-1 text-xs text-slate-500">
+                    atau klik untuk memilih file dari komputer
+                  </p>
+
+                  <div className="mt-4 flex flex-wrap justify-center gap-2">
+                    {[".xlsx", ".xls", ".xlsm", ".csv"].map((extension) => (
+                      <span
+                        key={extension}
+                        className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-500 shadow-sm"
+                      >
+                        {extension}
+                      </span>
+                    ))}
+                  </div>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.xlsm,.csv"
+                    onChange={handleInputChange}
+                    className="hidden"
+                  />
                 </div>
-
-                {!selectedFile ? (
-                  <div
-                    onDragOver={(event) => {
-                      event.preventDefault();
-                      setIsDragging(true);
-                    }}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDrop={handleDrop}
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition sm:p-12 ${
-                      isDragging
-                        ? "border-blue-500 bg-blue-50"
-                        : "border-slate-200 bg-slate-50 hover:border-blue-300 hover:bg-blue-50/40"
-                    }`}
-                  >
-                    <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-white text-blue-600 shadow-sm">
-                      <Upload className="h-6 w-6" />
-                    </div>
-
-                    <h3 className="mt-4 text-sm font-bold text-slate-800">
-                      Tarik file ke sini
-                    </h3>
-
-                    <p className="mt-1 text-xs text-slate-500">
-                      atau klik untuk memilih file dari komputer
-                    </p>
-
-                    <div className="mt-4 flex flex-wrap justify-center gap-2">
-                      {[".xlsx", ".xls", ".xlsm", ".csv"].map((extension) => (
-                        <span
-                          key={extension}
-                          className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-500 shadow-sm"
-                        >
-                          {extension}
-                        </span>
-                      ))}
-                    </div>
-
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls,.xlsm,.csv"
-                      onChange={handleInputChange}
-                      className="hidden"
-                    />
-                  </div>
-                ) : (
-                  <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-                      <div className="flex min-w-0 flex-1 items-center gap-3">
-                        <div className="rounded-xl bg-white p-3 text-emerald-600 shadow-sm">
-                          <FileSpreadsheet className="h-5 w-5" />
-                        </div>
-
-                        <div className="min-w-0">
-                          <div className="truncate text-sm font-bold text-slate-800">
-                            {selectedFile.name}
-                          </div>
-
-                          <div className="mt-0.5 text-xs text-slate-500">
-                            {formatFileSize(selectedFile.size)}
-                          </div>
-                        </div>
+              ) : (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      <div className="rounded-xl bg-white p-3 text-emerald-600 shadow-sm">
+                        <FileSpreadsheet className="h-5 w-5" />
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={clearFile}
-                        className="flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Hapus
-                      </button>
-                    </div>
-
-                    <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                      <button
-                        type="button"
-                        onClick={handlePreview}
-                        className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50"
-                      >
-                        <Table2 className="h-4 w-4" />
-                        Preview Data
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleImport}
-                        className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
-                      >
-                        <Import className="h-4 w-4" />
-                        Import Data
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* PREVIEW */}
-              {showPreview && selectedFile && (
-                <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                  <div className="border-b border-slate-200 p-4 sm:p-5">
-                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                      <div>
-                        <h2 className="text-sm font-bold text-slate-900">
-                          Preview Data
-                        </h2>
-
-                        <p className="mt-1 text-xs text-slate-500">
+                      <div className="min-w-0">
+                        <div className="truncate text-sm font-bold text-slate-800">
                           {selectedFile.name}
-                        </p>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2 sm:flex">
-                        <div className="rounded-xl bg-emerald-50 px-3 py-2">
-                          <div className="text-[10px] font-medium text-emerald-600">
-                            Valid
-                          </div>
-                          <div className="text-lg font-bold text-emerald-700">
-                            {validCount}
-                          </div>
                         </div>
 
-                        <div className="rounded-xl bg-rose-50 px-3 py-2">
-                          <div className="text-[10px] font-medium text-rose-600">
-                            Error
-                          </div>
-                          <div className="text-lg font-bold text-rose-700">
-                            {errorCount}
-                          </div>
+                        <div className="mt-0.5 text-xs text-slate-500">
+                          {formatFileSize(selectedFile.size)}
                         </div>
                       </div>
                     </div>
 
-                    <div className="relative mt-4 max-w-md">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
-                      <input
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Cari data preview..."
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs outline-none transition focus:border-blue-400 focus:bg-white"
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={clearFile}
+                      className="flex w-fit items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      Hapus
+                    </button>
                   </div>
 
-                  <div className="overflow-x-auto">
-                    <table className="min-w-[900px] w-full text-left text-xs">
-                      <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
-                        <tr>
-                          <th className="px-4 py-3 font-bold">Baris</th>
-                          <th className="px-4 py-3 font-bold">Data</th>
-                          <th className="px-4 py-3 font-bold">Status</th>
-                          <th className="px-4 py-3 font-bold">Keterangan</th>
-                        </tr>
-                      </thead>
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                    <button
+                      type="button"
+                      onClick={handlePreview}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-blue-700 shadow-sm ring-1 ring-blue-100 hover:bg-blue-50"
+                    >
+                      <Table2 className="h-4 w-4" />
+                      Preview Data
+                    </button>
 
-                      <tbody className="divide-y divide-slate-100">
-                        {filteredPreview.map((row) => {
-                          const entries = Object.entries(row);
-
-                          const rowNumber = entries.find(
-                            ([key]) => key === "row",
-                          )?.[1];
-
-                          const status = entries.find(
-                            ([key]) => key === "status",
-                          )?.[1];
-
-                          const dataEntries = entries.filter(
-                            ([key]) => key !== "row" && key !== "status",
-                          );
-
-                          return (
-                            <tr
-                              key={`${rowNumber}-${JSON.stringify(row)}`}
-                              className="hover:bg-slate-50"
-                            >
-                              <td className="px-4 py-3 font-semibold text-slate-600">
-                                {rowNumber}
-                              </td>
-
-                              <td className="px-4 py-3">
-                                <div className="flex max-w-[600px] flex-wrap gap-x-4 gap-y-1.5">
-                                  {dataEntries.map(([key, value]) => (
-                                    <div key={key} className="flex gap-1">
-                                      <span className="font-medium capitalize text-slate-400">
-                                        {key}:
-                                      </span>
-
-                                      <span className="text-slate-700">
-                                        {value || "-"}
-                                      </span>
-                                    </div>
-                                  ))}
-                                </div>
-                              </td>
-
-                              <td className="px-4 py-3">
-                                {status === "VALID" ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
-                                    <Check className="h-3 w-3" />
-                                    VALID
-                                  </span>
-                                ) : (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700">
-                                    <AlertCircle className="h-3 w-3" />
-                                    ERROR
-                                  </span>
-                                )}
-                              </td>
-
-                              <td className="px-4 py-3 text-slate-500">
-                                {status === "ERROR"
-                                  ? "Data wajib belum lengkap."
-                                  : "Data siap diimport."}
-                              </td>
-                            </tr>
-                          );
-                        })}
-
-                        {filteredPreview.length === 0 && (
-                          <tr>
-                            <td
-                              colSpan={4}
-                              className="px-4 py-10 text-center text-xs text-slate-400"
-                            >
-                              Tidak ada data.
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-
-                  <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="text-xs text-slate-500">
-                      Total preview:{" "}
-                      <span className="font-bold text-slate-700">
-                        {previewRows.length}
-                      </span>{" "}
-                      baris
-                    </div>
-
-                    {errorCount > 0 && (
-                      <button
-                        type="button"
-                        onClick={() => setShowErrorModal(true)}
-                        className="flex w-fit items-center gap-2 text-xs font-bold text-rose-600 hover:text-rose-700"
-                      >
-                        <AlertCircle className="h-4 w-4" />
-                        Lihat detail error
-                      </button>
-                    )}
+                    <button
+                      type="button"
+                      onClick={handleImport}
+                      className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700"
+                    >
+                      <Import className="h-4 w-4" />
+                      Import Data
+                    </button>
                   </div>
                 </div>
               )}
+            </div>
 
-              {/* HISTORY */}
+            {/* PREVIEW */}
+            {showPreview && selectedFile && (
               <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
                 <div className="border-b border-slate-200 p-4 sm:p-5">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                     <div>
-                      <div className="flex items-center gap-2">
-                        <History className="h-4 w-4 text-slate-700" />
-
-                        <h2 className="text-sm font-bold text-slate-900">
-                          Riwayat Import
-                        </h2>
-                      </div>
+                      <h2 className="text-sm font-bold text-slate-900">
+                        Preview Data
+                      </h2>
 
                       <p className="mt-1 text-xs text-slate-500">
-                        Riwayat proses import data.
+                        {selectedFile.name}
                       </p>
                     </div>
 
-                    <div className="relative w-full sm:max-w-xs">
-                      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                    <div className="grid grid-cols-2 gap-2 sm:flex">
+                      <div className="rounded-xl bg-emerald-50 px-3 py-2">
+                        <div className="text-[10px] font-medium text-emerald-600">
+                          Valid
+                        </div>
+                        <div className="text-lg font-bold text-emerald-700">
+                          {validCount}
+                        </div>
+                      </div>
 
-                      <input
-                        value={historySearch}
-                        onChange={(event) =>
-                          setHistorySearch(event.target.value)
-                        }
-                        placeholder="Cari riwayat..."
-                        className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs outline-none focus:border-blue-400 focus:bg-white"
-                      />
+                      <div className="rounded-xl bg-rose-50 px-3 py-2">
+                        <div className="text-[10px] font-medium text-rose-600">
+                          Error
+                        </div>
+                        <div className="text-lg font-bold text-rose-700">
+                          {errorCount}
+                        </div>
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="relative mt-4 max-w-md">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                    <input
+                      value={search}
+                      onChange={(event) => setSearch(event.target.value)}
+                      placeholder="Cari data preview..."
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs outline-none transition focus:border-blue-400 focus:bg-white"
+                    />
                   </div>
                 </div>
 
-                {/* DESKTOP */}
-                <div className="hidden overflow-x-auto md:block">
+                <div className="overflow-x-auto">
                   <table className="min-w-[900px] w-full text-left text-xs">
                     <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
                       <tr>
-                        <th className="px-4 py-3 font-bold">File</th>
-
-                        <th className="px-4 py-3 font-bold">Jenis</th>
-
-                        <th className="px-4 py-3 font-bold">Unit</th>
-
+                        <th className="px-4 py-3 font-bold">Baris</th>
                         <th className="px-4 py-3 font-bold">Data</th>
-
-                        <th className="px-4 py-3 font-bold">Hasil</th>
-
-                        <th className="px-4 py-3 font-bold">Waktu</th>
-
-                        <th className="px-4 py-3 text-right font-bold">Aksi</th>
+                        <th className="px-4 py-3 font-bold">Status</th>
+                        <th className="px-4 py-3 font-bold">Keterangan</th>
                       </tr>
                     </thead>
 
                     <tbody className="divide-y divide-slate-100">
-                      {filteredHistory.map((item) => (
-                        <tr key={item.id} className="hover:bg-slate-50">
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+                      {filteredPreview.map((row) => {
+                        const entries = Object.entries(row);
 
-                              <span className="font-semibold text-slate-700">
-                                {item.fileName}
-                              </span>
-                            </div>
-                          </td>
+                        const rowNumber = entries.find(
+                          ([key]) => key === "row",
+                        )?.[1];
 
-                          <td className="px-4 py-3">
-                            {getTemplate(item.type)?.title || item.type}
-                          </td>
+                        const status = entries.find(
+                          ([key]) => key === "status",
+                        )?.[1];
 
-                          <td className="px-4 py-3 font-semibold">
-                            {item.unit}
-                          </td>
+                        const dataEntries = entries.filter(
+                          ([key]) => key !== "row" && key !== "status",
+                        );
 
-                          <td className="px-4 py-3">{item.total}</td>
+                        return (
+                          <tr
+                            key={`${rowNumber}-${JSON.stringify(row)}`}
+                            className="hover:bg-slate-50"
+                          >
+                            <td className="px-4 py-3 font-semibold text-slate-600">
+                              {rowNumber}
+                            </td>
 
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-emerald-600">
-                                {item.success}
-                              </span>
+                            <td className="px-4 py-3">
+                              <div className="flex max-w-[600px] flex-wrap gap-x-4 gap-y-1.5">
+                                {dataEntries.map(([key, value]) => (
+                                  <div key={key} className="flex gap-1">
+                                    <span className="font-medium capitalize text-slate-400">
+                                      {key}:
+                                    </span>
 
-                              {item.error > 0 && (
-                                <span className="font-bold text-rose-600">
-                                  / {item.error} error
+                                    <span className="text-slate-700">
+                                      {value || "-"}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+
+                            <td className="px-4 py-3">
+                              {status === "VALID" ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
+                                  <Check className="h-3 w-3" />
+                                  VALID
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-700">
+                                  <AlertCircle className="h-3 w-3" />
+                                  ERROR
                                 </span>
                               )}
-                            </div>
-                          </td>
+                            </td>
 
-                          <td className="px-4 py-3 text-slate-500">
-                            {item.date}
-                          </td>
+                            <td className="px-4 py-3 text-slate-500">
+                              {status === "ERROR"
+                                ? "Data wajib belum lengkap."
+                                : "Data siap diimport."}
+                            </td>
+                          </tr>
+                        );
+                      })}
 
-                          <td className="px-4 py-3 text-right">
-                            <button
-                              type="button"
-                              onClick={() => setShowHistoryDetail(item)}
-                              className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-blue-600 hover:bg-blue-50"
-                            >
-                              Detail
-                              <ChevronRight className="h-3.5 w-3.5" />
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-
-                      {filteredHistory.length === 0 && (
+                      {filteredPreview.length === 0 && (
                         <tr>
                           <td
-                            colSpan={7}
+                            colSpan={4}
                             className="px-4 py-10 text-center text-xs text-slate-400"
                           >
-                            Belum ada riwayat import.
+                            Tidak ada data.
                           </td>
                         </tr>
                       )}
@@ -1190,65 +1039,205 @@ export default function ImportDataPage() {
                   </table>
                 </div>
 
-                {/* MOBILE */}
-                <div className="divide-y divide-slate-100 md:hidden">
-                  {filteredHistory.map((item) => (
+                <div className="flex flex-col gap-3 border-t border-slate-200 bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="text-xs text-slate-500">
+                    Total preview:{" "}
+                    <span className="font-bold text-slate-700">
+                      {previewRows.length}
+                    </span>{" "}
+                    baris
+                  </div>
+
+                  {errorCount > 0 && (
                     <button
                       type="button"
-                      key={item.id}
-                      onClick={() => setShowHistoryDetail(item)}
-                      className="block w-full p-4 text-left hover:bg-slate-50"
+                      onClick={() => setShowErrorModal(true)}
+                      className="flex w-fit items-center gap-2 text-xs font-bold text-rose-600 hover:text-rose-700"
                     >
-                      <div className="flex items-start gap-3">
-                        <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600">
-                          <FileSpreadsheet className="h-4 w-4" />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <div className="truncate text-xs font-bold text-slate-800">
-                            {item.fileName}
-                          </div>
-
-                          <div className="mt-1 text-[10px] text-slate-500">
-                            {getTemplate(item.type)?.title} • {item.unit}
-                          </div>
-
-                          <div className="mt-3 flex flex-wrap gap-2">
-                            <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">
-                              Total {item.total}
-                            </span>
-
-                            <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
-                              Valid {item.success}
-                            </span>
-
-                            {item.error > 0 && (
-                              <span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-700">
-                                Error {item.error}
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="mt-2 text-[10px] text-slate-400">
-                            {item.date}
-                          </div>
-                        </div>
-
-                        <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
-                      </div>
+                      <AlertCircle className="h-4 w-4" />
+                      Lihat detail error
                     </button>
-                  ))}
-
-                  {filteredHistory.length === 0 && (
-                    <div className="px-4 py-10 text-center text-xs text-slate-400">
-                      Belum ada riwayat import.
-                    </div>
                   )}
                 </div>
               </div>
+            )}
+
+            {/* HISTORY */}
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+              <div className="border-b border-slate-200 p-4 sm:p-5">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <History className="h-4 w-4 text-slate-700" />
+
+                      <h2 className="text-sm font-bold text-slate-900">
+                        Riwayat Import
+                      </h2>
+                    </div>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      Riwayat proses import data.
+                    </p>
+                  </div>
+
+                  <div className="relative w-full sm:max-w-xs">
+                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+
+                    <input
+                      value={historySearch}
+                      onChange={(event) => setHistorySearch(event.target.value)}
+                      placeholder="Cari riwayat..."
+                      className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs outline-none focus:border-blue-400 focus:bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* DESKTOP */}
+              <div className="hidden overflow-x-auto md:block">
+                <table className="min-w-[900px] w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3 font-bold">File</th>
+
+                      <th className="px-4 py-3 font-bold">Jenis</th>
+
+                      <th className="px-4 py-3 font-bold">Unit</th>
+
+                      <th className="px-4 py-3 font-bold">Data</th>
+
+                      <th className="px-4 py-3 font-bold">Hasil</th>
+
+                      <th className="px-4 py-3 font-bold">Waktu</th>
+
+                      <th className="px-4 py-3 text-right font-bold">Aksi</th>
+                    </tr>
+                  </thead>
+
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredHistory.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <FileSpreadsheet className="h-4 w-4 text-emerald-600" />
+
+                            <span className="font-semibold text-slate-700">
+                              {item.fileName}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3">
+                          {getTemplate(item.type)?.title || item.type}
+                        </td>
+
+                        <td className="px-4 py-3 font-semibold">{item.unit}</td>
+
+                        <td className="px-4 py-3">{item.total}</td>
+
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-emerald-600">
+                              {item.success}
+                            </span>
+
+                            {item.error > 0 && (
+                              <span className="font-bold text-rose-600">
+                                / {item.error} error
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3 text-slate-500">
+                          {item.date}
+                        </td>
+
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setShowHistoryDetail(item)}
+                            className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[10px] font-bold text-blue-600 hover:bg-blue-50"
+                          >
+                            Detail
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {filteredHistory.length === 0 && (
+                      <tr>
+                        <td
+                          colSpan={7}
+                          className="px-4 py-10 text-center text-xs text-slate-400"
+                        >
+                          Belum ada riwayat import.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* MOBILE */}
+              <div className="divide-y divide-slate-100 md:hidden">
+                {filteredHistory.map((item) => (
+                  <button
+                    type="button"
+                    key={item.id}
+                    onClick={() => setShowHistoryDetail(item)}
+                    className="block w-full p-4 text-left hover:bg-slate-50"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="rounded-xl bg-emerald-50 p-2.5 text-emerald-600">
+                        <FileSpreadsheet className="h-4 w-4" />
+                      </div>
+
+                      <div className="min-w-0 flex-1">
+                        <div className="truncate text-xs font-bold text-slate-800">
+                          {item.fileName}
+                        </div>
+
+                        <div className="mt-1 text-[10px] text-slate-500">
+                          {getTemplate(item.type)?.title} • {item.unit}
+                        </div>
+
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] text-slate-600">
+                            Total {item.total}
+                          </span>
+
+                          <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                            Valid {item.success}
+                          </span>
+
+                          {item.error > 0 && (
+                            <span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-semibold text-rose-700">
+                              Error {item.error}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-2 text-[10px] text-slate-400">
+                          {item.date}
+                        </div>
+                      </div>
+
+                      <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
+                    </div>
+                  </button>
+                ))}
+
+                {filteredHistory.length === 0 && (
+                  <div className="px-4 py-10 text-center text-xs text-slate-400">
+                    Belum ada riwayat import.
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* ===================================================
@@ -1452,6 +1441,6 @@ export default function ImportDataPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }

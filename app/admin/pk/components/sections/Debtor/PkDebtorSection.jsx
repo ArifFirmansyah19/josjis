@@ -24,8 +24,42 @@ function getSalutationByGender(gender) {
   return "";
 }
 
+function calculateAge(birthDate, today = new Date()) {
+  if (!birthDate) return null;
+
+  // Hindari pergeseran tanggal akibat zona waktu.
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birthDate);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+
+  const birth = new Date(year, month - 1, day);
+
+  // Pastikan tanggal lahir valid.
+  if (
+    birth.getFullYear() !== year ||
+    birth.getMonth() !== month - 1 ||
+    birth.getDate() !== day
+  ) {
+    return null;
+  }
+
+  let age = today.getFullYear() - year;
+
+  const birthdayNotReached =
+    today.getMonth() < month - 1 ||
+    (today.getMonth() === month - 1 && today.getDate() < day);
+
+  if (birthdayNotReached) age -= 1;
+
+  return age >= 0 ? age : null;
+}
+
 export default function PkDebtorSection({ pk, setPk, canEdit, locked }) {
   const disabled = !canEdit || locked;
+  const age = calculateAge(pk?.tanggal_lahir);
 
   const update = (field, value) => {
     if (disabled) return;
@@ -76,9 +110,12 @@ export default function PkDebtorSection({ pk, setPk, canEdit, locked }) {
         <PkInput
           label="NIK"
           value={pk?.nomor_ktp || ""}
-          onChange={(e) => update("nomor_ktp", e.target.value)}
+          onChange={(e) =>
+            update("nomor_ktp", e.target.value.replace(/\D/g, "").slice(0, 16))
+          }
           disabled={disabled}
           inputMode="numeric"
+          maxLength={16}
         />
 
         <PkSelect
@@ -111,6 +148,20 @@ export default function PkDebtorSection({ pk, setPk, canEdit, locked }) {
           onChange={(e) => update("tanggal_lahir", e.target.value)}
           disabled={disabled}
         />
+
+        <div className="rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+          <p className="text-sm font-medium text-zinc-600">Usia Debitur</p>
+
+          <p className="mt-1 text-lg font-semibold text-zinc-900">
+            {age === null ? "—" : `${age} tahun`}
+          </p>
+
+          <p className="mt-1 text-xs text-zinc-500">
+            {age === null
+              ? "Isi tanggal lahir yang valid."
+              : "Dihitung otomatis berdasarkan tanggal hari ini."}
+          </p>
+        </div>
       </div>
     </PkSection>
   );

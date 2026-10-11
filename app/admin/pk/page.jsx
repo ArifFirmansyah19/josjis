@@ -2,8 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw, Plus } from "lucide-react";
-
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import PkDetailModal from "./components/PkDetailModal";
 import { supabase } from "@/lib/supabase";
@@ -418,163 +416,161 @@ export default function PkPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="w-full space-y-4">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+    <div className="w-full space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h1 className="text-lg font-bold tracking-tight text-zinc-900 sm:text-xl">
+            Data PK
+          </h1>
+          <p className="mt-0.5 text-xs text-zinc-500">
+            Data Perjanjian Kredit berdasarkan unit aktif.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => loadPkData(pagination.page)}
+            disabled={loading || saving}
+            className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
+            Refresh
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAdd}
+            disabled={saving}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Plus size={14} />
+            Tambah PK
+          </button>
+        </div>
+      </div>
+
+      {successMessage && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-medium text-emerald-700">
+          {successMessage}
+        </div>
+      )}
+
+      <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 py-2.5">
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-[9px] font-bold text-zinc-600">
+            UNIT
+          </div>
+
+          <div className="min-w-0">
+            <div className="truncate text-xs font-bold text-zinc-800">
+              {activeUnit?.name || "-"}
+            </div>
+            <div className="text-[10px] text-zinc-400">
+              {activeUnit?.code || activeUnit?.value || "-"}
+            </div>
+          </div>
+        </div>
+
+        <div className="shrink-0 text-right text-[10px] text-zinc-500">
+          <div className="font-semibold text-zinc-700">
+            {pagination.total.toLocaleString("id-ID")} hasil
+          </div>
           <div>
-            <h1 className="text-lg font-bold tracking-tight text-zinc-900 sm:text-xl">
-              Data PK
-            </h1>
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Data Perjanjian Kredit berdasarkan unit aktif.
-            </p>
+            {pagination.from}–{pagination.to} ditampilkan
+          </div>
+        </div>
+      </div>
+
+      <PkFilter
+        search={search}
+        setSearch={setSearch}
+        productFilter={productFilter}
+        setProductFilter={setProductFilter}
+        mksFilter={mksFilter}
+        setMksFilter={setMksFilter}
+        limitFilter={limitFilter}
+        setLimitFilter={setLimitFilter}
+        monthFilter={monthFilter}
+        setMonthFilter={setMonthFilter}
+        yearFilter={yearFilter}
+        setYearFilter={setYearFilter}
+        mksOptions={mksOptions}
+        yearOptions={yearOptions}
+        visibleCount={visiblePk.length}
+        totalCount={pagination.total}
+        resetFilters={resetFilters}
+      />
+
+      {errorMessage && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
+          {errorMessage}
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
+        <PkDesktopTable
+          loading={loading}
+          visiblePk={visiblePk}
+          saving={saving}
+          openDetail={openDetail}
+          openEdit={openEdit}
+        />
+
+        <PkMobileTable
+          loading={loading}
+          visiblePk={visiblePk}
+          openDetail={openDetail}
+          openEdit={openEdit}
+        />
+
+        <div className="flex flex-col gap-3 border-t border-zinc-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
+            <span>Baris per halaman</span>
+
+            <select
+              value={pagination.pageSize}
+              onChange={changePageSize}
+              disabled={loading}
+              className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 outline-none focus:border-zinc-400"
+            >
+              <option value={25}>25</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+
+            <span>
+              Menampilkan {pagination.from}–{pagination.to} dari{" "}
+              {pagination.total.toLocaleString("id-ID")} PK
+            </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               type="button"
-              onClick={() => loadPkData(pagination.page)}
-              disabled={loading || saving}
-              className="inline-flex h-9 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => changePage(pagination.page - 1)}
+              disabled={loading || pagination.page <= 1}
+              className="h-8 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
-              Refresh
+              Sebelumnya
             </button>
+
+            <span className="min-w-20 text-center text-xs text-zinc-600">
+              Halaman {pagination.page} / {Math.max(1, pagination.totalPages)}
+            </span>
 
             <button
               type="button"
-              onClick={handleAdd}
-              disabled={saving}
-              className="inline-flex h-9 items-center gap-2 rounded-lg bg-zinc-900 px-3 text-xs font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+              onClick={() => changePage(pagination.page + 1)}
+              disabled={
+                loading ||
+                pagination.page >= pagination.totalPages ||
+                pagination.totalPages === 0
+              }
+              className="h-8 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Plus size={14} />
-              Tambah PK
+              Berikutnya
             </button>
-          </div>
-        </div>
-
-        {successMessage && (
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-medium text-emerald-700">
-            {successMessage}
-          </div>
-        )}
-
-        <div className="flex items-center justify-between rounded-xl border border-zinc-200 bg-white px-3 py-2.5">
-          <div className="flex min-w-0 items-center gap-2">
-            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-[9px] font-bold text-zinc-600">
-              UNIT
-            </div>
-
-            <div className="min-w-0">
-              <div className="truncate text-xs font-bold text-zinc-800">
-                {activeUnit?.name || "-"}
-              </div>
-              <div className="text-[10px] text-zinc-400">
-                {activeUnit?.code || activeUnit?.value || "-"}
-              </div>
-            </div>
-          </div>
-
-          <div className="shrink-0 text-right text-[10px] text-zinc-500">
-            <div className="font-semibold text-zinc-700">
-              {pagination.total.toLocaleString("id-ID")} hasil
-            </div>
-            <div>
-              {pagination.from}–{pagination.to} ditampilkan
-            </div>
-          </div>
-        </div>
-
-        <PkFilter
-          search={search}
-          setSearch={setSearch}
-          productFilter={productFilter}
-          setProductFilter={setProductFilter}
-          mksFilter={mksFilter}
-          setMksFilter={setMksFilter}
-          limitFilter={limitFilter}
-          setLimitFilter={setLimitFilter}
-          monthFilter={monthFilter}
-          setMonthFilter={setMonthFilter}
-          yearFilter={yearFilter}
-          setYearFilter={setYearFilter}
-          mksOptions={mksOptions}
-          yearOptions={yearOptions}
-          visibleCount={visiblePk.length}
-          totalCount={pagination.total}
-          resetFilters={resetFilters}
-        />
-
-        {errorMessage && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-xs text-red-700">
-            {errorMessage}
-          </div>
-        )}
-
-        <div className="overflow-hidden rounded-xl border border-zinc-200 bg-white">
-          <PkDesktopTable
-            loading={loading}
-            visiblePk={visiblePk}
-            saving={saving}
-            openDetail={openDetail}
-            openEdit={openEdit}
-          />
-
-          <PkMobileTable
-            loading={loading}
-            visiblePk={visiblePk}
-            openDetail={openDetail}
-            openEdit={openEdit}
-          />
-
-          <div className="flex flex-col gap-3 border-t border-zinc-200 px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-              <span>Baris per halaman</span>
-
-              <select
-                value={pagination.pageSize}
-                onChange={changePageSize}
-                disabled={loading}
-                className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 outline-none focus:border-zinc-400"
-              >
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-
-              <span>
-                Menampilkan {pagination.from}–{pagination.to} dari{" "}
-                {pagination.total.toLocaleString("id-ID")} PK
-              </span>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => changePage(pagination.page - 1)}
-                disabled={loading || pagination.page <= 1}
-                className="h-8 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Sebelumnya
-              </button>
-
-              <span className="min-w-20 text-center text-xs text-zinc-600">
-                Halaman {pagination.page} / {Math.max(1, pagination.totalPages)}
-              </span>
-
-              <button
-                type="button"
-                onClick={() => changePage(pagination.page + 1)}
-                disabled={
-                  loading ||
-                  pagination.page >= pagination.totalPages ||
-                  pagination.totalPages === 0
-                }
-                className="h-8 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-700 hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Berikutnya
-              </button>
-            </div>
           </div>
         </div>
       </div>
@@ -591,6 +587,6 @@ export default function PkPage() {
           saving={saving}
         />
       )}
-    </DashboardLayout>
+    </div>
   );
 }

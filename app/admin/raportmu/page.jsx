@@ -1,11 +1,6 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-
 "use client";
 
 import { useEffect, useState } from "react";
-
-import DashboardLayout from "@/components/DashboardLayout";
-
 import BookingModal from "./components/BookingModal";
 import EasyCallModal from "./components/EasyCallModal";
 import ExcelImportCard from "./components/ExcelImportCard";
@@ -109,50 +104,48 @@ export default function RaportMuPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            RaportMU
-          </h1>
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+          RaportMU
+        </h1>
 
-          <p className="mt-1 text-sm text-zinc-500">
-            Import, proses, dan export data RaportMU.
-          </p>
-        </div>
-
-        <ExcelImportCard
-          data={data}
-          onImport={handleImport}
-          onRemove={handleRemove}
-          onFileReady={handleFileReady}
-        />
-
-        <RaportMuProcessMenu
-          disabled={!excelFile}
-          onBookingClick={handleOpenBooking}
-          onTwoAClick={handleOpenTwoA}
-          onEasyCallClick={handleOpenEasyCall}
-        />
-
-        <BookingModal
-          open={bookingOpen}
-          onClose={() => setBookingOpen(false)}
-          file={excelFile}
-        />
-
-        <TwoATagihanModal
-          open={twoAOpen}
-          onClose={() => setTwoAOpen(false)}
-          file={excelFile}
-        />
-
-        <EasyCallModal
-          open={easyCallOpen}
-          onClose={() => setEasyCallOpen(false)}
-          file={excelFile}
-        />
+        <p className="mt-1 text-sm text-zinc-500">
+          Import, proses, dan export data RaportMU.
+        </p>
       </div>
-    </DashboardLayout>
+
+      <ExcelImportCard
+        data={data}
+        onImport={handleImport}
+        onRemove={handleRemove}
+        onFileReady={handleFileReady}
+      />
+
+      <RaportMuProcessMenu
+        disabled={!excelFile}
+        onBookingClick={handleOpenBooking}
+        onTwoAClick={handleOpenTwoA}
+        onEasyCallClick={handleOpenEasyCall}
+      />
+
+      <BookingModal
+        open={bookingOpen}
+        onClose={() => setBookingOpen(false)}
+        file={excelFile}
+      />
+
+      <TwoATagihanModal
+        open={twoAOpen}
+        onClose={() => setTwoAOpen(false)}
+        file={excelFile}
+      />
+
+      <EasyCallModal
+        open={easyCallOpen}
+        onClose={() => setEasyCallOpen(false)}
+        file={excelFile}
+      />
+    </div>
   );
 }

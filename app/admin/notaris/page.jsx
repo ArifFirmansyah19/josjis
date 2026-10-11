@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-
-import DashboardLayout from "@/components/DashboardLayout";
-
 import NotarisToolbar from "../notaris/components/NotarisToolbar";
 import NotarisTable from "../notaris/components/NotarisTable";
 import NotarisForm from "../notaris/components/NotarisForm";
@@ -144,56 +141,54 @@ export default function DataNotarisPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-5">
-        {/* HEADER */}
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-            Data Notaris
-          </h1>
+    <div className="space-y-5">
+      {/* HEADER */}
+      <div>
+        <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+          Data Notaris
+        </h1>
 
-          <p className="mt-1 text-sm text-zinc-500">
-            Master data notaris untuk kebutuhan proses agunan.
-          </p>
-        </div>
-
-        {/* TOOLBAR */}
-        <NotarisToolbar
-          search={search}
-          onSearchChange={setSearch}
-          onAdd={handleAdd}
-        />
-
-        {/* ERROR */}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {/* TABLE */}
-        <NotarisTable
-          records={filteredRecords}
-          loading={loading}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-        />
-
-        {/* FORM */}
-        <NotarisForm
-          open={formOpen}
-          editingRecord={editingRecord}
-          onClose={handleCloseForm}
-          onSave={handleSave}
-        />
-
-        {/* DETAIL */}
-        <NotarisDetailModal
-          record={viewingRecord}
-          onClose={() => setViewingRecord(null)}
-        />
+        <p className="mt-1 text-sm text-zinc-500">
+          Master data notaris untuk kebutuhan proses agunan.
+        </p>
       </div>
-    </DashboardLayout>
+
+      {/* TOOLBAR */}
+      <NotarisToolbar
+        search={search}
+        onSearchChange={setSearch}
+        onAdd={handleAdd}
+      />
+
+      {/* ERROR */}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      {/* TABLE */}
+      <NotarisTable
+        records={filteredRecords}
+        loading={loading}
+        onView={handleView}
+        onEdit={handleEdit}
+        onDelete={handleDelete}
+      />
+
+      {/* FORM */}
+      <NotarisForm
+        open={formOpen}
+        editingRecord={editingRecord}
+        onClose={handleCloseForm}
+        onSave={handleSave}
+      />
+
+      {/* DETAIL */}
+      <NotarisDetailModal
+        record={viewingRecord}
+        onClose={() => setViewingRecord(null)}
+      />
+    </div>
   );
 }

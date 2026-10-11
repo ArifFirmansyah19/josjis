@@ -18,8 +18,6 @@ import {
   X,
 } from "lucide-react";
 
-import DashboardLayout from "@/components/DashboardLayout";
-
 /* =========================================================
    MOCK DATA
 ========================================================= */
@@ -195,293 +193,291 @@ export default function PelunasanPinjamanPage() {
   ).length;
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
-        {/* =================================================
+    <div className="space-y-6">
+      {/* =================================================
             HEADER
         ================================================= */}
 
-        <div>
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
-            <div>
-              <div className="mb-1 flex items-center gap-2 text-xs font-medium text-zinc-400">
-                <Landmark className="h-4 w-4" />
-                PROSES
-              </div>
-
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-                Pelunasan Pinjaman
-              </h1>
-
-              <p className="mt-1 max-w-2xl text-sm text-zinc-500">
-                Proses perubahan status pinjaman dari aktif menjadi lunas dan
-                kelola proses setelah pelunasan.
-              </p>
+      <div>
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div>
+            <div className="mb-1 flex items-center gap-2 text-xs font-medium text-zinc-400">
+              <Landmark className="h-4 w-4" />
+              PROSES
             </div>
 
-            <div className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5">
-              <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
-                Unit Aktif
-              </div>
+            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
+              Pelunasan Pinjaman
+            </h1>
 
-              <div className="mt-0.5 text-sm font-semibold text-zinc-900">
-                Jambi Kuamang Kuning 1
-              </div>
+            <p className="mt-1 max-w-2xl text-sm text-zinc-500">
+              Proses perubahan status pinjaman dari aktif menjadi lunas dan
+              kelola proses setelah pelunasan.
+            </p>
+          </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-white px-4 py-2.5">
+            <div className="text-[10px] font-semibold uppercase tracking-wider text-zinc-400">
+              Unit Aktif
+            </div>
+
+            <div className="mt-0.5 text-sm font-semibold text-zinc-900">
+              Jambi Kuamang Kuning 1
             </div>
           </div>
         </div>
+      </div>
 
-        {/* =================================================
+      {/* =================================================
             SUMMARY
         ================================================= */}
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-medium text-zinc-500">
-                  Pinjaman Aktif
-                </div>
-
-                <div className="mt-1 text-2xl font-bold text-zinc-900">
-                  {totalAktif}
-                </div>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-medium text-zinc-500">
+                Pinjaman Aktif
               </div>
 
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
-                <WalletCards className="h-5 w-5" />
+              <div className="mt-1 text-2xl font-bold text-zinc-900">
+                {totalAktif}
               </div>
             </div>
-          </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-medium text-zinc-500">
-                  Sudah Lunas
-                </div>
-
-                <div className="mt-1 text-2xl font-bold text-zinc-900">
-                  {totalLunas}
-                </div>
-              </div>
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
-                <CheckCircle2 className="h-5 w-5" />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <div className="text-xs font-medium text-zinc-500">
-                  Perlu Roya
-                </div>
-
-                <div className="mt-1 text-2xl font-bold text-zinc-900">
-                  {totalRoya}
-                </div>
-              </div>
-
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-                <FileCheck className="h-5 w-5" />
-              </div>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600">
+              <WalletCards className="h-5 w-5" />
             </div>
           </div>
         </div>
 
-        {/* =================================================
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-medium text-zinc-500">
+                Sudah Lunas
+              </div>
+
+              <div className="mt-1 text-2xl font-bold text-zinc-900">
+                {totalLunas}
+              </div>
+            </div>
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-xs font-medium text-zinc-500">
+                Perlu Roya
+              </div>
+
+              <div className="mt-1 text-2xl font-bold text-zinc-900">
+                {totalRoya}
+              </div>
+            </div>
+
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+              <FileCheck className="h-5 w-5" />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =================================================
             SEARCH & FILTER
         ================================================= */}
 
-        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-          <div className="flex flex-col gap-3 lg:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+      <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+        <div className="flex flex-col gap-3 lg:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
 
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari nama, norek pinjaman, CIF, atau nomor PK..."
-                className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 pl-10 pr-4 text-sm outline-none transition focus:border-zinc-400 focus:bg-white"
-              />
-            </div>
-
-            <div className="flex rounded-xl border border-zinc-200 bg-zinc-50 p-1">
-              {["AKTIF", "LUNAS", "SEMUA"].map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  onClick={() => setStatusFilter(status)}
-                  className={`rounded-lg px-4 py-2 text-xs font-semibold transition ${
-                    statusFilter === status
-                      ? "bg-white text-zinc-900 shadow-sm"
-                      : "text-zinc-500 hover:text-zinc-900"
-                  }`}
-                >
-                  {status === "AKTIF"
-                    ? "Aktif"
-                    : status === "LUNAS"
-                      ? "Lunas"
-                      : "Semua"}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* =================================================
-            TABLE
-        ================================================= */}
-
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-          <div className="border-b border-zinc-100 px-5 py-4">
-            <div className="text-sm font-semibold text-zinc-900">
-              Daftar Pinjaman
-            </div>
-
-            <div className="mt-0.5 text-xs text-zinc-500">
-              Pilih pinjaman untuk melihat detail dan memproses pelunasan.
-            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari nama, norek pinjaman, CIF, atau nomor PK..."
+              className="h-11 w-full rounded-xl border border-zinc-200 bg-zinc-50 pl-10 pr-4 text-sm outline-none transition focus:border-zinc-400 focus:bg-white"
+            />
           </div>
 
-          {/* DESKTOP */}
-
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[900px]">
-              <thead>
-                <tr className="border-b border-zinc-100 bg-zinc-50/70 text-left">
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    Debitur
-                  </th>
-
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    Norek Pinjaman
-                  </th>
-
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    CIF
-                  </th>
-
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    Produk
-                  </th>
-
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    Limit
-                  </th>
-
-                  <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    Status
-                  </th>
-
-                  <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
-                    Aksi
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredData.map((item) => (
-                  <tr
-                    key={item.id}
-                    onClick={() => setSelected(item)}
-                    className="cursor-pointer border-b border-zinc-100 transition hover:bg-zinc-50"
-                  >
-                    <td className="px-5 py-4">
-                      <div className="font-semibold text-zinc-900">
-                        {item.nama}
-                      </div>
-
-                      <div className="mt-0.5 text-xs text-zinc-400">
-                        MKS: {item.mks}
-                      </div>
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-zinc-700">
-                      {item.norek}
-                    </td>
-
-                    <td className="px-5 py-4 text-sm text-zinc-700">
-                      {item.cif}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <span className="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-700">
-                        {item.produk}
-                      </span>
-                    </td>
-
-                    <td className="px-5 py-4 text-sm font-medium text-zinc-800">
-                      {formatRupiah(item.limit)}
-                    </td>
-
-                    <td className="px-5 py-4">
-                      <StatusBadge status={item.status} />
-                    </td>
-
-                    <td className="px-5 py-4 text-right">
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelected(item);
-                        }}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
-                      >
-                        Detail
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* MOBILE */}
-
-          <div className="divide-y divide-zinc-100 md:hidden">
-            {filteredData.map((item) => (
+          <div className="flex rounded-xl border border-zinc-200 bg-zinc-50 p-1">
+            {["AKTIF", "LUNAS", "SEMUA"].map((status) => (
               <button
-                key={item.id}
+                key={status}
                 type="button"
-                onClick={() => setSelected(item)}
-                className="flex w-full items-center justify-between px-4 py-4 text-left transition hover:bg-zinc-50"
+                onClick={() => setStatusFilter(status)}
+                className={`rounded-lg px-4 py-2 text-xs font-semibold transition ${
+                  statusFilter === status
+                    ? "bg-white text-zinc-900 shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-900"
+                }`}
               >
-                <div className="min-w-0">
-                  <div className="truncate font-semibold text-zinc-900">
-                    {item.nama}
-                  </div>
-
-                  <div className="mt-1 text-xs text-zinc-500">{item.norek}</div>
-
-                  <div className="mt-2">
-                    <StatusBadge status={item.status} />
-                  </div>
-                </div>
-
-                <ChevronRight className="ml-3 h-5 w-5 shrink-0 text-zinc-400" />
+                {status === "AKTIF"
+                  ? "Aktif"
+                  : status === "LUNAS"
+                    ? "Lunas"
+                    : "Semua"}
               </button>
             ))}
           </div>
-
-          {filteredData.length === 0 && (
-            <div className="px-5 py-14 text-center">
-              <Search className="mx-auto h-8 w-8 text-zinc-300" />
-
-              <div className="mt-3 text-sm font-semibold text-zinc-700">
-                Data tidak ditemukan
-              </div>
-
-              <div className="mt-1 text-xs text-zinc-400">
-                Coba gunakan kata pencarian atau filter yang berbeda.
-              </div>
-            </div>
-          )}
         </div>
+      </div>
+
+      {/* =================================================
+            TABLE
+        ================================================= */}
+
+      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+        <div className="border-b border-zinc-100 px-5 py-4">
+          <div className="text-sm font-semibold text-zinc-900">
+            Daftar Pinjaman
+          </div>
+
+          <div className="mt-0.5 text-xs text-zinc-500">
+            Pilih pinjaman untuk melihat detail dan memproses pelunasan.
+          </div>
+        </div>
+
+        {/* DESKTOP */}
+
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[900px]">
+            <thead>
+              <tr className="border-b border-zinc-100 bg-zinc-50/70 text-left">
+                <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Debitur
+                </th>
+
+                <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Norek Pinjaman
+                </th>
+
+                <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  CIF
+                </th>
+
+                <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Produk
+                </th>
+
+                <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Limit
+                </th>
+
+                <th className="px-5 py-3 text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Status
+                </th>
+
+                <th className="px-5 py-3 text-right text-[11px] font-semibold uppercase tracking-wide text-zinc-400">
+                  Aksi
+                </th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredData.map((item) => (
+                <tr
+                  key={item.id}
+                  onClick={() => setSelected(item)}
+                  className="cursor-pointer border-b border-zinc-100 transition hover:bg-zinc-50"
+                >
+                  <td className="px-5 py-4">
+                    <div className="font-semibold text-zinc-900">
+                      {item.nama}
+                    </div>
+
+                    <div className="mt-0.5 text-xs text-zinc-400">
+                      MKS: {item.mks}
+                    </div>
+                  </td>
+
+                  <td className="px-5 py-4 text-sm text-zinc-700">
+                    {item.norek}
+                  </td>
+
+                  <td className="px-5 py-4 text-sm text-zinc-700">
+                    {item.cif}
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <span className="rounded-lg bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-700">
+                      {item.produk}
+                    </span>
+                  </td>
+
+                  <td className="px-5 py-4 text-sm font-medium text-zinc-800">
+                    {formatRupiah(item.limit)}
+                  </td>
+
+                  <td className="px-5 py-4">
+                    <StatusBadge status={item.status} />
+                  </td>
+
+                  <td className="px-5 py-4 text-right">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelected(item);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-100 hover:text-zinc-900"
+                    >
+                      Detail
+                      <ChevronRight className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* MOBILE */}
+
+        <div className="divide-y divide-zinc-100 md:hidden">
+          {filteredData.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              onClick={() => setSelected(item)}
+              className="flex w-full items-center justify-between px-4 py-4 text-left transition hover:bg-zinc-50"
+            >
+              <div className="min-w-0">
+                <div className="truncate font-semibold text-zinc-900">
+                  {item.nama}
+                </div>
+
+                <div className="mt-1 text-xs text-zinc-500">{item.norek}</div>
+
+                <div className="mt-2">
+                  <StatusBadge status={item.status} />
+                </div>
+              </div>
+
+              <ChevronRight className="ml-3 h-5 w-5 shrink-0 text-zinc-400" />
+            </button>
+          ))}
+        </div>
+
+        {filteredData.length === 0 && (
+          <div className="px-5 py-14 text-center">
+            <Search className="mx-auto h-8 w-8 text-zinc-300" />
+
+            <div className="mt-3 text-sm font-semibold text-zinc-700">
+              Data tidak ditemukan
+            </div>
+
+            <div className="mt-1 text-xs text-zinc-400">
+              Coba gunakan kata pencarian atau filter yang berbeda.
+            </div>
+          </div>
+        )}
       </div>
 
       {/* =====================================================
@@ -729,7 +725,7 @@ export default function PelunasanPinjamanPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }
 

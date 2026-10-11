@@ -1,1285 +1,1075 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
-import DashboardLayout from "@/components/DashboardLayout";
-import { useUnit } from "@/components/UnitContext";
-import { supabase } from "@/lib/supabase";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Search,
-  Pencil,
-  Smartphone,
-  ShieldCheck,
-  UserRound,
-  X,
-  Power,
   RefreshCw,
-  Wifi,
+  Plus,
+  Pencil,
   Trash2,
+  X,
+  UserRound,
+  ShieldCheck,
+  Smartphone,
+  Power,
+  Mail,
+  KeyRound,
+  AlertTriangle,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  EyeOff,
 } from "lucide-react";
+import { useUnit } from "@/components/UnitContext";
 
-const DISPLAY_ROLES = ["MKS", "PENGAWAS"];
+const EMPLOYEE_ROLES = ["MKS", "PENGAWAS"];
 
 export default function PenggunaPage() {
   const { activeUnit } = useUnit();
 
   const [users, setUsers] = useState([]);
   const [unitData, setUnitData] = useState(null);
-
+  const [units, setUnits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [error, setError] = useState("");
-
+  const [saving, setSaving] = useState(false);
+  const [actionId, setActionId] = useState("");
   const [search, setSearch] = useState("");
-  const [viewingUser, setViewingUser] = useState(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState(null);
 
-  async function loadData(showRefresh = false) {
-    if (!activeUnit?.value) {
-      setUsers([]);
-      setLoading(false);
-      return;
-    }
+  const [editingUser, setEditingUser] = useState(null);
+  const [creatingUser, setCreatingUser] = useState(false);
+  const [deletingUser, setDeletingUser] = useState(null);
+  const [detailUser, setDetailUser] = useState(null);
 
-    if (showRefresh) {
-      setRefreshing(true);
-    } else {
-      setLoading(true);
-    }
-
-    setError("");
-
-    try {
-      // =========================================================
-      // 1. UNIT AKTIF DARI TOPBAR
-      // =========================================================
-      const { data: currentUnit, error: unitError } = await supabase
-        .from("unit")
-        .select(
-          "id, nama_unit, kode_unit, kode_legacy, kode_kawasan, cabang_id",
-        )
-        .eq("kode_unit", activeUnit.value)
-        .maybeSingle();
-
-      if (unitError) throw unitError;
-
-      if (!currentUnit) {
-        setUnitData(null);
+  const loadData = useCallback(
+    async (refresh = false) => {
+      if (!activeUnit?.value) {
         setUsers([]);
-        setError("Unit aktif tidak ditemukan.");
+        setUnitData(null);
+        setLoading(false);
+        setRefreshing(false);
         return;
       }
 
-      setUnitData(currentUnit);
+      refresh ? setRefreshing(true) : setLoading(true);
+      setError("");
 
-      // =========================================================
-      // 2. AMBIL PEGAWAI UNIT AKTIF
-      //
-      // Hanya MKS dan PENGAWAS.
-      // BM dan MKA sengaja tidak diambil.
-      // =========================================================
-      const { data: pegawaiUnit, error: pegawaiError } = await supabase
-        .from("pegawai")
-        .select(
-          `
-            id,
-            nama,
-            nip,
-            jabatan,
-            jenis_pegawai,
-            unit_id,
-            aktif
-          `,
-        )
-        .eq("unit_id", currentUnit.id)
-        .in("jenis_pegawai", DISPLAY_ROLES)
-        .order("jenis_pegawai", { ascending: true })
-        .order("nama", { ascending: true });
+      try {
+        const response = await fetch("/api/admin/pengguna", {
+          method: "GET",
+          cache: "no-store",
+        });
+        const result = await response.json();
 
-      if (pegawaiError) throw pegawaiError;
+        if (!response.ok) {
+          throw new Error(result.error || "Gagal memuat pengguna.");
+        }
 
-      // =========================================================
-      // 3. AMBIL DATA MKS
-      //
-      // Dipakai untuk memastikan pegawai MKS memang punya
-      // record di tabel public.mks.
-      // =========================================================
-      const pegawaiIds = (pegawaiUnit || []).map((pegawai) => pegawai.id);
+        const employeeList = result.pegawai || [];
+        const accountList = result.pengguna || [];
+        const profileList = result.profiles || [];
+        const deviceList = result.perangkat || [];
+        const mksList = result.mks || [];
+        const unitList = result.units || [];
 
-      let mksData = [];
-
-      if (pegawaiIds.length > 0) {
-        const { data, error: mksError } = await supabase
-          .from("mks")
-          .select(
-            `
-              id,
-              pegawai_id,
-              pengawas_id,
-              kode_agen
-            `,
-          )
-          .in("pegawai_id", pegawaiIds);
-
-        if (mksError) throw mksError;
-
-        mksData = data || [];
-      }
-
-      // =========================================================
-      // 4. AMBIL SUPERADMIN
-      //
-      // Superadmin bersifat global, jadi selalu tampil.
-      // =========================================================
-      const { data: superadminData, error: superadminError } = await supabase
-        .from("pengguna")
-        .select(
-          `
-              id,
-              auth_user_id,
-              pegawai_id,
-              role,
-              unit_id,
-              username,
-              aktif,
-              last_login_at,
-              last_seen_at,
-              created_at,
-              updated_at,
-              pegawai:pegawai_id (
-                id,
-                nama,
-                nip,
-                jabatan,
-                jenis_pegawai,
-                aktif
-              )
-            `,
-        )
-        .eq("role", "SUPERADMIN")
-        .order("username", { ascending: true });
-
-      if (superadminError) throw superadminError;
-
-      // =========================================================
-      // 5. AMBIL AKUN PENGGUNA UNTUK MKS/PENGAWAS UNIT INI
-      //
-      // Tidak masalah kalau belum ada akun.
-      // Pegawainya tetap akan ditampilkan.
-      // =========================================================
-      let penggunaData = [];
-
-      if (pegawaiIds.length > 0) {
-        const { data, error: penggunaError } = await supabase
-          .from("pengguna")
-          .select(
-            `
-              id,
-              auth_user_id,
-              pegawai_id,
-              role,
-              unit_id,
-              username,
-              aktif,
-              last_login_at,
-              last_seen_at,
-              created_at,
-              updated_at
-            `,
-          )
-          .in("pegawai_id", pegawaiIds);
-
-        if (penggunaError) throw penggunaError;
-
-        penggunaData = data || [];
-      }
-
-      // =========================================================
-      // 6. AMBIL PERANGKAT
-      // =========================================================
-      const penggunaIds = [
-        ...penggunaData.map((user) => user.id),
-        ...(superadminData || []).map((user) => user.id),
-      ];
-
-      let perangkatData = [];
-
-      if (penggunaIds.length > 0) {
-        const { data, error: perangkatError } = await supabase
-          .from("perangkat")
-          .select(
-            `
-              id,
-              pengguna_id,
-              nama_perangkat,
-              jenis_perangkat,
-              platform,
-              browser,
-              aktif,
-              terdaftar_at,
-              last_seen_at,
-              last_ip,
-              revoked_at,
-              revoked_reason,
-              created_at,
-              updated_at
-            `,
-          )
-          .in("pengguna_id", penggunaIds)
-          .order("last_seen_at", {
-            ascending: false,
-            nullsFirst: false,
-          });
-
-        if (perangkatError) throw perangkatError;
-
-        perangkatData = data || [];
-      }
-
-      // =========================================================
-      // 7. GABUNG PEGAWAI + PENGGUNA + MKS + PERANGKAT
-      // =========================================================
-      const mappedUnitUsers = (pegawaiUnit || [])
-        .map((pegawai) => {
-          const account = penggunaData.find(
-            (user) => user.pegawai_id === pegawai.id,
-          );
-
-          const mks = mksData.find((item) => item.pegawai_id === pegawai.id);
-
-          // Kalau jenis pegawai MKS tetapi belum ada record mks,
-          // tetap ditampilkan agar master data terlihat.
-          const devices = account
-            ? perangkatData.filter(
-                (device) => device.pengguna_id === account.id,
-              )
-            : [];
-
-          return {
-            id: account?.id || `pegawai-${pegawai.id}`,
-            pegawai_id: pegawai.id,
-
-            auth_user_id: account?.auth_user_id || null,
-
-            role: account?.role || normalizeRole(pegawai.jenis_pegawai),
-
-            unit_id: currentUnit.id,
-
-            username: account?.username || "",
-
-            aktif: account ? account.aktif : pegawai.aktif,
-
-            account_exists: Boolean(account),
-
-            last_login_at: account?.last_login_at || null,
-            last_seen_at: account?.last_seen_at || null,
-
-            created_at: account?.created_at || null,
-            updated_at: account?.updated_at || null,
-
-            pegawai,
-
-            mks: mks || null,
-
-            devices,
-          };
-        })
-        .filter(Boolean);
-
-      // =========================================================
-      // 8. SUPERADMIN
-      // =========================================================
-      const mappedSuperadmins = (superadminData || []).map((user) => {
-        const devices = perangkatData.filter(
-          (device) => device.pengguna_id === user.id,
+        setUnits(
+          unitList.filter(
+            (unit) =>
+              !unit.archived_at &&
+              String(unit.status || "").toUpperCase() === "AKTIF",
+          ),
         );
 
-        return {
-          ...user,
+        const currentUnit = unitList.find(
+          (unit) => unit.kode_unit === activeUnit.value,
+        );
 
-          account_exists: true,
+        if (!currentUnit) {
+          setUnitData(null);
+          setUsers([]);
+          throw new Error("Unit aktif tidak ditemukan.");
+        }
 
-          pegawai: user.pegawai || null,
+        setUnitData(currentUnit);
 
-          mks: null,
+        const employeeUsers = employeeList
+          .filter(
+            (employee) =>
+              employee.unit_id === currentUnit.id &&
+              EMPLOYEE_ROLES.includes(
+                String(employee.jenis_pegawai || "").toUpperCase(),
+              ),
+          )
+          .map((employee) => {
+            const account = accountList.find(
+              (item) => item.pegawai_id === employee.id,
+            );
+            const profile = account
+              ? profileList.find(
+                  (item) => item.user_id === account.auth_user_id,
+                )
+              : null;
+            const mks = mksList.find((item) => item.pegawai_id === employee.id);
 
-          devices,
-        };
-      });
+            return {
+              id: account?.id || `employee-${employee.id}`,
+              pegawai_id: employee.id,
+              auth_user_id: account?.auth_user_id || null,
+              role: String(
+                account?.role || employee.jenis_pegawai || "",
+              ).toUpperCase(),
+              username: account?.username || employee.nip || "",
+              email: profile?.email_utama || "",
+              aktif: account ? account.aktif : employee.aktif,
+              account_exists: Boolean(account),
+              wajib_ganti_password: Boolean(profile?.wajib_ganti_password),
+              pegawai: employee,
+              unit: currentUnit,
+              mks: mks || null,
+              last_login_at: account?.last_login_at || null,
+              last_seen_at: account?.last_seen_at || null,
+              created_at: account?.created_at || null,
+              devices: account
+                ? deviceList.filter(
+                    (device) => device.pengguna_id === account.id,
+                  )
+                : [],
+            };
+          });
 
-      // =========================================================
-      // 9. HASIL AKHIR
-      //
-      // MKS/PENGAWAS UNIT AKTIF
-      // +
-      // SUPERADMIN GLOBAL
-      // =========================================================
-      setUsers([...mappedUnitUsers, ...mappedSuperadmins]);
-    } catch (err) {
-      console.error("Gagal mengambil data pengguna:", err);
+        const superadmins = accountList
+          .filter(
+            (account) =>
+              String(account.role || "").toUpperCase() === "SUPERADMIN",
+          )
+          .map((account) => {
+            const profile = profileList.find(
+              (item) => item.user_id === account.auth_user_id,
+            );
+            const employee = employeeList.find(
+              (item) => item.id === account.pegawai_id,
+            );
 
-      setError(err?.message || "Gagal mengambil data pengguna dari database.");
+            return {
+              ...account,
+              role: "SUPERADMIN",
+              pegawai: employee || null,
+              email: profile?.email_utama || "",
+              account_exists: true,
+              wajib_ganti_password: Boolean(profile?.wajib_ganti_password),
+              devices: deviceList.filter(
+                (device) => device.pengguna_id === account.id,
+              ),
+            };
+          });
 
-      setUsers([]);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }
+        setUsers([...employeeUsers, ...superadmins]);
+      } catch (err) {
+        console.error(err);
+        setError(err?.message || "Gagal memuat data pengguna.");
+        setUsers([]);
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [activeUnit?.value],
+  );
 
   useEffect(() => {
     loadData();
-  }, [activeUnit?.value]);
+  }, [loadData]);
 
-  // ===========================================================
-  // FILTER PENCARIAN
-  // ===========================================================
   const filteredUsers = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
+    const q = search.trim().toLowerCase();
+    if (!q) return users;
 
-    if (!keyword) return users;
-
-    return users.filter((user) => {
-      const values = [
+    return users.filter((user) =>
+      [
         user.pegawai?.nama,
         user.pegawai?.nip,
         user.pegawai?.jabatan,
         user.role,
         user.username,
+        user.email,
         user.mks?.kode_agen,
-      ];
-
-      return values
+      ]
         .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(keyword));
-    });
+        .join(" ")
+        .toLowerCase()
+        .includes(q),
+    );
   }, [users, search]);
 
-  const unitUsers = filteredUsers.filter((user) => user.role !== "SUPERADMIN");
+  const stats = useMemo(() => {
+    const accounts = users.filter((user) => user.account_exists);
+    const devices = accounts.flatMap((user) => user.devices || []);
 
+    return {
+      employees: users.filter((user) => user.role !== "SUPERADMIN").length,
+      accounts: accounts.length,
+      active: accounts.filter((user) => user.aktif).length,
+      devices: devices.filter((device) => device.aktif).length,
+    };
+  }, [users]);
+
+  function notify(message, type = "success") {
+    setNotice({ message, type });
+  }
+
+  async function handleSave(form) {
+    setSaving(true);
+    setError("");
+
+    try {
+      if (form.mode === "create") {
+        const response = await fetch("/api/admin/pengguna", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            pegawai_id: form.pegawai_id,
+            email: form.email.trim(),
+            password_awal: form.password_awal,
+            unit_ids: [unitData.id],
+          }),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || "Gagal membuat akun.");
+        }
+
+        setCreatingUser(false);
+        await loadData(true);
+        notify(result.message || "Akun berhasil dibuat.");
+        return;
+      }
+
+      const response = await fetch(`/api/admin/pengguna/${form.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          nama: form.nama,
+          nip: form.nip,
+          jabatan: form.jabatan,
+          jenis_pegawai: form.jenis_pegawai,
+          email: form.email.trim(),
+          unit_id: form.unit_id,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal menyimpan perubahan.");
+      }
+
+      setEditingUser(null);
+      setDetailUser(null);
+      await loadData(true);
+      notify(result.message || "Data berhasil diperbarui.");
+    } catch (err) {
+      notify(err?.message || "Terjadi kesalahan.", "error");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(user) {
+    if (!user?.id || !user.account_exists) return;
+
+    if (user.role === "SUPERADMIN" || user.role === "ADMIN") {
+      notify("Akun Admin dan SUPERADMIN tidak dapat dihapus di sini.", "error");
+      return;
+    }
+
+    setActionId(user.id);
+
+    try {
+      const response = await fetch(`/api/admin/pengguna/${user.id}`, {
+        method: "DELETE",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Penghapusan akun gagal.");
+      }
+
+      setDeletingUser(null);
+      setDetailUser(null);
+      await loadData(true);
+      notify(
+        result.message || "Akun login dihapus. Data pegawai tetap disimpan.",
+      );
+    } catch (err) {
+      notify(err?.message || "Gagal menghapus akun.", "error");
+    } finally {
+      setActionId("");
+    }
+  }
+
+  async function handleToggle(user) {
+    if (!user?.account_exists || user.role === "SUPERADMIN") return;
+
+    const confirmed = window.confirm(
+      `${user.aktif ? "Nonaktifkan" : "Aktifkan"} akun ${user.pegawai?.nama || user.username}?`,
+    );
+    if (!confirmed) return;
+
+    setActionId(user.id);
+
+    try {
+      const response = await fetch(`/api/admin/pengguna/${user.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aktif: !user.aktif }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || "Gagal mengubah status akun.");
+      }
+
+      await loadData(true);
+      notify(result.message || "Status akun diperbarui.");
+    } catch (err) {
+      notify(err?.message || "Gagal mengubah status.", "error");
+    } finally {
+      setActionId("");
+    }
+  }
+
+  const availableEmployees = users.filter(
+    (user) =>
+      user.role !== "SUPERADMIN" && !user.account_exists && user.pegawai_id,
+  );
+
+  const unitUsers = filteredUsers.filter((user) => user.role !== "SUPERADMIN");
   const superadmins = filteredUsers.filter(
     (user) => user.role === "SUPERADMIN",
   );
 
-  const activeUsers = users.filter((user) => user.aktif).length;
+  return (
+    <main className="min-h-screen space-y-6 bg-slate-50 p-4 md:p-6">
+      {notice && (
+        <div
+          className={`fixed right-4 top-4 z-[100] flex max-w-md items-start gap-3 rounded-xl border bg-white p-4 shadow-xl ${
+            notice.type === "error"
+              ? "border-red-200 text-red-700"
+              : "border-emerald-200 text-emerald-700"
+          }`}
+        >
+          {notice.type === "error" ? (
+            <AlertCircle size={19} />
+          ) : (
+            <CheckCircle2 size={19} />
+          )}
+          <p className="flex-1 text-sm">{notice.message}</p>
+          <button onClick={() => setNotice(null)} aria-label="Tutup">
+            <X size={16} />
+          </button>
+        </div>
+      )}
 
-  const accountUsers = users.filter((user) => user.account_exists).length;
+      <header className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div>
+          <p className="mb-2 text-sm text-slate-500">
+            Administrasi Sistem / Pengguna
+          </p>
+          <h1 className="text-2xl font-bold text-slate-900 md:text-3xl">
+            Kelola Pengguna
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Kelola data pegawai, akun login, dan status pengguna.
+          </p>
+          <p className="mt-3 inline-flex rounded-lg bg-blue-50 px-3 py-2 text-sm font-semibold text-blue-800">
+            {unitData?.nama_unit || activeUnit?.label || "Memuat unit..."}
+          </p>
+        </div>
 
-  const activeDevices = users.reduce(
-    (total, user) =>
-      total + user.devices.filter((device) => device.aktif).length,
-    0,
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setCreatingUser(true)}
+            disabled={!unitData || availableEmployees.length === 0}
+            className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+          >
+            <Plus size={17} />
+            Tambah Akun
+          </button>
+          <button
+            onClick={() => loadData(true)}
+            disabled={loading || refreshing}
+            className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            <RefreshCw size={17} className={refreshing ? "animate-spin" : ""} />
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <Stat
+          title="Total Pegawai"
+          value={stats.employees}
+          icon={<UserRound size={20} />}
+        />
+        <Stat
+          title="Akun Terdaftar"
+          value={stats.accounts}
+          icon={<ShieldCheck size={20} />}
+        />
+        <Stat
+          title="Akun Aktif"
+          value={stats.active}
+          icon={<Power size={20} />}
+        />
+        <Stat
+          title="Perangkat Aktif"
+          value={stats.devices}
+          icon={<Smartphone size={20} />}
+        />
+      </section>
+
+      <div className="relative">
+        <Search
+          size={18}
+          className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+        />
+        <input
+          value={search}
+          onChange={(event) => setSearch(event.target.value)}
+          placeholder="Cari nama, NIP, username, email, atau kode agen..."
+          className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+        />
+      </div>
+
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-bold text-slate-900">Pengguna Unit</h2>
+            <p className="text-sm text-slate-500">
+              Data pegawai pada unit aktif.
+            </p>
+          </div>
+          <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold">
+            {unitUsers.length} data
+          </span>
+        </div>
+
+        {loading ? (
+          <p className="rounded-xl bg-white p-8 text-center text-sm text-slate-500">
+            Memuat data...
+          </p>
+        ) : unitUsers.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">
+            Tidak ada pengguna yang cocok dengan pencarian.
+          </p>
+        ) : (
+          <div className="grid gap-4 xl:grid-cols-2">
+            {unitUsers.map((user) => (
+              <UserCard
+                key={user.id}
+                user={user}
+                busy={actionId === user.id}
+                onView={() => setDetailUser(user)}
+                onEdit={() => setEditingUser(user)}
+                onDelete={() => setDeletingUser(user)}
+                onToggle={() => handleToggle(user)}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {superadmins.length > 0 && (
+        <section className="space-y-4">
+          <h2 className="text-lg font-bold text-slate-900">
+            Administrator Utama
+          </h2>
+          <div className="grid gap-4 xl:grid-cols-2">
+            {superadmins.map((user) => (
+              <UserCard
+                key={user.id}
+                user={user}
+                busy={false}
+                onView={() => setDetailUser(user)}
+                onEdit={() =>
+                  notify(
+                    "SUPERADMIN tidak dapat diedit di halaman ini.",
+                    "error",
+                  )
+                }
+                onDelete={() =>
+                  notify(
+                    "SUPERADMIN tidak dapat dihapus di halaman ini.",
+                    "error",
+                  )
+                }
+                onToggle={() =>
+                  notify(
+                    "SUPERADMIN dilindungi dari perubahan status.",
+                    "error",
+                  )
+                }
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          units={units}
+          currentUnitId={unitData?.id}
+          saving={saving}
+          onClose={() => setEditingUser(null)}
+          onSave={handleSave}
+        />
+      )}
+
+      {creatingUser && (
+        <CreateAccountModal
+          employees={availableEmployees}
+          unitName={unitData?.nama_unit || ""}
+          saving={saving}
+          onClose={() => setCreatingUser(false)}
+          onSave={handleSave}
+        />
+      )}
+
+      {deletingUser && (
+        <DeleteAccountModal
+          user={deletingUser}
+          busy={actionId === deletingUser.id}
+          onClose={() => setDeletingUser(null)}
+          onConfirm={() => handleDelete(deletingUser)}
+        />
+      )}
+
+      {detailUser && (
+        <DetailModal
+          user={detailUser}
+          onClose={() => setDetailUser(null)}
+          onEdit={() => {
+            setEditingUser(detailUser);
+            setDetailUser(null);
+          }}
+          onDelete={() => {
+            setDeletingUser(detailUser);
+            setDetailUser(null);
+          }}
+        />
+      )}
+    </main>
   );
+}
 
-  const onlineUsers = users.filter((user) =>
-    isOnline(user.last_seen_at),
-  ).length;
+function UserCard({ user, busy, onView, onEdit, onDelete, onToggle }) {
+  const isAdmin = ["ADMIN", "SUPERADMIN"].includes(user.role);
+  const devices = (user.devices || []).filter((device) => device.aktif);
 
-  // ===========================================================
-  // AKTIF / NONAKTIF
-  // ===========================================================
-  async function handleToggleUser(user) {
+  return (
+    <article className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="p-4 sm:p-5">
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-blue-50 font-bold text-blue-700">
+            {initials(user.pegawai?.nama || user.username)}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="break-words font-bold text-slate-900">
+              {user.pegawai?.nama || user.username || "Pengguna"}
+            </h3>
+            <p className="mt-1 text-sm text-slate-500">
+              {user.pegawai?.nip || user.username || "-"}
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-xs font-bold text-blue-700">
+                {user.role}
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                  user.account_exists
+                    ? user.aktif
+                      ? "bg-emerald-50 text-emerald-700"
+                      : "bg-slate-100 text-slate-600"
+                    : "bg-amber-50 text-amber-700"
+                }`}
+              >
+                {!user.account_exists
+                  ? "Belum ada akun"
+                  : user.aktif
+                    ? "Aktif"
+                    : "Nonaktif"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {user.wajib_ganti_password && user.account_exists && (
+          <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+            Wajib ganti password
+          </p>
+        )}
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <MiniInfo label="Username" value={user.username || "-"} />
+          <MiniInfo label="Email" value={user.email || "-"} />
+          <MiniInfo label="Kode Agen" value={user.mks?.kode_agen || "-"} />
+          <MiniInfo label="Perangkat Aktif" value={`${devices.length}`} />
+        </div>
+      </div>
+
+      <div className="flex flex-wrap gap-2 border-t border-slate-100 bg-slate-50 p-3">
+        <ActionButton onClick={onView} icon={<Eye size={15} />}>
+          Detail
+        </ActionButton>
+
+        {!isAdmin && (
+          <>
+            <ActionButton onClick={onEdit} icon={<Pencil size={15} />}>
+              Edit
+            </ActionButton>
+
+            {user.account_exists && (
+              <>
+                <ActionButton
+                  onClick={onToggle}
+                  disabled={busy}
+                  icon={<Power size={15} />}
+                >
+                  {user.aktif ? "Nonaktifkan" : "Aktifkan"}
+                </ActionButton>
+
+                <ActionButton
+                  onClick={onDelete}
+                  disabled={busy}
+                  danger
+                  icon={<Trash2 size={15} />}
+                >
+                  Hapus Akun
+                </ActionButton>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function EditUserModal({
+  user,
+  units,
+  currentUnitId,
+  saving,
+  onClose,
+  onSave,
+}) {
+  const [nama, setNama] = useState(user.pegawai?.nama || "");
+  const [nip, setNip] = useState(user.pegawai?.nip || "");
+  const [jabatan, setJabatan] = useState(user.pegawai?.jabatan || "");
+  const [role, setRole] = useState(user.pegawai?.jenis_pegawai || user.role);
+  const [email, setEmail] = useState(user.email || "");
+  const [unitId, setUnitId] = useState(user.unit?.id || currentUnitId || "");
+
+  async function submit(event) {
+    event.preventDefault();
+
     if (!user.account_exists) {
-      setError(
-        "Akun pengguna belum dibuat. Data pegawai sudah tampil, tetapi akun login belum tersedia.",
+      window.alert(
+        "Pegawai ini belum memiliki akun. Buat akun terlebih dahulu.",
       );
       return;
     }
 
-    const nextStatus = !user.aktif;
-
-    const confirmed = window.confirm(
-      `${nextStatus ? "Aktifkan" : "Nonaktifkan"} akun "${getUserName(user)}"?`,
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setError("");
-
-      const { error: updateError } = await supabase
-        .from("pengguna")
-        .update({
-          aktif: nextStatus,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", user.id);
-
-      if (updateError) throw updateError;
-
-      await loadData(true);
-
-      setViewingUser(null);
-    } catch (err) {
-      console.error(err);
-
-      setError(err?.message || "Gagal mengubah status pengguna.");
-    }
-  }
-
-  // ===========================================================
-  // CABUT PERANGKAT
-  // ===========================================================
-  async function handleRevokeDevice(device) {
-    const confirmed = window.confirm(
-      `Cabut perangkat "${device.nama_perangkat || "Perangkat"}"?`,
-    );
-
-    if (!confirmed) return;
-
-    try {
-      setError("");
-
-      const { error: updateError } = await supabase
-        .from("perangkat")
-        .update({
-          aktif: false,
-          revoked_at: new Date().toISOString(),
-          revoked_reason: "Dicabut oleh administrator",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", device.id);
-
-      if (updateError) throw updateError;
-
-      await loadData(true);
-
-      setViewingUser(null);
-    } catch (err) {
-      console.error(err);
-
-      setError(err?.message || "Gagal mencabut perangkat.");
-    }
+    await onSave({
+      mode: "edit",
+      id: user.id,
+      nama,
+      nip,
+      jabatan,
+      jenis_pegawai: role,
+      email,
+      unit_id: unitId,
+    });
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-5">
-        {/* =====================================================
-            HEADER
-        ====================================================== */}
-        <div>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-                Pengguna
-              </h1>
+    <Modal title="Edit Data Pegawai dan Akun" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <Field label="Nama lengkap">
+          <input
+            required
+            value={nama}
+            onChange={(e) => setNama(e.target.value)}
+          />
+        </Field>
+        <Field label="NIP">
+          <input
+            required
+            value={nip}
+            onChange={(e) => setNip(e.target.value)}
+          />
+        </Field>
+        <Field label="Jabatan">
+          <input
+            required
+            value={jabatan}
+            onChange={(e) => setJabatan(e.target.value)}
+          />
+        </Field>
+        <Field label="Jenis pegawai">
+          <select value={role} onChange={(e) => setRole(e.target.value)}>
+            <option value="MKS">MKS</option>
+            <option value="PENGAWAS">PENGAWAS</option>
+          </select>
+        </Field>
+        <Field label="Email login">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+        <Field label="Unit penugasan">
+          <select
+            required
+            value={unitId}
+            onChange={(e) => setUnitId(e.target.value)}
+          >
+            <option value="">Pilih unit</option>
+            {units.map((unit) => (
+              <option key={unit.id} value={unit.id}>
+                {unit.nama_unit}
+              </option>
+            ))}
+          </select>
+        </Field>
 
-              <p className="mt-1 text-sm text-zinc-500">
-                Akun dan perangkat pengguna JOSJIS.
-              </p>
-            </div>
+        <p className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+          Perubahan NIP dan jenis pegawai dapat berdampak pada relasi data lain.
+          Pastikan data sudah benar sebelum menyimpan.
+        </p>
 
-            <div className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-xs">
-              <span className="text-zinc-400">Unit aktif</span>
+        <ModalActions saving={saving} onClose={onClose} />
+      </form>
+    </Modal>
+  );
+}
 
-              <div className="mt-0.5 font-semibold text-zinc-800">
-                {unitData?.nama_unit ||
-                  activeUnit?.label ||
-                  activeUnit?.value ||
-                  "-"}
-              </div>
-            </div>
-          </div>
-        </div>
+function CreateAccountModal({ employees, unitName, saving, onClose, onSave }) {
+  const [pegawaiId, setPegawaiId] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
-        {/* =====================================================
-            TOOLBAR
-        ====================================================== */}
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-md">
-            <Search
-              size={17}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
-            />
+  async function submit(event) {
+    event.preventDefault();
 
+    if (!pegawaiId || password.length < 12) {
+      window.alert("Pilih pegawai dan gunakan password minimal 12 karakter.");
+      return;
+    }
+
+    await onSave({
+      mode: "create",
+      pegawai_id: pegawaiId,
+      email,
+      password_awal: password,
+    });
+  }
+
+  return (
+    <Modal title="Tambah Akun" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="rounded-lg bg-blue-50 p-3 text-sm text-blue-800">
+          Unit: {unitName}
+        </p>
+
+        <Field label="Pegawai">
+          <select
+            required
+            value={pegawaiId}
+            onChange={(e) => setPegawaiId(e.target.value)}
+          >
+            <option value="">Pilih pegawai</option>
+            {employees.map((user) => (
+              <option key={user.pegawai_id} value={user.pegawai_id}>
+                {user.pegawai?.nama} — {user.pegawai?.nip} ({user.role})
+              </option>
+            ))}
+          </select>
+        </Field>
+
+        <Field label="Email utama">
+          <input
+            type="email"
+            required
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </Field>
+
+        <Field label="Password awal (minimal 12 karakter)">
+          <div className="relative">
             <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Cari nama, NIP, username..."
-              className="h-10 w-full rounded-xl border border-zinc-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-zinc-400"
+              type={showPassword ? "text" : "password"}
+              required
+              minLength={12}
+              maxLength={256}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="pr-11"
             />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-3 text-slate-500"
+              aria-label="Tampilkan atau sembunyikan password"
+            >
+              {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+            </button>
           </div>
+        </Field>
 
-          <button
-            type="button"
-            onClick={() => loadData(true)}
-            disabled={refreshing}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
-          >
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
-            Refresh
-          </button>
-        </div>
-
-        {/* =====================================================
-            ERROR
-        ====================================================== */}
-        {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {error}
-          </div>
-        )}
-
-        {/* =====================================================
-            SUMMARY
-        ====================================================== */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <SummaryCard
-            icon={<UserRound size={17} />}
-            label="Pengguna"
-            value={users.length}
-          />
-
-          <SummaryCard
-            icon={<ShieldCheck size={17} />}
-            label="Akun dibuat"
-            value={accountUsers}
-          />
-
-          <SummaryCard
-            icon={<Smartphone size={17} />}
-            label="Perangkat"
-            value={activeDevices}
-          />
-
-          <SummaryCard
-            icon={<Wifi size={17} />}
-            label="Online"
-            value={onlineUsers}
-          />
-        </div>
-
-        {/* =====================================================
-            LOADING
-        ====================================================== */}
-        {loading ? (
-          <LoadingCards />
-        ) : (
-          <>
-            {/* =================================================
-                MKS + PENGAWAS
-            ================================================== */}
-            <section>
-              <div className="mb-3 flex items-center justify-between">
-                <div>
-                  <h2 className="text-sm font-semibold text-zinc-900">
-                    Pengguna {unitData?.kode_unit || ""}
-                  </h2>
-
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    MKS dan Pengawas pada unit aktif.
-                  </p>
-                </div>
-
-                <span className="text-xs text-zinc-400">
-                  {unitUsers.length} orang
-                </span>
-              </div>
-
-              {unitUsers.length === 0 ? (
-                <EmptyState text="Belum ada MKS atau Pengawas pada unit ini." />
-              ) : (
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {unitUsers.map((user) => (
-                    <UserCard
-                      key={user.id}
-                      user={user}
-                      onView={() => setViewingUser(user)}
-                      onToggle={() => handleToggleUser(user)}
-                    />
-                  ))}
-                </div>
-              )}
-            </section>
-
-            {/* =================================================
-                SUPERADMIN
-            ================================================== */}
-            {superadmins.length > 0 && (
-              <section>
-                <div className="mb-3">
-                  <h2 className="text-sm font-semibold text-zinc-900">
-                    Administrator Sistem
-                  </h2>
-
-                  <p className="mt-0.5 text-xs text-zinc-500">
-                    Akun global yang tidak mengikuti unit aktif.
-                  </p>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                  {superadmins.map((user) => (
-                    <UserCard
-                      key={user.id}
-                      user={user}
-                      onView={() => setViewingUser(user)}
-                      onToggle={() => handleToggleUser(user)}
-                    />
-                  ))}
-                </div>
-              </section>
-            )}
-          </>
-        )}
-
-        {/* =====================================================
-            DETAIL
-        ====================================================== */}
-        <UserDetailModal
-          user={viewingUser}
-          onClose={() => setViewingUser(null)}
-          onToggle={() => {
-            if (!viewingUser) return;
-            handleToggleUser(viewingUser);
-          }}
-          onRevokeDevice={handleRevokeDevice}
+        <ModalActions
+          saving={saving}
+          onClose={onClose}
+          submitLabel="Buat Akun"
         />
-      </div>
-    </DashboardLayout>
+      </form>
+    </Modal>
   );
 }
 
-/* =============================================================
-   USER CARD
-============================================================= */
+function DeleteAccountModal({ user, busy, onClose, onConfirm }) {
+  const [confirmation, setConfirmation] = useState("");
 
-function UserCard({ user, onView, onToggle }) {
-  const activeDevices = user.devices.filter((device) => device.aktif);
-
-  const online = isOnline(user.last_seen_at);
-
-  const roleLabel = user.role === "SUPERADMIN" ? "Superadmin" : user.role;
+  const expected = "HAPUS";
 
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4 transition hover:border-zinc-300 hover:shadow-sm">
-      <div className="flex items-start gap-3">
-        {/* Avatar */}
-        <div
-          className={[
-            "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold",
-            user.role === "SUPERADMIN"
-              ? "bg-violet-50 text-violet-700"
-              : user.role === "MKS"
-                ? "bg-cyan-50 text-cyan-700"
-                : "bg-indigo-50 text-indigo-700",
-          ].join(" ")}
-        >
-          {getInitials(getUserName(user))}
-        </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <h3 className="truncate text-sm font-semibold text-zinc-900">
-                {getUserName(user)}
-              </h3>
-
-              <p className="mt-0.5 truncate text-xs text-zinc-500">
-                {roleLabel}
-                {user.pegawai?.nip ? ` • ${user.pegawai.nip}` : ""}
-              </p>
-            </div>
-
-            <StatusBadge
-              aktif={user.aktif}
-              accountExists={user.account_exists}
-            />
+    <Modal title="Hapus Akun Permanen" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">
+          <AlertTriangle size={22} className="mt-0.5 shrink-0" />
+          <div>
+            <p className="font-bold">
+              Tindakan ini tidak dapat dibatalkan dengan mudah.
+            </p>
+            <p className="mt-1 text-sm">
+              Akun login {user.pegawai?.nama || user.username} akan dihapus.
+              Data pegawai tetap disimpan, tetapi identitas Auth yang dihapus
+              tidak otomatis dapat dipulihkan.
+            </p>
           </div>
         </div>
-      </div>
 
-      {/* INFO */}
-      <div className="mt-4 space-y-2.5">
-        <InfoRow
-          label="Username"
-          value={
-            user.account_exists
-              ? user.username || "Belum diisi"
-              : "Belum dibuat"
-          }
+        <p className="text-sm text-slate-600">
+          Ketik <strong>HAPUS</strong> untuk mengonfirmasi.
+        </p>
+
+        <input
+          value={confirmation}
+          onChange={(event) => setConfirmation(event.target.value)}
+          placeholder="Ketik HAPUS"
+          className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-red-400"
         />
 
-        {user.role === "MKS" && (
-          <InfoRow label="Kode Agen" value={user.mks?.kode_agen || "—"} />
-        )}
-
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-xs text-zinc-400">Perangkat</span>
-
-          <button
-            type="button"
-            onClick={onView}
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-zinc-700 hover:text-zinc-900"
-          >
-            <Smartphone size={14} />
-
-            {activeDevices.length}
-
-            {getDeviceLimit(user.role) ? `/${getDeviceLimit(user.role)}` : ""}
-          </button>
-        </div>
-
-        {user.account_exists && (
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-zinc-400">Koneksi</span>
-
-            <OnlineBadge online={online} />
-          </div>
-        )}
-      </div>
-
-      {/* ACTION */}
-      <div className="mt-4 flex gap-2 border-t border-zinc-100 pt-3">
-        <button
-          type="button"
-          onClick={onView}
-          className="flex h-9 flex-1 items-center justify-center gap-1.5 rounded-lg border border-zinc-200 bg-white text-xs font-medium text-zinc-700 transition hover:bg-zinc-50"
-        >
-          <Smartphone size={14} />
-          Detail
-        </button>
-
-        <button
-          type="button"
-          onClick={onToggle}
-          disabled={!user.account_exists}
-          className="flex h-9 items-center justify-center rounded-lg border border-zinc-200 px-3 text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-30"
-          title={
-            user.account_exists
-              ? user.aktif
-                ? "Nonaktifkan"
-                : "Aktifkan"
-              : "Akun belum dibuat"
-          }
-        >
-          <Power size={15} />
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* =============================================================
-   DETAIL MODAL
-============================================================= */
-
-function UserDetailModal({ user, onClose, onToggle, onRevokeDevice }) {
-  if (!user) return null;
-
-  const activeDevices = user.devices.filter((device) => device.aktif);
-
-  const limit = getDeviceLimit(user.role);
-
-  return (
-    <Modal open={!!user} onClose={onClose}>
-      <div className="border-b border-zinc-200 px-4 py-4">
-        <div className="flex items-start gap-3">
-          <div
-            className={[
-              "flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-sm font-bold",
-              user.role === "SUPERADMIN"
-                ? "bg-violet-50 text-violet-700"
-                : user.role === "MKS"
-                  ? "bg-cyan-50 text-cyan-700"
-                  : "bg-indigo-50 text-indigo-700",
-            ].join(" ")}
-          >
-            {getInitials(getUserName(user))}
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-lg font-semibold text-zinc-900">
-              {getUserName(user)}
-            </div>
-
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-zinc-500">
-              <RoleBadge role={user.role} />
-
-              <span>•</span>
-
-              <span>
-                {user.role === "SUPERADMIN"
-                  ? "Global"
-                  : user.pegawai?.jabatan || unitLabel(user)}
-              </span>
-            </div>
-          </div>
-
+        <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100"
+            disabled={busy}
+            className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold"
           >
-            <X size={18} />
+            Batal
+          </button>
+          <button
+            type="button"
+            onClick={onConfirm}
+            disabled={busy || confirmation !== expected}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+          >
+            {busy ? (
+              <RefreshCw size={16} className="animate-spin" />
+            ) : (
+              <Trash2 size={16} />
+            )}
+            Hapus Permanen
           </button>
         </div>
-      </div>
-
-      <div className="space-y-5 p-4">
-        {/* AKUN */}
-        <section>
-          <SectionTitle icon={<UserRound size={16} />} title="Informasi Akun" />
-
-          <div className="mt-3 grid grid-cols-2 gap-4">
-            <DetailItem label="Nama" value={getUserName(user)} />
-
-            <DetailItem label="NIP" value={user.pegawai?.nip} />
-
-            <DetailItem label="Role" value={<RoleBadge role={user.role} />} />
-
-            <DetailItem
-              label="Username"
-              value={user.account_exists ? user.username : "Belum dibuat"}
-            />
-
-            <DetailItem
-              label="Status"
-              value={
-                <StatusBadge
-                  aktif={user.aktif}
-                  accountExists={user.account_exists}
-                />
-              }
-            />
-
-            <DetailItem
-              label="Terakhir aktif"
-              value={formatDateTime(user.last_seen_at)}
-            />
-          </div>
-        </section>
-
-        {/* MKS */}
-        {user.role === "MKS" && (
-          <section className="rounded-xl border border-zinc-100 bg-zinc-50 p-3">
-            <SectionTitle icon={<ShieldCheck size={16} />} title="Data MKS" />
-
-            <div className="mt-3 grid grid-cols-2 gap-4">
-              <DetailItem label="Kode Agen" value={user.mks?.kode_agen} />
-
-              <DetailItem
-                label="Pengawas"
-                value={user.mks?.pengawas_id ? "Terhubung" : "Belum diatur"}
-              />
-            </div>
-          </section>
-        )}
-
-        {/* PERANGKAT */}
-        <section>
-          <div className="flex items-center justify-between">
-            <SectionTitle icon={<Smartphone size={16} />} title="Perangkat" />
-
-            <span className="text-xs text-zinc-500">
-              {activeDevices.length}
-              {limit ? ` / ${limit}` : ""}
-            </span>
-          </div>
-
-          <div className="mt-3 space-y-2">
-            {user.devices.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-zinc-200 px-4 py-7 text-center">
-                <Smartphone size={26} className="mx-auto text-zinc-300" />
-
-                <p className="mt-2 text-xs font-medium text-zinc-600">
-                  Belum ada perangkat
-                </p>
-              </div>
-            ) : (
-              user.devices.map((device) => (
-                <DeviceItem
-                  key={device.id}
-                  device={device}
-                  onRevoke={() => onRevokeDevice(device)}
-                />
-              ))
-            )}
-          </div>
-        </section>
-
-        {/* AKSI */}
-        {user.account_exists && (
-          <div className="flex gap-2 border-t border-zinc-100 pt-4">
-            <button
-              type="button"
-              onClick={() => {
-                alert(
-                  "Form edit pengguna akan kita sambungkan setelah tampilan data dasar ini selesai.",
-                );
-              }}
-              className="flex h-10 flex-1 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-            >
-              <Pencil size={15} />
-              Edit
-            </button>
-
-            <button
-              type="button"
-              onClick={onToggle}
-              className={[
-                "flex h-10 flex-1 items-center justify-center gap-2 rounded-xl text-sm font-medium",
-                user.aktif
-                  ? "border border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                  : "bg-zinc-900 text-white hover:bg-zinc-800",
-              ].join(" ")}
-            >
-              <Power size={15} />
-
-              {user.aktif ? "Nonaktifkan" : "Aktifkan"}
-            </button>
-          </div>
-        )}
       </div>
     </Modal>
   );
 }
 
-/* =============================================================
-   DEVICE
-============================================================= */
+function DetailModal({ user, onClose, onEdit, onDelete }) {
+  return (
+    <Modal title="Detail Pengguna" onClose={onClose}>
+      <div className="space-y-3">
+        <MiniInfo label="Nama" value={user.pegawai?.nama || "-"} />
+        <MiniInfo label="NIP" value={user.pegawai?.nip || "-"} />
+        <MiniInfo label="Jabatan" value={user.pegawai?.jabatan || "-"} />
+        <MiniInfo label="Role" value={user.role || "-"} />
+        <MiniInfo label="Username" value={user.username || "-"} />
+        <MiniInfo label="Email" value={user.email || "-"} />
+        <MiniInfo label="Kode Agen" value={user.mks?.kode_agen || "-"} />
+        <MiniInfo
+          label="Perangkat aktif"
+          value={(user.devices || []).filter((device) => device.aktif).length}
+        />
 
-function DeviceItem({ device, onRevoke }) {
-  const online = isOnline(device.last_seen_at);
+        <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-4">
+          <ActionButton onClick={onClose}>Tutup</ActionButton>
+          {user.account_exists &&
+            user.role !== "SUPERADMIN" &&
+            user.role !== "ADMIN" && (
+              <>
+                <ActionButton onClick={onEdit} icon={<Pencil size={15} />}>
+                  Edit
+                </ActionButton>
+                <ActionButton
+                  onClick={onDelete}
+                  danger
+                  icon={<Trash2 size={15} />}
+                >
+                  Hapus Akun
+                </ActionButton>
+              </>
+            )}
+        </div>
+      </div>
+    </Modal>
+  );
+}
 
+function Modal({ title, onClose, children }) {
   return (
     <div
-      className={[
-        "rounded-xl border p-3",
-        device.aktif
-          ? "border-zinc-200 bg-white"
-          : "border-zinc-100 bg-zinc-50 opacity-70",
-      ].join(" ")}
+      className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-zinc-100 text-zinc-600">
-          <Smartphone size={17} />
+      <div className="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-t-2xl bg-white shadow-2xl sm:max-h-[88vh] sm:rounded-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 p-4">
+          <h2 className="text-lg font-bold text-slate-900">{title}</h2>
+          <button
+            onClick={onClose}
+            aria-label="Tutup"
+            className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"
+          >
+            <X size={19} />
+          </button>
         </div>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0">
-              <div className="truncate text-sm font-medium text-zinc-900">
-                {device.nama_perangkat || "Perangkat tanpa nama"}
-              </div>
-
-              <div className="mt-0.5 truncate text-[11px] text-zinc-500">
-                {[device.jenis_perangkat, device.platform, device.browser]
-                  .filter(Boolean)
-                  .join(" • ") || "Informasi perangkat"}
-              </div>
-            </div>
-
-            <OnlineBadge online={online} />
-          </div>
-
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <DetailItem
-              label="Terdaftar"
-              value={formatDateTime(device.terdaftar_at)}
-            />
-
-            <DetailItem
-              label="Terakhir aktif"
-              value={formatDateTime(device.last_seen_at)}
-            />
-          </div>
-
-          {device.aktif && (
-            <div className="mt-3 flex justify-end">
-              <button
-                type="button"
-                onClick={onRevoke}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 px-2.5 py-1.5 text-[11px] font-medium text-red-600 hover:bg-red-50"
-              >
-                <Trash2 size={13} />
-                Cabut
-              </button>
-            </div>
-          )}
-
-          {!device.aktif && device.revoked_reason && (
-            <div className="mt-2 text-[11px] text-zinc-400">
-              {device.revoked_reason}
-            </div>
-          )}
-        </div>
+        <div className="overflow-y-auto p-4 sm:p-5">{children}</div>
       </div>
     </div>
   );
 }
 
-/* =============================================================
-   SUMMARY
-============================================================= */
-
-function SummaryCard({ icon, label, value }) {
+function Field({ label, children }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-3 sm:p-4">
-      <div className="flex items-center gap-2 text-zinc-500">
-        {icon}
-
-        <span className="text-xs font-medium sm:text-sm">{label}</span>
-      </div>
-
-      <div className="mt-2 text-xl font-bold text-zinc-900 sm:text-2xl">
-        {value}
-      </div>
-    </div>
-  );
-}
-
-/* =============================================================
-   INFO ROW
-============================================================= */
-
-function InfoRow({ label, value }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-xs text-zinc-400">{label}</span>
-
-      <span className="max-w-[65%] truncate text-right text-xs font-medium text-zinc-700">
-        {value || "—"}
-      </span>
-    </div>
-  );
-}
-
-/* =============================================================
-   BADGES
-============================================================= */
-
-function StatusBadge({ aktif, accountExists = true }) {
-  if (!accountExists) {
-    return (
-      <span className="inline-flex shrink-0 items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-700">
-        Belum dibuat
-      </span>
-    );
-  }
-
-  return (
-    <span
-      className={[
-        "inline-flex shrink-0 items-center rounded-full px-2 py-0.5 text-[10px] font-medium",
-        aktif ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500",
-      ].join(" ")}
-    >
-      {aktif ? "Aktif" : "Nonaktif"}
-    </span>
-  );
-}
-
-function OnlineBadge({ online }) {
-  return (
-    <span
-      className={[
-        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[10px] font-medium",
-        online ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500",
-      ].join(" ")}
-    >
-      <span
-        className={[
-          "h-1.5 w-1.5 rounded-full",
-          online ? "bg-emerald-500" : "bg-zinc-400",
-        ].join(" ")}
-      />
-
-      {online ? "Online" : "Offline"}
-    </span>
-  );
-}
-
-function RoleBadge({ role }) {
-  const classes = {
-    SUPERADMIN: "bg-violet-50 text-violet-700",
-    MKS: "bg-cyan-50 text-cyan-700",
-    PENGAWAS: "bg-indigo-50 text-indigo-700",
-  };
-
-  return (
-    <span
-      className={[
-        "inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium",
-        classes[role] || "bg-zinc-100 text-zinc-700",
-      ].join(" ")}
-    >
-      {role}
-    </span>
-  );
-}
-
-/* =============================================================
-   DETAIL
-============================================================= */
-
-function SectionTitle({ icon, title }) {
-  return (
-    <div className="flex items-center gap-2 text-sm font-semibold text-zinc-800">
-      {icon}
-      {title}
-    </div>
-  );
-}
-
-function DetailItem({ label, value }) {
-  return (
-    <div className="min-w-0">
-      <div className="mb-1 text-[9px] uppercase tracking-wide text-zinc-400">
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">
         {label}
-      </div>
-
-      <div className="truncate text-xs text-zinc-700">{value || "—"}</div>
-    </div>
-  );
-}
-
-/* =============================================================
-   MODAL
-============================================================= */
-
-function Modal({ open, onClose, children }) {
-  if (!open) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-0 sm:items-center sm:p-4">
-      <div className="max-h-[92vh] w-full overflow-y-auto rounded-t-2xl bg-white shadow-2xl sm:max-w-lg sm:rounded-2xl">
+      </span>
+      <div className="[&_input]:w-full [&_input]:rounded-xl [&_input]:border [&_input]:border-slate-200 [&_input]:px-3 [&_input]:py-3 [&_input]:text-sm [&_input]:outline-none [&_input:focus]:border-blue-400 [&_select]:w-full [&_select]:rounded-xl [&_select]:border [&_select]:border-slate-200 [&_select]:bg-white [&_select]:px-3 [&_select]:py-3 [&_select]:text-sm">
         {children}
       </div>
+    </label>
+  );
+}
+
+function ModalActions({ saving, onClose, submitLabel = "Simpan Perubahan" }) {
+  return (
+    <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+      <button
+        type="button"
+        onClick={onClose}
+        disabled={saving}
+        className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold"
+      >
+        Batal
+      </button>
+      <button
+        type="submit"
+        disabled={saving}
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-50"
+      >
+        {saving && <RefreshCw size={16} className="animate-spin" />}
+        {saving ? "Menyimpan..." : submitLabel}
+      </button>
     </div>
   );
 }
 
-/* =============================================================
-   LOADING
-============================================================= */
-
-function LoadingCards() {
+function Stat({ title, value, icon }) {
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-      {Array.from({ length: 4 }).map((_, index) => (
-        <div
-          key={index}
-          className="rounded-2xl border border-zinc-200 bg-white p-4"
-        >
-          <div className="flex gap-3">
-            <div className="h-11 w-11 animate-pulse rounded-xl bg-zinc-100" />
-
-            <div className="flex-1">
-              <div className="h-4 w-40 animate-pulse rounded bg-zinc-100" />
-
-              <div className="mt-2 h-3 w-28 animate-pulse rounded bg-zinc-100" />
-            </div>
-          </div>
-
-          <div className="mt-5 space-y-3">
-            <div className="h-3 animate-pulse rounded bg-zinc-100" />
-            <div className="h-3 animate-pulse rounded bg-zinc-100" />
-            <div className="h-3 animate-pulse rounded bg-zinc-100" />
-          </div>
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <p className="text-sm text-slate-500">{title}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
         </div>
-      ))}
+        <div className="rounded-xl bg-blue-50 p-3 text-blue-700">{icon}</div>
+      </div>
     </div>
   );
 }
 
-/* =============================================================
-   EMPTY
-============================================================= */
-
-function EmptyState({ text }) {
+function MiniInfo({ label, value }) {
   return (
-    <div className="rounded-2xl border border-dashed border-zinc-200 bg-white px-4 py-10 text-center">
-      <UserRound size={28} className="mx-auto text-zinc-300" />
-
-      <p className="mt-2 text-sm font-medium text-zinc-600">{text}</p>
+    <div className="min-w-0 rounded-lg bg-slate-50 p-3">
+      <p className="text-xs text-slate-500">{label}</p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-800">
+        {value || "-"}
+      </p>
     </div>
   );
 }
 
-/* =============================================================
-   HELPERS
-============================================================= */
-
-function normalizeRole(jenisPegawai) {
-  const value = String(jenisPegawai || "").toUpperCase();
-
-  if (value === "PENGAWAS") {
-    return "PENGAWAS";
-  }
-
-  if (value === "MKS") {
-    return "MKS";
-  }
-
-  return value;
+function ActionButton({
+  children,
+  onClick,
+  icon,
+  danger = false,
+  disabled = false,
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-50 ${
+        danger
+          ? "border-red-200 bg-white text-red-700 hover:bg-red-50"
+          : "border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
+      }`}
+    >
+      {icon}
+      {children}
+    </button>
+  );
 }
 
-function getUserName(user) {
-  return user?.pegawai?.nama || user?.username || "Pengguna";
-}
-
-function getInitials(name) {
-  const words = String(name || "")
+function initials(value) {
+  return String(value || "P")
     .trim()
     .split(/\s+/)
-    .filter(Boolean);
-
-  if (words.length === 0) return "P";
-
-  if (words.length === 1) {
-    return words[0].slice(0, 2).toUpperCase();
-  }
-
-  return (words[0][0] + words[words.length - 1][0]).toUpperCase();
-}
-
-function unitLabel(user) {
-  return (
-    user?.unit?.nama_unit ||
-    user?.unit?.kode_unit ||
-    user?.pegawai?.unit_id ||
-    "—"
-  );
-}
-
-function getDeviceLimit(role) {
-  if (
-    role === "MKS" ||
-    role === "PENGAWAS" ||
-    role === "MBM" ||
-    role === "SGP"
-  ) {
-    return 2;
-  }
-
-  return null;
-}
-
-function isOnline(lastSeen) {
-  if (!lastSeen) return false;
-
-  const timestamp = new Date(lastSeen).getTime();
-
-  if (Number.isNaN(timestamp)) {
-    return false;
-  }
-
-  return Date.now() - timestamp <= 5 * 60 * 1000;
-}
-
-function formatDateTime(value) {
-  if (!value) return "Belum ada";
-
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "—";
-  }
-
-  return new Intl.DateTimeFormat("id-ID", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(date);
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase())
+    .join("");
 }

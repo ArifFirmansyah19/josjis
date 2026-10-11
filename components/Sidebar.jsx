@@ -3,11 +3,13 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import {
   Home,
   BriefcaseBusiness,
   LockKeyhole,
   Database,
+  KeyRound,
   Landmark,
   Building2,
   Archive,
@@ -53,6 +55,11 @@ const mainMenus = [
     label: "Buka / Tutup Blokiran",
     href: "/admin/blokiran",
     icon: LockKeyhole,
+  },
+  {
+    label: "Account",
+    href: "/admin/account",
+    icon: KeyRound,
   },
 ];
 
@@ -287,18 +294,22 @@ export default function Sidebar({ open = false, onClose }) {
     return initial;
   });
 
-  // Buka otomatis grup yang berisi halaman aktif.
+  // Otomatis buka grup menu aktif dan tutup grup lainnya.
   useEffect(() => {
-    const activeSection = menuSections.find((section) =>
-      sectionHasActiveItem(pathname, section),
+    const activeSection = menuSections.find(
+      (section) =>
+        section.id !== "database-pk" && sectionHasActiveItem(pathname, section),
     );
 
-    if (activeSection) {
-      setExpandedSections((previous) => ({
-        ...previous,
-        [activeSection.id]: true,
-      }));
-    }
+    setExpandedSections(() => {
+      const next = {};
+
+      menuSections.forEach((section) => {
+        next[section.id] = section.id === activeSection?.id;
+      });
+
+      return next;
+    });
   }, [pathname]);
 
   // Kunci scroll halaman saat sidebar mobile dibuka.
@@ -324,19 +335,44 @@ export default function Sidebar({ open = false, onClose }) {
   }, [open, onClose]);
 
   const toggleSection = (sectionId) => {
-    setExpandedSections((previous) => ({
-      ...previous,
-      [sectionId]: !previous[sectionId],
-    }));
+    setExpandedSections((previous) => {
+      const isCurrentlyOpen = previous[sectionId];
+
+      const next = {};
+
+      menuSections.forEach((section) => {
+        next[section.id] = !isCurrentlyOpen && section.id === sectionId;
+      });
+
+      return next;
+    });
   };
 
   const handleNavigate = () => {
     onClose?.();
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     onClose?.();
-    router.push("/");
+
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        alert(result.error || "Logout gagal. Silakan coba lagi.");
+        return;
+      }
+
+      window.location.replace("/");
+    } catch (error) {
+      console.error("Gagal menghubungi API logout:", error);
+      alert("Tidak dapat terhubung ke server. Silakan coba lagi.");
+    }
   };
 
   return (

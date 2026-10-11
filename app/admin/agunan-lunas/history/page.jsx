@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import {
   Archive,
@@ -360,177 +359,175 @@ export default function AgunanLunasHistoryPage() {
   }, [unitCode, search]);
 
   return (
-    <DashboardLayout>
-      <div className="min-h-screen bg-slate-50">
-        {/* HEADER */}
-        <div className="border-b border-slate-200 bg-white">
-          <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
-                <History size={19} />
-              </div>
+    <div className="min-h-screen bg-slate-50">
+      {/* HEADER */}
+      <div className="border-b border-slate-200 bg-white">
+        <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-slate-900 text-white">
+              <History size={19} />
+            </div>
 
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">
-                  History Agunan
-                </h1>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">
+                History Agunan
+              </h1>
 
-                <p className="mt-0.5 text-xs text-slate-500">{unitLabel}</p>
-              </div>
+              <p className="mt-0.5 text-xs text-slate-500">{unitLabel}</p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* CONTENT */}
-        <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
-          {/* BACK */}
-          <a
-            href="/admin/agunan-lunas"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
-          >
-            <ArrowRight size={15} className="rotate-180" />
-            Kembali ke Agunan Lunas
-          </a>
+      {/* CONTENT */}
+      <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6 lg:px-8">
+        {/* BACK */}
+        <a
+          href="/admin/agunan-lunas"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900"
+        >
+          <ArrowRight size={15} className="rotate-180" />
+          Kembali ke Agunan Lunas
+        </a>
 
-          {/* SEARCH */}
-          <div className="mt-5">
-            <div className="relative">
-              <Search
-                size={17}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-              />
+        {/* SEARCH */}
+        <div className="mt-5">
+          <div className="relative">
+            <Search
+              size={17}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            />
 
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Cari debitur, rekening, atau SHM..."
-                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none shadow-sm focus:border-slate-400"
-              />
-            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Cari debitur, rekening, atau SHM..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none shadow-sm focus:border-slate-400"
+            />
+          </div>
+        </div>
+
+        {/* TABLE */}
+        <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-200 px-4 py-4">
+            <h2 className="text-sm font-bold text-slate-900">
+              Riwayat Penyelesaian
+            </h2>
+
+            <p className="mt-0.5 text-xs text-slate-500">
+              Agunan yang sudah diserahkan atau seluruhnya digunakan kembali.
+            </p>
           </div>
 
-          {/* TABLE */}
-          <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-200 px-4 py-4">
-              <h2 className="text-sm font-bold text-slate-900">
-                Riwayat Penyelesaian
-              </h2>
+          <div className="hidden md:block">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
+                    Debitur
+                  </th>
 
-              <p className="mt-0.5 text-xs text-slate-500">
-                Agunan yang sudah diserahkan atau seluruhnya digunakan kembali.
-              </p>
-            </div>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
+                    No. Rekening
+                  </th>
 
-            <div className="hidden md:block">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200 bg-slate-50">
-                    <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
-                      Debitur
-                    </th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
+                    Tgl Lunas
+                  </th>
 
-                    <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
-                      No. Rekening
-                    </th>
+                  <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
+                    Penyelesaian
+                  </th>
 
-                    <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
-                      Tgl Lunas
-                    </th>
+                  <th className="w-10 px-5 py-3" />
+                </tr>
+              </thead>
 
-                    <th className="px-5 py-3 text-left text-xs font-bold text-slate-500">
-                      Penyelesaian
-                    </th>
-
-                    <th className="w-10 px-5 py-3" />
-                  </tr>
-                </thead>
-
-                <tbody className="divide-y divide-slate-100">
-                  {data.map((item) => (
-                    <tr
-                      key={item.id}
-                      onClick={() => setSelectedItem(item)}
-                      className="cursor-pointer transition hover:bg-slate-50"
-                    >
-                      <td className="px-5 py-4">
-                        <p className="text-sm font-bold text-slate-900">
-                          {item.debitur}
-                        </p>
-                      </td>
-
-                      <td className="px-5 py-4 font-mono text-xs text-slate-600">
-                        {item.rekening}
-                      </td>
-
-                      <td className="px-5 py-4 text-sm text-slate-600">
-                        {item.tglLunas}
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <HistoryBadge type={item.selesaiKarena} />
-                      </td>
-
-                      <td className="px-5 py-4">
-                        <ChevronRight size={17} className="text-slate-400" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* MOBILE */}
-            <div className="divide-y divide-slate-100 md:hidden">
-              {data.map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setSelectedItem(item)}
-                  className="w-full p-4 text-left"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+              <tbody className="divide-y divide-slate-100">
+                {data.map((item) => (
+                  <tr
+                    key={item.id}
+                    onClick={() => setSelectedItem(item)}
+                    className="cursor-pointer transition hover:bg-slate-50"
+                  >
+                    <td className="px-5 py-4">
                       <p className="text-sm font-bold text-slate-900">
                         {item.debitur}
                       </p>
+                    </td>
 
-                      <p className="mt-1 font-mono text-xs text-slate-500">
-                        {item.rekening}
-                      </p>
+                    <td className="px-5 py-4 font-mono text-xs text-slate-600">
+                      {item.rekening}
+                    </td>
 
-                      <p className="mt-2 text-xs text-slate-400">
-                        Lunas {item.tglLunas}
-                      </p>
-                    </div>
+                    <td className="px-5 py-4 text-sm text-slate-600">
+                      {item.tglLunas}
+                    </td>
 
-                    <ChevronRight size={17} className="text-slate-400" />
-                  </div>
+                    <td className="px-5 py-4">
+                      <HistoryBadge type={item.selesaiKarena} />
+                    </td>
 
-                  <div className="mt-3">
-                    <HistoryBadge type={item.selesaiKarena} />
-                  </div>
-                </button>
-              ))}
-            </div>
-
-            {data.length === 0 && (
-              <div className="px-5 py-16 text-center">
-                <History size={28} className="mx-auto text-slate-300" />
-
-                <p className="mt-3 text-sm font-semibold text-slate-700">
-                  Belum ada history
-                </p>
-              </div>
-            )}
+                    <td className="px-5 py-4">
+                      <ChevronRight size={17} className="text-slate-400" />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-        </div>
 
-        {/* MODAL */}
-        <HistoryDetailModal
-          item={selectedItem}
-          onClose={() => setSelectedItem(null)}
-        />
+          {/* MOBILE */}
+          <div className="divide-y divide-slate-100 md:hidden">
+            {data.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setSelectedItem(item)}
+                className="w-full p-4 text-left"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">
+                      {item.debitur}
+                    </p>
+
+                    <p className="mt-1 font-mono text-xs text-slate-500">
+                      {item.rekening}
+                    </p>
+
+                    <p className="mt-2 text-xs text-slate-400">
+                      Lunas {item.tglLunas}
+                    </p>
+                  </div>
+
+                  <ChevronRight size={17} className="text-slate-400" />
+                </div>
+
+                <div className="mt-3">
+                  <HistoryBadge type={item.selesaiKarena} />
+                </div>
+              </button>
+            ))}
+          </div>
+
+          {data.length === 0 && (
+            <div className="px-5 py-16 text-center">
+              <History size={28} className="mx-auto text-slate-300" />
+
+              <p className="mt-3 text-sm font-semibold text-slate-700">
+                Belum ada history
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </DashboardLayout>
+
+      {/* MODAL */}
+      <HistoryDetailModal
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+      />
+    </div>
   );
 }

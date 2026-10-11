@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import DashboardLayout from "@/components/DashboardLayout";
 import { useUnit } from "@/components/UnitContext";
 import {
   Search,
@@ -441,301 +440,215 @@ export default function BastPage() {
   ======================================================= */
 
   return (
-    <DashboardLayout>
-      <div className="space-y-4 p-3 sm:p-4 md:space-y-5 md:p-6">
-        {/* =================================================
+    <div className="space-y-4 p-3 sm:p-4 md:space-y-5 md:p-6">
+      {/* =================================================
             HEADER
         ================================================= */}
 
-        <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-xl">
-              BAST
-            </h1>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h1 className="text-xl font-semibold tracking-tight text-slate-900 md:text-xl">
+            BAST
+          </h1>
 
-            <p className="mt-1 hidden text-sm text-slate-500 sm:block">
-              Pembuatan dan pengelolaan dokumen BAST, Roya, dan dokumen serah
-              terima.
-            </p>
+          <p className="mt-1 hidden text-sm text-slate-500 sm:block">
+            Pembuatan dan pengelolaan dokumen BAST, Roya, dan dokumen serah
+            terima.
+          </p>
 
-            <p className="mt-1 text-xs text-slate-500 sm:hidden">
-              Dokumen BAST dan serah terima
-            </p>
-          </div>
+          <p className="mt-1 text-xs text-slate-500 sm:hidden">
+            Dokumen BAST dan serah terima
+          </p>
         </div>
+      </div>
 
-        {/* =================================================
+      {/* =================================================
             JENIS DOKUMEN
             DESKTOP = GRID
             MOBILE = HORIZONTAL SCROLL
         ================================================= */}
 
-        <div className="-mx-3 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4 md:mx-0 md:overflow-visible md:px-0">
-          <div className="flex w-max gap-2.5 md:grid md:w-auto md:grid-cols-5 md:gap-3">
-            {BAST_TYPES.map((item) => {
-              const Icon = item.icon;
-              const active = activeType === item.id;
-
-              return (
-                <button
-                  key={item.id}
-                  onClick={() => {
-                    setActiveType(item.id);
-                    setSelected(null);
-                    setShowDetail(false);
-                    setShowCreate(false);
-                  }}
-                  className={[
-                    "shrink-0 text-left transition",
-                    "w-[145px] rounded-2xl border p-3",
-                    "md:w-auto md:p-4",
-                    active
-                      ? "border-slate-900 bg-slate-900 text-white shadow-sm"
-                      : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
-                  ].join(" ")}
-                >
-                  <div
-                    className={[
-                      "mb-2 flex h-8 w-8 items-center justify-center rounded-xl md:mb-3 md:h-9 md:w-9",
-                      active ? "bg-white/10" : "bg-slate-100",
-                    ].join(" ")}
-                  >
-                    <Icon size={17} />
-                  </div>
-
-                  <div className="text-xs font-semibold leading-4 md:text-sm">
-                    <span className="md:hidden">{item.shortTitle}</span>
-
-                    <span className="hidden md:inline">{item.title}</span>
-                  </div>
-
-                  <div
-                    className={[
-                      "mt-1 hidden text-xs leading-5 md:block",
-                      active ? "text-slate-300" : "text-slate-500",
-                    ].join(" ")}
-                  >
-                    {item.description}
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* =================================================
-            SUMMARY
-        ================================================= */}
-
-        <div className="grid grid-cols-3 gap-2.5 md:gap-3">
-          <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 md:p-4">
-            <div className="text-[11px] text-slate-500 md:text-xs">Data</div>
-
-            <div className="mt-1 text-xl font-semibold text-slate-900 md:text-2xl">
-              {summary.total}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 md:p-4">
-            <div className="text-[11px] text-emerald-700 md:text-xs">Sudah</div>
-
-            <div className="mt-1 text-xl font-semibold text-emerald-800 md:text-2xl">
-              {summary.sudah}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3 md:p-4">
-            <div className="text-[11px] text-amber-700 md:text-xs">Belum</div>
-
-            <div className="mt-1 text-xl font-semibold text-amber-800 md:text-2xl">
-              {summary.belum}
-            </div>
-          </div>
-        </div>
-
-        {/* =================================================
-            SEARCH
-        ================================================= */}
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-2.5 md:p-3">
-          <div className="relative">
-            <Search
-              size={17}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cari debitur, CIF, rekening, atau nomor PK..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white"
-            />
-          </div>
-        </div>
-
-        {/* =================================================
-            CONTENT HEADER
-        ================================================= */}
-
-        <div className="flex items-center justify-between px-1">
-          <div>
-            <h2 className="text-sm font-semibold text-slate-900">
-              {activeTypeInfo.title}
-            </h2>
-
-            <p className="text-xs text-slate-500">
-              {activeUnit?.nama_unit || activeUnit?.kode_unit || "Unit aktif"}
-            </p>
-          </div>
-
-          <div className="hidden text-xs text-slate-400 sm:block">
-            {filteredRows.length} data
-          </div>
-        </div>
-
-        {/* =================================================
-            DESKTOP TABLE
-        ================================================= */}
-
-        <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
-                  <th className="px-4 py-3">Debitur</th>
-
-                  <th className="px-4 py-3">No. Rekening</th>
-
-                  <th className="px-4 py-3">Tgl Lunas</th>
-
-                  <th className="px-4 py-3">Pengikatan</th>
-
-                  <th className="px-4 py-3">Status Dokumen</th>
-
-                  <th className="w-10 px-4 py-3" />
-                </tr>
-              </thead>
-
-              <tbody>
-                {filteredRows.map((row) => {
-                  const document = getCurrentDocument(row);
-
-                  const royaBlocked =
-                    activeType === "ROYA" && !isRoyaAvailable(row);
-
-                  return (
-                    <tr
-                      key={row.id}
-                      onClick={() => openDetail(row)}
-                      className="cursor-pointer border-b border-slate-100 transition hover:bg-slate-50"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-slate-900">
-                          {row.debitur}
-                        </div>
-
-                        <div className="mt-0.5 text-xs text-slate-500">
-                          CIF {row.cif}
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-3 text-slate-700">
-                        {row.no_rekening}
-                      </td>
-
-                      <td className="px-4 py-3 text-slate-700">
-                        {formatDate(row.tgl_lunas)}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <span
-                          className={[
-                            "rounded-full px-2.5 py-1 text-xs font-medium",
-                            row.pengikatan === "APHT"
-                              ? "bg-blue-50 text-blue-700"
-                              : "bg-slate-100 text-slate-600",
-                          ].join(" ")}
-                        >
-                          {row.pengikatan}
-                        </span>
-                      </td>
-
-                      <td className="px-4 py-3">
-                        {royaBlocked ? (
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
-                            <AlertCircle size={13} />
-                            Bukan APHT
-                          </span>
-                        ) : (
-                          <DocumentStatus document={document} />
-                        )}
-                      </td>
-
-                      <td className="px-4 py-3">
-                        <ChevronRight size={17} className="text-slate-400" />
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        {/* =================================================
-            MOBILE LIST
-        ================================================= */}
-
-        <div className="space-y-2.5 md:hidden">
-          {filteredRows.map((row) => {
-            const document = getCurrentDocument(row);
-
-            const royaBlocked = activeType === "ROYA" && !isRoyaAvailable(row);
+      <div className="-mx-3 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4 md:mx-0 md:overflow-visible md:px-0">
+        <div className="flex w-max gap-2.5 md:grid md:w-auto md:grid-cols-5 md:gap-3">
+          {BAST_TYPES.map((item) => {
+            const Icon = item.icon;
+            const active = activeType === item.id;
 
             return (
               <button
-                key={row.id}
-                onClick={() => openDetail(row)}
-                className="group w-full rounded-2xl border border-slate-200 bg-white p-3.5 text-left shadow-sm transition active:scale-[0.99] active:bg-slate-50"
+                key={item.id}
+                onClick={() => {
+                  setActiveType(item.id);
+                  setSelected(null);
+                  setShowDetail(false);
+                  setShowCreate(false);
+                }}
+                className={[
+                  "shrink-0 text-left transition",
+                  "w-[145px] rounded-2xl border p-3",
+                  "md:w-auto md:p-4",
+                  active
+                    ? "border-slate-900 bg-slate-900 text-white shadow-sm"
+                    : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm",
+                ].join(" ")}
               >
-                <div className="flex items-start gap-3">
-                  {/* ICON */}
+                <div
+                  className={[
+                    "mb-2 flex h-8 w-8 items-center justify-center rounded-xl md:mb-3 md:h-9 md:w-9",
+                    active ? "bg-white/10" : "bg-slate-100",
+                  ].join(" ")}
+                >
+                  <Icon size={17} />
+                </div>
 
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
-                    <UserRound size={18} />
-                  </div>
+                <div className="text-xs font-semibold leading-4 md:text-sm">
+                  <span className="md:hidden">{item.shortTitle}</span>
 
-                  {/* MAIN */}
+                  <span className="hidden md:inline">{item.title}</span>
+                </div>
 
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate text-sm font-semibold text-slate-900">
-                          {row.debitur}
-                        </div>
+                <div
+                  className={[
+                    "mt-1 hidden text-xs leading-5 md:block",
+                    active ? "text-slate-300" : "text-slate-500",
+                  ].join(" ")}
+                >
+                  {item.description}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-                        <div className="mt-0.5 truncate text-xs text-slate-500">
-                          {row.no_rekening}
-                        </div>
+      {/* =================================================
+            SUMMARY
+        ================================================= */}
+
+      <div className="grid grid-cols-3 gap-2.5 md:gap-3">
+        <div className="rounded-2xl border border-slate-200 bg-white px-3 py-3 md:p-4">
+          <div className="text-[11px] text-slate-500 md:text-xs">Data</div>
+
+          <div className="mt-1 text-xl font-semibold text-slate-900 md:text-2xl">
+            {summary.total}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 px-3 py-3 md:p-4">
+          <div className="text-[11px] text-emerald-700 md:text-xs">Sudah</div>
+
+          <div className="mt-1 text-xl font-semibold text-emerald-800 md:text-2xl">
+            {summary.sudah}
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-amber-100 bg-amber-50 px-3 py-3 md:p-4">
+          <div className="text-[11px] text-amber-700 md:text-xs">Belum</div>
+
+          <div className="mt-1 text-xl font-semibold text-amber-800 md:text-2xl">
+            {summary.belum}
+          </div>
+        </div>
+      </div>
+
+      {/* =================================================
+            SEARCH
+        ================================================= */}
+
+      <div className="rounded-2xl border border-slate-200 bg-white p-2.5 md:p-3">
+        <div className="relative">
+          <Search
+            size={17}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cari debitur, CIF, rekening, atau nomor PK..."
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white"
+          />
+        </div>
+      </div>
+
+      {/* =================================================
+            CONTENT HEADER
+        ================================================= */}
+
+      <div className="flex items-center justify-between px-1">
+        <div>
+          <h2 className="text-sm font-semibold text-slate-900">
+            {activeTypeInfo.title}
+          </h2>
+
+          <p className="text-xs text-slate-500">
+            {activeUnit?.nama_unit || activeUnit?.kode_unit || "Unit aktif"}
+          </p>
+        </div>
+
+        <div className="hidden text-xs text-slate-400 sm:block">
+          {filteredRows.length} data
+        </div>
+      </div>
+
+      {/* =================================================
+            DESKTOP TABLE
+        ================================================= */}
+
+      <div className="hidden overflow-hidden rounded-2xl border border-slate-200 bg-white md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-medium text-slate-500">
+                <th className="px-4 py-3">Debitur</th>
+
+                <th className="px-4 py-3">No. Rekening</th>
+
+                <th className="px-4 py-3">Tgl Lunas</th>
+
+                <th className="px-4 py-3">Pengikatan</th>
+
+                <th className="px-4 py-3">Status Dokumen</th>
+
+                <th className="w-10 px-4 py-3" />
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredRows.map((row) => {
+                const document = getCurrentDocument(row);
+
+                const royaBlocked =
+                  activeType === "ROYA" && !isRoyaAvailable(row);
+
+                return (
+                  <tr
+                    key={row.id}
+                    onClick={() => openDetail(row)}
+                    className="cursor-pointer border-b border-slate-100 transition hover:bg-slate-50"
+                  >
+                    <td className="px-4 py-3">
+                      <div className="font-medium text-slate-900">
+                        {row.debitur}
                       </div>
 
-                      <ChevronRight
-                        size={17}
-                        className="mt-0.5 shrink-0 text-slate-300 transition group-hover:text-slate-500"
-                      />
-                    </div>
+                      <div className="mt-0.5 text-xs text-slate-500">
+                        CIF {row.cif}
+                      </div>
+                    </td>
 
-                    {/* META */}
+                    <td className="px-4 py-3 text-slate-700">
+                      {row.no_rekening}
+                    </td>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
-                        <CalendarDays size={11} />
-                        {formatDate(row.tgl_lunas)}
-                      </span>
+                    <td className="px-4 py-3 text-slate-700">
+                      {formatDate(row.tgl_lunas)}
+                    </td>
 
+                    <td className="px-4 py-3">
                       <span
                         className={[
-                          "rounded-full px-2 py-1 text-[11px] font-medium",
+                          "rounded-full px-2.5 py-1 text-xs font-medium",
                           row.pengikatan === "APHT"
                             ? "bg-blue-50 text-blue-700"
                             : "bg-slate-100 text-slate-600",
@@ -743,21 +656,105 @@ export default function BastPage() {
                       >
                         {row.pengikatan}
                       </span>
+                    </td>
 
+                    <td className="px-4 py-3">
                       {royaBlocked ? (
-                        <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-500">
+                        <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-500">
+                          <AlertCircle size={13} />
                           Bukan APHT
                         </span>
                       ) : (
-                        <DocumentStatus document={document} compact />
+                        <DocumentStatus document={document} />
                       )}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <ChevronRight size={17} className="text-slate-400" />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* =================================================
+            MOBILE LIST
+        ================================================= */}
+
+      <div className="space-y-2.5 md:hidden">
+        {filteredRows.map((row) => {
+          const document = getCurrentDocument(row);
+
+          const royaBlocked = activeType === "ROYA" && !isRoyaAvailable(row);
+
+          return (
+            <button
+              key={row.id}
+              onClick={() => openDetail(row)}
+              className="group w-full rounded-2xl border border-slate-200 bg-white p-3.5 text-left shadow-sm transition active:scale-[0.99] active:bg-slate-50"
+            >
+              <div className="flex items-start gap-3">
+                {/* ICON */}
+
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+                  <UserRound size={18} />
+                </div>
+
+                {/* MAIN */}
+
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-semibold text-slate-900">
+                        {row.debitur}
+                      </div>
+
+                      <div className="mt-0.5 truncate text-xs text-slate-500">
+                        {row.no_rekening}
+                      </div>
                     </div>
+
+                    <ChevronRight
+                      size={17}
+                      className="mt-0.5 shrink-0 text-slate-300 transition group-hover:text-slate-500"
+                    />
+                  </div>
+
+                  {/* META */}
+
+                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-600">
+                      <CalendarDays size={11} />
+                      {formatDate(row.tgl_lunas)}
+                    </span>
+
+                    <span
+                      className={[
+                        "rounded-full px-2 py-1 text-[11px] font-medium",
+                        row.pengikatan === "APHT"
+                          ? "bg-blue-50 text-blue-700"
+                          : "bg-slate-100 text-slate-600",
+                      ].join(" ")}
+                    >
+                      {row.pengikatan}
+                    </span>
+
+                    {royaBlocked ? (
+                      <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] text-slate-500">
+                        Bukan APHT
+                      </span>
+                    ) : (
+                      <DocumentStatus document={document} compact />
+                    )}
                   </div>
                 </div>
-              </button>
-            );
-          })}
-        </div>
+              </div>
+            </button>
+          );
+        })}
 
         {/* =================================================
             EMPTY STATE
@@ -1191,6 +1188,6 @@ export default function BastPage() {
           </div>
         </div>
       )}
-    </DashboardLayout>
+    </div>
   );
 }
