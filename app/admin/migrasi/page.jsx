@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -12,7 +13,6 @@ import {
   FileSpreadsheet,
   History,
   Info,
-  Lock,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -20,144 +20,22 @@ import {
   Upload,
   X,
 } from "lucide-react";
-
+import MigrasiCredentialEditor from "@/components/MigrasiCredentialEditor";
 import { useUnit } from "@/components/UnitContext";
-
-const DUMMY_USERS = {
-  JKK1: {
-    maker: {
-      nip: "2501838353",
-      password: "MakerJKK1@2026",
-    },
-    checker: {
-      nip: "2501838354",
-      password: "CheckerJKK1@2026",
-    },
-  },
-  JKK2: {
-    maker: {
-      nip: "2501838355",
-      password: "MakerJKK2@2026",
-    },
-    checker: {
-      nip: "2501838356",
-      password: "CheckerJKK2@2026",
-    },
-  },
-};
-
-const INITIAL_PK = [
-  {
-    id: "PK001",
-    nama: "AHMAD FAUZI",
-    cif: "9001234567",
-    nik: "1501010101010001",
-    noPk: "PK/001/2026",
-    tglPk: "2026-09-10",
-    mks: "MKS JKK1 - ARIF",
-    limit: 180000000,
-    kondisi: ["PK Baru"],
-    migrasi: [],
-    penyatuan: false,
-  },
-  {
-    id: "PK002",
-    nama: "BUDI SANTOSO",
-    cif: "9001234568",
-    nik: "1501010101010002",
-    noPk: "PK/002/2026",
-    tglPk: "2026-09-05",
-    mks: "MKS JKK1 - RIZKY",
-    limit: 250000000,
-    kondisi: ["Legal di CO", "SHM di Notaris", "Perlu Penyatuan"],
-    migrasi: [
-      {
-        jenis: "DMS",
-        tanggal: "2026-08-20",
-        status: "Selesai",
-        keterangan: "Migrasi DMS sebelumnya",
-      },
-    ],
-    penyatuan: true,
-  },
-  {
-    id: "PK003",
-    nama: "CITRA LESTARI",
-    cif: "9001234569",
-    nik: "1501010101010003",
-    noPk: "PK/003/2026",
-    tglPk: "2026-08-18",
-    mks: "MKS JKK1 - ANDI",
-    limit: 150000000,
-    kondisi: ["Dokumen belum lengkap"],
-    migrasi: [],
-    penyatuan: false,
-  },
-  {
-    id: "PK004",
-    nama: "DARMAN",
-    cif: "9001234570",
-    nik: "1501010101010004",
-    noPk: "PK/004/2026",
-    tglPk: "2026-07-10",
-    mks: "MKS JKK1 - RAHMAT",
-    limit: 320000000,
-    kondisi: ["Legal di CO", "SHM di Notaris", "Perlu Penyatuan"],
-    migrasi: [
-      {
-        jenis: "NON-DMS",
-        tanggal: "2026-07-25",
-        status: "Selesai",
-        keterangan: "Migrasi awal NON-DMS",
-      },
-    ],
-    penyatuan: true,
-  },
-  {
-    id: "PK005",
-    nama: "ERWIN",
-    cif: "9001234571",
-    nik: "1501010101010005",
-    noPk: "PK/005/2026",
-    tglPk: "2026-09-22",
-    mks: "MKS JKK1 - ARIF",
-    limit: 200000000,
-    kondisi: ["PK Baru"],
-    migrasi: [
-      {
-        jenis: "DMS",
-        tanggal: "2026-09-25",
-        status: "Selesai",
-        keterangan: "Migrasi DMS selesai",
-      },
-    ],
-    penyatuan: false,
-  },
-  {
-    id: "PK006",
-    nama: "FAHMI",
-    cif: "9001234572",
-    nik: "1501010101010006",
-    noPk: "PK/006/2026",
-    tglPk: "2026-08-30",
-    mks: "MKS JKK1 - RIZKY",
-    limit: 275000000,
-    kondisi: ["Legal di CO", "SHM di Notaris"],
-    migrasi: [],
-    penyatuan: true,
-  },
-];
 
 const FORMAT_RUPIAH = new Intl.NumberFormat("id-ID");
 
 function formatRupiah(value) {
-  return `Rp ${FORMAT_RUPIAH.format(value)}`;
+  return `Rp ${FORMAT_RUPIAH.format(Number(value || 0))}`;
 }
 
 function formatTanggal(value) {
   if (!value) return "-";
 
-  return new Date(value).toLocaleDateString("id-ID", {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+
+  return date.toLocaleDateString("id-ID", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -166,22 +44,13 @@ function formatTanggal(value) {
 
 function getLatestMigration(pk) {
   if (!pk.migrasi?.length) return null;
-
   return pk.migrasi[pk.migrasi.length - 1];
 }
 
-function canSelectForMigration(pk, mode) {
-  const latest = getLatestMigration(pk);
-
-  // Belum pernah migrasi → boleh.
-  if (!latest) return true;
-
-  // Kalau masih dalam kondisi penyatuan dokumen,
-  // boleh migrasi ulang walaupun pernah migrasi.
-  if (pk.penyatuan) return true;
-
-  // Sudah migrasi → tidak boleh dipilih lagi.
-  return false;
+function canSelectForMigration(pk) {
+  // Riwayat migrasi lama belum diintegrasikan dari database.
+  // Untuk saat ini, jangan menyimpulkan bahwa PK sudah atau belum pernah migrasi.
+  return Boolean(pk.id);
 }
 
 function getMigrationState(pk) {
@@ -189,7 +58,7 @@ function getMigrationState(pk) {
 
   if (!latest) {
     return {
-      label: "Belum Migrasi",
+      label: "Riwayat belum dimuat",
       type: "warning",
     };
   }
@@ -219,7 +88,7 @@ function PasswordField({ label, value }) {
       <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
         <input
           type={show ? "text" : "password"}
-          value={value}
+          value={value || ""}
           readOnly
           className="min-w-0 flex-1 bg-transparent text-sm font-medium text-slate-800 outline-none"
         />
@@ -280,13 +149,12 @@ function UserCredentialCard({ type, data }) {
           <label className="mb-1.5 block text-xs font-medium text-slate-500">
             NIP
           </label>
-
           <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-slate-800">
-            {data.nip}
+            {data?.nip || "-"}
           </div>
         </div>
 
-        <PasswordField label="Password" value={data.password} />
+        <PasswordField label="Password" value={data?.password || ""} />
       </div>
     </div>
   );
@@ -323,7 +191,7 @@ function MigrationHistory({ pk }) {
   const [open, setOpen] = useState(false);
 
   if (!pk.migrasi?.length) {
-    return <span className="text-xs text-slate-400">Belum ada riwayat</span>;
+    return <span className="text-xs text-slate-400">Riwayat belum dimuat</span>;
   }
 
   return (
@@ -374,10 +242,22 @@ function MigrationHistory({ pk }) {
   );
 }
 
+function InfoBox({ label, value }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
+        {label}
+      </p>
+      <p className="mt-1 break-words text-sm font-semibold text-slate-800">
+        {value || "-"}
+      </p>
+    </div>
+  );
+}
+
 function DetailModal({ pk, onClose }) {
   if (!pk) return null;
 
-  const latest = getLatestMigration(pk);
   const state = getMigrationState(pk);
 
   return (
@@ -417,11 +297,14 @@ function DetailModal({ pk, onClose }) {
             <InfoBox label="Tanggal PK" value={formatTanggal(pk.tglPk)} />
             <InfoBox label="MKS" value={pk.mks} />
             <InfoBox label="Limit" value={formatRupiah(pk.limit)} />
+            <InfoBox label="Produk" value={pk.produk} />
+            <InfoBox label="Status PK" value={pk.statusPk} />
+            <InfoBox label="PK UUID" value={pk.id} />
           </div>
 
           <div>
             <h3 className="mb-2 text-sm font-bold text-slate-900">
-              Kondisi yang terdeteksi
+              Informasi tersedia
             </h3>
 
             <div className="flex flex-wrap gap-2">
@@ -436,67 +319,32 @@ function DetailModal({ pk, onClose }) {
             </div>
           </div>
 
-          {latest && (
-            <div className="rounded-2xl border border-slate-200 p-4">
-              <h3 className="mb-3 text-sm font-bold text-slate-900">
-                Migrasi terakhir
-              </h3>
-
-              <div className="grid gap-3 sm:grid-cols-2">
-                <InfoBox label="Jenis" value={latest.jenis} />
-                <InfoBox
-                  label="Tanggal"
-                  value={formatTanggal(latest.tanggal)}
-                />
-                <InfoBox label="Status" value={latest.status} />
-                <InfoBox label="Keterangan" value={latest.keterangan} />
-              </div>
+          <div className="flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <Info className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">
+                Riwayat migrasi belum terhubung
+              </p>
+              <p className="mt-1 text-xs leading-5 text-amber-800">
+                Informasi riwayat dan kondisi dokumen lama belum diambil dari
+                database. Status pada halaman ini tidak dapat dijadikan bukti
+                bahwa PK belum pernah dimigrasikan.
+              </p>
             </div>
-          )}
-
-          {pk.penyatuan && (
-            <div className="flex gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
-              <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-
-              <div>
-                <p className="text-sm font-bold text-blue-900">
-                  Dapat dimigrasikan ulang
-                </p>
-                <p className="mt-1 text-xs leading-5 text-blue-700">
-                  PK ini masih memiliki proses penyatuan dokumen/agunan. Karena
-                  itu, meskipun sudah pernah dimigrasikan, sistem tetap
-                  memperbolehkan PK dipilih kembali.
-                </p>
-              </div>
-            </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
   );
 }
 
-function InfoBox({ label, value }) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white p-3">
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">
-        {label}
-      </p>
-      <p className="mt-1 text-sm font-semibold text-slate-800">{value}</p>
-    </div>
-  );
-}
-
 export default function MigrasiPage() {
-  const { selectedUnit } = useUnit();
+  const { selectedUnit, activeUnit } = useUnit();
+  const router = useRouter();
 
-  const unitCode =
-    selectedUnit?.kode_unit ||
-    selectedUnit?.kodeUnit ||
-    selectedUnit?.kode ||
-    "JKK1";
-
-  const unit = unitCode === "JKK2" ? "JKK2" : "JKK1";
+  const unit = selectedUnit === "JKK2" ? "JKK2" : "JKK1";
+  const unitCode = activeUnit?.value || unit;
+  const kodeLegacy = unit === "JKK2" ? "11081B" : "11081A";
 
   const [mode, setMode] = useState("DMS");
   const [search, setSearch] = useState("");
@@ -505,29 +353,95 @@ export default function MigrasiPage() {
   const [detailPk, setDetailPk] = useState(null);
   const [templateModal, setTemplateModal] = useState(false);
 
-  const users = DUMMY_USERS[unit];
+  const [pkRows, setPkRows] = useState([]);
+  const [loadingPk, setLoadingPk] = useState(true);
+  const [pkError, setPkError] = useState("");
+  const [creatingBatch, setCreatingBatch] = useState(false);
+  const [actionError, setActionError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadPk() {
+      setLoadingPk(true);
+      setPkError("");
+      setActionError("");
+      setSelectedIds([]);
+
+      try {
+        const response = await fetch(
+          `/api/admin/migrasi/pk?kode_legacy=${kodeLegacy}`,
+          { cache: "no-store" },
+        );
+
+        const result = await response.json();
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Data PK gagal dimuat.");
+        }
+
+        if (cancelled) return;
+
+        const normalized = (result.data || []).map((row) => ({
+          id: row.id,
+          unit_id: row.unit_id,
+          mks_id: row.mks_id,
+          nama: row.nama_debitur || "-",
+          cif: row.cif || "-",
+          nik: "-",
+          noPk: row.nomor_pk || "-",
+          tglPk: null,
+          mks: "-",
+          limit: Number(row.limit_kredit || 0),
+          produk: row.jenis_pengajuan_kredit || "",
+          statusPk: row.status_pk || "-",
+          kondisi: [
+            `Produk: ${row.jenis_pengajuan_kredit || "-"}`,
+            `Status PK: ${row.status_pk || "-"}`,
+          ],
+          migrasi: [],
+          penyatuan: false,
+        }));
+
+        setPkRows(normalized);
+      } catch (error) {
+        if (!cancelled) {
+          setPkRows([]);
+          setPkError(
+            error instanceof Error
+              ? error.message
+              : "Terjadi kesalahan saat mengambil data PK.",
+          );
+        }
+      } finally {
+        if (!cancelled) setLoadingPk(false);
+      }
+    }
+
+    loadPk();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [kodeLegacy]);
 
   const filteredData = useMemo(() => {
     const keyword = search.trim().toLowerCase();
 
-    return INITIAL_PK.filter((pk) => {
-      const latest = getLatestMigration(pk);
-
-      /*
-       * Yang sudah selesai dan tidak ada kebutuhan penyatuan
-       * tidak ditampilkan di halaman utama.
-       */
-      if (latest && !pk.penyatuan) {
-        return false;
-      }
-
-      const searchable = [pk.nama, pk.cif, pk.nik, pk.noPk, pk.mks]
+    return pkRows.filter((pk) => {
+      const searchable = [
+        pk.nama,
+        pk.cif,
+        pk.nik,
+        pk.noPk,
+        pk.mks,
+        pk.produk,
+        pk.statusPk,
+      ]
         .join(" ")
         .toLowerCase();
 
-      if (keyword && !searchable.includes(keyword)) {
-        return false;
-      }
+      if (keyword && !searchable.includes(keyword)) return false;
 
       if (
         conditionFilter !== "SEMUA" &&
@@ -538,7 +452,7 @@ export default function MigrasiPage() {
 
       return true;
     });
-  }, [search, conditionFilter]);
+  }, [pkRows, search, conditionFilter]);
 
   const selectableData = filteredData.filter((pk) =>
     canSelectForMigration(pk, mode),
@@ -575,17 +489,80 @@ export default function MigrasiPage() {
 
   function changeMode(nextMode) {
     setMode(nextMode);
-
-    /*
-     * Pilihan PK dipertahankan kalau PK memang masih valid
-     * untuk mode yang baru.
-     */
     setSelectedIds((prev) =>
       prev.filter((id) => {
-        const pk = INITIAL_PK.find((item) => item.id === id);
+        const pk = pkRows.find((item) => item.id === id);
         return pk && canSelectForMigration(pk, nextMode);
       }),
     );
+  }
+
+  async function handleStartPreparation() {
+    if (creatingBatch) return;
+
+    if (!selectedData.length) {
+      setActionError("Pilih minimal satu PK terlebih dahulu.");
+      return;
+    }
+
+    setCreatingBatch(true);
+    setActionError("");
+
+    try {
+      const response = await fetch("/api/admin/migrasi/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kode_unit: kodeLegacy,
+          pk_ids: selectedData.map((pk) => pk.id),
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.error || "Batch migrasi gagal dibuat.");
+      }
+
+      const debiturByPkId = new Map(
+        (result.debitur || []).map((item) => [item.pk_id, item]),
+      );
+
+      const debitur = selectedData.map((pk) => {
+        const relation = debiturByPkId.get(pk.id);
+
+        if (!relation?.id) {
+          throw new Error(
+            `Relasi migrasi untuk PK ${pk.noPk} tidak ditemukan.`,
+          );
+        }
+
+        return {
+          ...pk,
+          migrasi_debitur_id: relation.id,
+        };
+      });
+
+      sessionStorage.setItem(
+        "josjis_persiapan_migrasi",
+        JSON.stringify({
+          unit,
+          mode,
+          batch_id: result.batch.id,
+          debitur,
+        }),
+      );
+
+      router.push("/admin/migrasi/persiapan");
+    } catch (error) {
+      setActionError(
+        error instanceof Error
+          ? error.message
+          : "Terjadi kesalahan saat membuat batch.",
+      );
+    } finally {
+      setCreatingBatch(false);
+    }
   }
 
   function handleDmsExport() {
@@ -600,8 +577,8 @@ export default function MigrasiPage() {
       "TGL PK",
       "MKS",
       "LIMIT",
-      "KONDISI",
-      "STATUS MIGRASI",
+      "PRODUK",
+      "STATUS PK",
     ];
 
     const rows = selectedData.map((pk, index) => [
@@ -610,11 +587,11 @@ export default function MigrasiPage() {
       pk.cif,
       pk.nik,
       pk.noPk,
-      pk.tglPk,
+      pk.tglPk || "",
       pk.mks,
       pk.limit,
-      pk.kondisi.join("; "),
-      getMigrationState(pk).label,
+      pk.produk,
+      pk.statusPk,
     ]);
 
     const csv = [headers, ...rows]
@@ -638,7 +615,6 @@ export default function MigrasiPage() {
       .slice(0, 10)}.csv`;
 
     anchor.click();
-
     URL.revokeObjectURL(url);
   }
 
@@ -672,15 +648,14 @@ export default function MigrasiPage() {
           </div>
         </div>
 
-        {/* MAKER CHECKER */}
-        <div className="mb-6 grid gap-4 lg:grid-cols-2">
-          <UserCredentialCard type="Maker" data={users.maker} />
-          <UserCredentialCard type="Checker" data={users.checker} />
+        {/* MAKER CHECKER - DIPERKECIL */}
+        <div className="mb-4 max-w-4xl">
+          <MigrasiCredentialEditor unitCode={unitCode} />
         </div>
 
         {/* MODE */}
         <div className="mb-5 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <button
               type="button"
               onClick={() => changeMode("DMS")}
@@ -692,6 +667,29 @@ export default function MigrasiPage() {
             >
               <FileSpreadsheet className="h-4 w-4" />
               Migrasi DMS
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                sessionStorage.setItem(
+                  "josjis_bast_migrasi",
+                  JSON.stringify({
+                    unit,
+                    mode,
+                    nomorSurat: "0370",
+                    tahun: "2026",
+                    tanggal: "2026-10-13",
+                    debitur: selectedData,
+                  }),
+                );
+
+                router.push("/admin/migrasi/lampiran");
+              }}
+              disabled={selectedData.length === 0}
+              className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              BAST + Lampiran
             </button>
 
             <button
@@ -712,26 +710,37 @@ export default function MigrasiPage() {
         {/* INFO */}
         <div className="mb-5 flex gap-3 rounded-2xl border border-blue-200 bg-blue-50 p-4">
           <Info className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
-
           <div className="text-xs leading-5 text-blue-800">
             <p className="font-bold">
               {mode === "DMS" ? "Migrasi DMS" : "Migrasi NON-DMS"}
             </p>
-
             <p>
-              Pilih PK yang akan dimigrasikan. PK yang sudah pernah migrasi
-              tidak dapat dipilih kembali, kecuali masih memiliki kebutuhan
-              penyatuan dokumen/agunan.
+              Pilih PK dari database untuk menyiapkan migrasi. Riwayat migrasi
+              lama dan status penyatuan dokumen belum diintegrasikan pada
+              halaman ini.
             </p>
           </div>
         </div>
+
+        {(loadingPk || pkError || actionError) && (
+          <div
+            className={`mb-4 rounded-xl border p-3 text-sm ${
+              pkError || actionError
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-blue-200 bg-blue-50 text-blue-700"
+            }`}
+          >
+            {loadingPk && "Sedang mengambil data PK dari Supabase..."}
+            {!loadingPk && pkError}
+            {!pkError && actionError}
+          </div>
+        )}
 
         {/* FILTER */}
         <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <div className="grid gap-3 lg:grid-cols-[1fr_240px_auto]">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-
               <input
                 type="text"
                 value={search}
@@ -747,13 +756,13 @@ export default function MigrasiPage() {
               className="h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 outline-none"
             >
               <option value="SEMUA">Semua kondisi</option>
-              <option value="PK Baru">PK Baru</option>
-              <option value="Dokumen belum lengkap">
-                Dokumen belum lengkap
-              </option>
-              <option value="Legal di CO">Legal di CO</option>
-              <option value="SHM di Notaris">SHM di Notaris</option>
-              <option value="Perlu Penyatuan">Perlu Penyatuan</option>
+              {Array.from(new Set(pkRows.flatMap((pk) => pk.kondisi))).map(
+                (condition) => (
+                  <option key={condition} value={condition}>
+                    {condition}
+                  </option>
+                ),
+              )}
             </select>
 
             <button
@@ -773,11 +782,8 @@ export default function MigrasiPage() {
         {/* SUMMARY */}
         <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <SummaryCard label="PK ditampilkan" value={filteredData.length} />
-
           <SummaryCard label="Bisa dipilih" value={selectableData.length} />
-
           <SummaryCard label="Dipilih" value={selectedIds.length} active />
-
           <SummaryCard label="Mode" value={mode} textValue />
         </div>
 
@@ -786,7 +792,7 @@ export default function MigrasiPage() {
           <button
             type="button"
             onClick={toggleSelectAll}
-            disabled={!selectableData.length}
+            disabled={!selectableData.length || loadingPk}
             className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Check className="h-4 w-4" />
@@ -802,7 +808,7 @@ export default function MigrasiPage() {
                 className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
               >
                 <Download className="h-4 w-4" />
-                Export Excel
+                Export CSV
               </button>
             ) : (
               <button
@@ -815,6 +821,39 @@ export default function MigrasiPage() {
                 Isi Template
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={() => router.push("/admin/migrasi/monitoring")}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              <Eye size={16} />
+              Monitoring Migrasi
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                selectedData.length === 0 ||
+                loadingPk ||
+                creatingBatch ||
+                Boolean(pkError)
+              }
+              onClick={handleStartPreparation}
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {creatingBatch ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Membuat Batch...
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="h-4 w-4" />
+                  Persiapan Migrasi ({selectedData.length})
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -829,43 +868,34 @@ export default function MigrasiPage() {
                       type="checkbox"
                       checked={allSelectableSelected}
                       onChange={toggleSelectAll}
-                      disabled={!selectableData.length}
+                      disabled={!selectableData.length || loadingPk}
                       className="h-4 w-4 rounded border-slate-300"
                     />
                   </th>
-
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
                     Debitur
                   </th>
-
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
                     CIF / NIK
                   </th>
-
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
                     PK
                   </th>
-
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
                     MKS
                   </th>
-
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
                     Limit
                   </th>
-
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Kondisi
+                    Informasi PK
                   </th>
-
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
                     Status
                   </th>
-
                   <th className="px-4 py-3 text-xs font-bold uppercase tracking-wide text-slate-500">
                     Riwayat
                   </th>
-
                   <th className="px-4 py-3 text-center text-xs font-bold uppercase tracking-wide text-slate-500">
                     Detail
                   </th>
@@ -899,9 +929,8 @@ export default function MigrasiPage() {
                         <p className="text-sm font-bold text-slate-900">
                           {pk.nama}
                         </p>
-
                         <p className="mt-1 text-xs text-slate-500">
-                          {pk.tglPk ? formatTanggal(pk.tglPk) : "-"}
+                          {formatTanggal(pk.tglPk)}
                         </p>
                       </td>
 
@@ -909,7 +938,6 @@ export default function MigrasiPage() {
                         <p className="text-xs font-semibold text-slate-700">
                           {pk.cif}
                         </p>
-
                         <p className="mt-1 text-[11px] text-slate-400">
                           {pk.nik}
                         </p>
@@ -919,9 +947,8 @@ export default function MigrasiPage() {
                         <p className="text-xs font-semibold text-slate-700">
                           {pk.noPk}
                         </p>
-
                         <p className="mt-1 text-[11px] text-slate-400">
-                          {formatTanggal(pk.tglPk)}
+                          {pk.produk || "-"}
                         </p>
                       </td>
 
@@ -947,15 +974,7 @@ export default function MigrasiPage() {
                       </td>
 
                       <td className="px-4 py-4">
-                        <div className="space-y-2">
-                          <StatusBadge state={state} />
-
-                          {pk.penyatuan && (
-                            <p className="text-[10px] font-medium text-blue-600">
-                              Dapat migrasi ulang
-                            </p>
-                          )}
-                        </div>
+                        <StatusBadge state={state} />
                       </td>
 
                       <td className="px-4 py-4">
@@ -976,22 +995,33 @@ export default function MigrasiPage() {
                   );
                 })}
 
-                {!filteredData.length && (
+                {!loadingPk && !filteredData.length && (
                   <tr>
                     <td colSpan={10} className="px-6 py-16 text-center">
                       <div className="mx-auto flex max-w-sm flex-col items-center">
                         <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400">
                           <Search className="h-5 w-5" />
                         </div>
-
                         <p className="text-sm font-bold text-slate-700">
                           Tidak ada PK
                         </p>
-
                         <p className="mt-1 text-xs text-slate-400">
-                          Tidak ada data yang memenuhi filter migrasi saat ini.
+                          Tidak ada data yang memenuhi filter atau unit ini
+                          belum memiliki PK.
                         </p>
                       </div>
+                    </td>
+                  </tr>
+                )}
+
+                {loadingPk && (
+                  <tr>
+                    <td
+                      colSpan={10}
+                      className="px-6 py-16 text-center text-sm text-slate-500"
+                    >
+                      <RefreshCw className="mr-2 inline h-4 w-4 animate-spin" />
+                      Memuat data PK...
                     </td>
                   </tr>
                 )}
@@ -1008,7 +1038,6 @@ export default function MigrasiPage() {
                 <p className="text-sm font-bold text-slate-900">
                   {selectedIds.length} PK dipilih
                 </p>
-
                 <p className="text-[10px] text-slate-500">Mode {mode}</p>
               </div>
 
@@ -1018,7 +1047,7 @@ export default function MigrasiPage() {
                   onClick={handleDmsExport}
                   className="rounded-xl bg-blue-600 px-4 py-2.5 text-xs font-bold text-white"
                 >
-                  Export Excel
+                  Export CSV
                 </button>
               ) : (
                 <button
@@ -1046,7 +1075,6 @@ export default function MigrasiPage() {
                 <h2 className="text-lg font-bold text-slate-900">
                   Template NON-DMS
                 </h2>
-
                 <p className="mt-1 text-xs text-slate-500">
                   {selectedIds.length} PK akan dimasukkan ke template.
                 </p>
@@ -1063,14 +1091,12 @@ export default function MigrasiPage() {
 
             <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-6 text-center">
               <FileSpreadsheet className="mx-auto h-10 w-10 text-blue-600" />
-
               <p className="mt-3 text-sm font-bold text-slate-800">
                 Template Excel belum terhubung
               </p>
-
               <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-500">
-                Nanti template Excel NON-DMS yang Anda berikan akan digunakan
-                sistem untuk mengisi data PK yang dicentang secara otomatis.
+                Template Excel NON-DMS akan dihubungkan setelah file template
+                ditentukan.
               </p>
             </div>
 
@@ -1100,7 +1126,6 @@ function SummaryCard({ label, value, active, textValue }) {
       <p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">
         {label}
       </p>
-
       <p
         className={`mt-1 text-xl font-bold ${
           active ? "text-blue-700" : "text-slate-900"

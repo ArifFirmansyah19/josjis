@@ -28,7 +28,10 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts",
-    "**/*.mts"
+    "**/*.mts",
+    "app/pengawas/dashboard/page.jsx",
+    "app/mks/dashboard/page.jsx",
+    "components/RoleDashboardHome.jsx"
   ],
   "exclude": ["node_modules"]
 }

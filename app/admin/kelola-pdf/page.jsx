@@ -40,6 +40,11 @@ export default function KelolaPdfPage() {
   const [error, setError] = useState("");
   const [outputName, setOutputName] = useState("");
   const [compressionLevel, setCompressionLevel] = useState("medium");
+  const [scanOptions, setScanOptions] = useState({
+    crops: {},
+    level: "medium",
+    filter: "document",
+  });
   const [colorMode, setColorMode] = useState("color");
   const [splitRanges, setSplitRanges] = useState([""]);
   const [splitOutputMode, setSplitOutputMode] = useState("separate");
@@ -227,11 +232,18 @@ export default function KelolaPdfPage() {
         outputBytes = await imagesToPdf({
           files,
           colorMode,
+          crops: scanOptions.crops,
+          level: scanOptions.level,
+          filter: scanOptions.filter,
           onProgress: (current, total) =>
-            setProgress(`Memproses gambar ${current} dari ${total}...`),
+            setProgress(`Memindai gambar ${current} dari ${total}...`),
         });
-        prepareOutput(outputBytes, "gambar-ke-pdf.pdf");
-        showMessage(`${files.length} gambar berhasil dibuat menjadi PDF A4.`);
+
+        prepareOutput(outputBytes, "hasil-scan-josjis.pdf");
+
+        showMessage(
+          `PDF hasil scan selesai. Ukuran: ${(outputBytes.length / 1024 / 1024).toFixed(2)} MB.`,
+        );
       } else if (mode === "merge") {
         if (files.length < 2)
           throw new Error("Gabungkan PDF membutuhkan minimal 2 file.");
@@ -470,9 +482,11 @@ export default function KelolaPdfPage() {
       )}
       {mode === "image-to-pdf" && (
         <ImageToPdf
+          files={files}
           colorMode={colorMode}
           setColorMode={setColorMode}
-          files={files}
+          options={scanOptions}
+          onOptionsChange={setScanOptions}
         />
       )}
       {mode === "split" && (

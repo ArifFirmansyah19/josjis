@@ -92,7 +92,7 @@ const menuSections = [
         icon: Archive,
       },
       {
-        label: "Dokumentasi Serah Agunan",
+        label: "Serah Terima Agunan Lunas",
         href: "/admin/penyerahan-agunan-lunas",
         icon: PackageCheck,
       },
