@@ -12,6 +12,15 @@ export const runtime = "nodejs";
 const BUCKET = "dokumen-penyerahan-agunan-lunas";
 const MAX_SELECTED = 100;
 
+interface SerahTerimaRecord {
+  id: string;
+  unit_id: string | null;
+  nama_debitur: string | null;
+  tahun_surat: number | null;
+  nomor_urut_surat: number | null;
+  dokumen_path: string | null;
+}
+
 function fail(message: string, status: number) {
   return NextResponse.json(
     { success: false, message },
@@ -24,8 +33,6 @@ function fail(message: string, status: number) {
 
 /**
  * Membersihkan nama folder/file agar aman di dalam ZIP.
- * Menghapus karakter yang tidak cocok untuk nama file Windows,
- * Android, maupun iOS.
  */
 function sanitizeName(value: string, fallback = "Tanpa Nama"): string {
   const cleaned = value
@@ -80,7 +87,7 @@ export async function POST(request: NextRequest) {
       return fail("Daftar pilihan berisi ID duplikat.", 400);
     }
 
-    const { data: records, error } = await supabaseAdmin
+    const { data, error } = await supabaseAdmin
       .from("serah_terima_agunan_lunas")
       .select(
         [
@@ -99,12 +106,21 @@ export async function POST(request: NextRequest) {
       return fail("Gagal menyiapkan dokumen ZIP.", 500);
     }
 
-    if (!records || records.length !== uniqueIds.length) {
+    /*
+     * Supabase bisa menghasilkan GenericStringError jika
+     * tipe tabel/kolom belum tercantum dalam Database type.
+     * Validasi runtime tetap dilakukan melalui pemeriksaan error
+     * dan jumlah data sebelum data dipakai.
+     */
+    const records = (data ?? []) as unknown as SerahTerimaRecord[];
+
+    if (records.length !== uniqueIds.length) {
       return fail("Sebagian data tidak ditemukan.", 404);
     }
 
     const inaccessible = records.some(
-      (record) => !canAccessSerahTerimaUnit(auth, record.unit_id),
+      (record) =>
+        !record.unit_id || !canAccessSerahTerimaUnit(auth, record.unit_id),
     );
 
     if (inaccessible) {
@@ -128,7 +144,9 @@ export async function POST(request: NextRequest) {
     );
 
     for (const record of sortedRecords) {
-      if (!record.dokumen_path) {
+      const dokumenPath = record.dokumen_path;
+
+      if (!dokumenPath) {
         return fail(
           `Lokasi dokumen ${record.nama_debitur || "debitur"} tidak ditemukan.`,
           500,
@@ -137,7 +155,7 @@ export async function POST(request: NextRequest) {
 
       const { data: file, error: downloadError } = await supabaseAdmin.storage
         .from(BUCKET)
-        .download(record.dokumen_path);
+        .download(dokumenPath);
 
       if (downloadError || !file) {
         console.error(
@@ -154,10 +172,7 @@ export async function POST(request: NextRequest) {
 
       const namaDebitur = sanitizeName(record.nama_debitur || "Tanpa Nama");
 
-      // Contoh:
-      // Kumpulan Penyerahan Agunan Debitur/
-      //   Budi Santoso/
-      //     Serah Terima Agunan - Budi Santoso - 001-2026.pdf
+      // Folder terpisah untuk setiap debitur.
       const debtorFolder = rootFolder.folder(namaDebitur);
 
       if (!debtorFolder) {

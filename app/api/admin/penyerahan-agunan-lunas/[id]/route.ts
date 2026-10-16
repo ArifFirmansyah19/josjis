@@ -26,8 +26,29 @@ type RouteContext = {
   params: Promise<{ id: string }> | { id: string };
 };
 
+type SerahTerimaRecord = {
+  id: string;
+  unit_id: string | null;
+  nama_debitur: string | null;
+  nomor_rekening_pinjaman: string | null;
+  tanggal_penyerahan: string | null;
+  tahun_surat: number | null;
+  nomor_urut_surat: number | null;
+  surat_keluar_id: string | null;
+  dokumen_path: string | null;
+  nama_file_asli: string | null;
+  tipe_file_asli: string | null;
+  ukuran_file_bytes: number | null;
+  created_at: string | null;
+  updated_at: string | null;
+};
+
+type DeletedSerahTerimaRecord = {
+  dokumen_path: string | null;
+};
+
 async function getRecord(id: string) {
-  return supabaseAdmin
+  const result = await supabaseAdmin
     .from("serah_terima_agunan_lunas")
     .select(
       [
@@ -49,6 +70,11 @@ async function getRecord(id: string) {
     )
     .eq("id", id)
     .maybeSingle();
+
+  return {
+    data: result.data as unknown as SerahTerimaRecord | null,
+    error: result.error,
+  };
 }
 
 function isValidDate(value: string): boolean {
@@ -150,7 +176,6 @@ export async function GET(_request: NextRequest, context: RouteContext) {
   }
 
   const { id } = await context.params;
-
   const { data, error } = await getRecord(id);
 
   if (error) {
@@ -162,7 +187,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     return fail("Data serah terima tidak ditemukan.", 404);
   }
 
-  if (!canAccessSerahTerimaUnit(auth, data.unit_id)) {
+  if (!data.unit_id || !canAccessSerahTerimaUnit(auth, data.unit_id)) {
     return fail("Anda tidak memiliki akses ke data ini.", 403);
   }
 
@@ -188,7 +213,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
   }
 
   const { id } = await context.params;
-
   let uploadedPath: string | null = null;
 
   try {
@@ -203,18 +227,16 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return fail("Data serah terima tidak ditemukan.", 404);
     }
 
-    if (!canAccessSerahTerimaUnit(auth, record.unit_id)) {
+    if (!record.unit_id || !canAccessSerahTerimaUnit(auth, record.unit_id)) {
       return fail("Anda tidak memiliki akses ke data ini.", 403);
     }
 
     const formData = await request.formData();
 
     const namaDebitur = String(formData.get("namaDebitur") ?? "").trim();
-
     const nomorRekening = String(
       formData.get("nomorRekeningPinjaman") ?? "",
     ).trim();
-
     const tanggal = String(formData.get("tanggalPenyerahan") ?? "").trim();
 
     if (!namaDebitur || namaDebitur.length > 200) {
@@ -232,7 +254,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return fail("Tanggal penyerahan tidak valid.", 400);
     }
 
-    // File tidak wajib. Tanpa file baru, dokumen lama dipertahankan.
     const fileEntry = formData.get("dokumen");
 
     if (
@@ -268,7 +289,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       safeOriginalName = sanitizeOriginalName(originalNameInput);
 
-      // Upload file baru dengan nama unik ke folder unit yang sama.
       uploadedPath = `${record.unit_id}/${crypto.randomUUID()}.pdf`;
 
       const { error: uploadError } = await supabaseAdmin.storage
@@ -280,9 +300,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       if (uploadError) {
         console.error("Upload PDF pengganti gagal:", uploadError.message);
-
         uploadedPath = null;
-
         return fail("Dokumen pengganti gagal diunggah.", 500);
       }
     }
@@ -343,7 +361,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    // Update database berhasil. File baru menjadi file aktif.
     const oldPath = record.dokumen_path;
     uploadedPath = null;
 
@@ -399,7 +416,6 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
   }
 
   const { id } = await context.params;
-
   const { data: record, error: readError } = await getRecord(id);
 
   if (readError) {
@@ -411,7 +427,7 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     return fail("Data serah terima tidak ditemukan.", 404);
   }
 
-  if (!canAccessSerahTerimaUnit(auth, record.unit_id)) {
+  if (!record.unit_id || !canAccessSerahTerimaUnit(auth, record.unit_id)) {
     return fail("Anda tidak memiliki akses ke data ini.", 403);
   }
 
@@ -428,7 +444,8 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     return fail(deleteError.message || "Data gagal dihapus.", 400);
   }
 
-  const path = deleted?.dokumen_path;
+  const deletedRecord = deleted as unknown as DeletedSerahTerimaRecord | null;
+  const path = deletedRecord?.dokumen_path;
 
   // Record database sudah terhapus. Bersihkan file privat sesudahnya.
   if (path) {

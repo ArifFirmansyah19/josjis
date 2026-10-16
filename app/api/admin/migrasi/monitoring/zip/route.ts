@@ -292,7 +292,7 @@ export async function GET(request: NextRequest) {
       ? `Dokumen_Debitur_${safeName(debiturId)}.zip`
       : `${safeName(batch.nama_batch, "Batch_Migrasi")}.zip`;
 
-    return new Response(output, {
+    return new Response(Buffer.from(output), {
       status: 200,
       headers: {
         "Content-Type": "application/zip",
