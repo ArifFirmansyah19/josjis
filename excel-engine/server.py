@@ -1,10 +1,7 @@
-# ============================================================
-# FILE
-# D:\APLIKASI\josjis\excel-engine\server.py
-# ============================================================
 
 import base64
 import json
+import traceback
 
 from http.server import (
     BaseHTTPRequestHandler,
@@ -21,31 +18,22 @@ from engine_booking import (
     process_booking_options,
 )
 
+from engine_advis import process_advis
+
 
 HOST = "127.0.0.1"
 PORT = 8765
 
-
-# ============================================================
-# HTTP HANDLER
-# ============================================================
-
 class Handler(BaseHTTPRequestHandler):
 
-    def send_json(
-        self,
-        status_code,
-        payload,
-    ):
+    def send_json(self, status_code, payload):
         body = json.dumps(
             payload,
             ensure_ascii=False,
             default=str,
         ).encode("utf-8")
 
-        self.send_response(
-            status_code
-        )
+        self.send_response(status_code)
 
         self.send_header(
             "Content-Type",
@@ -73,24 +61,14 @@ class Handler(BaseHTTPRequestHandler):
         )
 
         self.end_headers()
-
         self.wfile.write(body)
-
-    # ========================================================
-    # OPTIONS
-    # ========================================================
-
     def do_OPTIONS(self):
         self.send_json(
             200,
             {
-                "success": True
+                "success": True,
             },
         )
-
-    # ========================================================
-    # READ REQUEST
-    # ========================================================
 
     def read_request(self):
         content_length = int(
@@ -100,73 +78,85 @@ class Handler(BaseHTTPRequestHandler):
             )
         )
 
-        body = self.rfile.read(
-            content_length
-        )
+        if content_length <= 0:
+            raise ValueError(
+                "Request body kosong."
+            )
+
+        body = self.rfile.read(content_length)
 
         return json.loads(
             body.decode("utf-8")
         )
 
-    # ========================================================
-    # DECODE EXCEL
-    # ========================================================
-
-    def decode_excel_request(
-        self,
-        request,
-    ):
+    def decode_excel_request(self, request):
         file_name = request.get(
             "fileName",
             "RaportMU.xlsb",
         )
 
-        # Frontend lama:
-        # "file"
-        #
-        # Frontend baru:
-        # "fileBase64"
+        # Mendukung frontend lama dan baru.
         encoded_file = (
             request.get("file")
             or request.get("fileBase64")
         )
 
         if not encoded_file:
-            raise Exception(
+            raise ValueError(
                 "File Excel tidak dikirim."
             )
 
-        file_bytes = base64.b64decode(
-            encoded_file
-        )
+        try:
+            file_bytes = base64.b64decode(
+                encoded_file,
+                validate=True,
+            )
+        except Exception as error:
+            raise ValueError(
+                "Format file Excel Base64 tidak valid."
+            ) from error
 
-        return (
-            file_bytes,
-            file_name,
-        )
+        if not file_bytes:
+            raise ValueError(
+                "File Excel kosong."
+            )
 
-    # ========================================================
-    # POST
-    # ========================================================
+        return file_bytes, file_name
 
     def do_POST(self):
         try:
             request = self.read_request()
 
-            # =================================================
-            # 2A / PORT UNIT
-            # =================================================
+            if self.path == "/raportmu/advis":
 
-            if (
-                self.path
-                == "/raportmu/port-unit"
-            ):
+                data = request.get("data", [])
+
+                if not isinstance(data, list):
+                    raise ValueError(
+                        "Data Advis harus berupa array."
+                    )
+
+                if not data:
+                    raise ValueError(
+                        "Tidak ada data untuk membuat Advis."
+                    )
+
+                result = process_advis(data)
+
+                self.send_json(
+                    200,
+                    result,
+                )
+
+                return
+
+ 
+            if self.path == "/raportmu/port-unit":
+
                 (
                     file_bytes,
                     file_name,
-                ) = self.decode_excel_request(
-                    request
-                )
+                ) = self.decode_excel_request(request)
 
                 unit_name = request.get(
                     "unit",
@@ -185,21 +175,12 @@ class Handler(BaseHTTPRequestHandler):
                 )
 
                 return
+            if self.path == "/raportmu/easy-call":
 
-            # =================================================
-            # EASY CALL
-            # =================================================
-
-            if (
-                self.path
-                == "/raportmu/easy-call"
-            ):
                 (
                     file_bytes,
                     file_name,
-                ) = self.decode_excel_request(
-                    request
-                )
+                ) = self.decode_excel_request(request)
 
                 result = process_easy_call(
                     file_bytes=file_bytes,
@@ -213,20 +194,12 @@ class Handler(BaseHTTPRequestHandler):
 
                 return
 
-            # =================================================
-            # BOOKING OPTIONS
-            # =================================================
+            if self.path == "/raportmu/booking/options":
 
-            if (
-                self.path
-                == "/raportmu/booking/options"
-            ):
                 (
                     file_bytes,
                     file_name,
-                ) = self.decode_excel_request(
-                    request
-                )
+                ) = self.decode_excel_request(request)
 
                 result = process_booking_options(
                     file_bytes=file_bytes,
@@ -240,44 +213,28 @@ class Handler(BaseHTTPRequestHandler):
 
                 return
 
-            # =================================================
-            # BOOKING PROCESS
-            # =================================================
+            if self.path == "/raportmu/booking/process":
 
-            if (
-                self.path
-                == "/raportmu/booking/process"
-            ):
                 (
                     file_bytes,
                     file_name,
-                ) = self.decode_excel_request(
-                    request
-                )
+                ) = self.decode_excel_request(request)
 
                 branch = str(
-                    request.get(
-                        "branch",
-                        "",
-                    )
-                    or ""
+                    request.get("branch", "") or ""
                 ).strip()
 
                 name = str(
-                    request.get(
-                        "name",
-                        "",
-                    )
-                    or ""
+                    request.get("name", "") or ""
                 ).strip()
 
                 if not branch:
-                    raise Exception(
+                    raise ValueError(
                         "Cabang Booking belum dipilih."
                     )
 
                 if not name:
-                    raise Exception(
+                    raise ValueError(
                         "Nama SGP belum dipilih."
                     )
 
@@ -295,159 +252,102 @@ class Handler(BaseHTTPRequestHandler):
 
                 return
 
-            # =================================================
-            # HEALTH
-            # =================================================
 
             if self.path == "/health":
+
                 self.send_json(
                     200,
                     {
                         "success": True,
-                        "service": (
-                            "josjis-excel-engine"
-                        ),
+                        "service": "josjis-excel-engine",
                     },
                 )
 
                 return
 
-            # =================================================
-            # 404
-            # =================================================
 
             self.send_json(
                 404,
                 {
                     "success": False,
-                    "error": (
-                        "Endpoint tidak ditemukan."
-                    ),
+                    "error": "Endpoint tidak ditemukan.",
                 },
             )
 
         except Exception as error:
-            print("")
-            print(
-                "========================================"
-            )
-            print(
-                "ERROR EXCEL ENGINE"
-            )
-            print(
-                "========================================"
-            )
-            print(error)
-            print("")
 
-            self.send_json(
-                500,
-                {
-                    "success": False,
-                    "error": str(error),
-                },
+            print()
+            print("=" * 60)
+            print("ERROR EXCEL ENGINE")
+            print("=" * 60)
+            print(f"Endpoint: {self.path}")
+            print(f"Error: {error}")
+            traceback.print_exc()
+            print("=" * 60)
+            print()
+
+            try:
+                self.send_json(
+                    500,
+                    {
+                        "success": False,
+                        "error": str(error),
+                    },
+                )
+            except Exception:
+                pass
+
+
+    def log_message(self, format_string, *args):
+        print(
+            "[%s] %s"
+            % (
+                self.log_date_time_string(),
+                format_string % args,
             )
+        )
 
-
-# ============================================================
-# MAIN
-# ============================================================
 
 def main():
+
     server = ThreadingHTTPServer(
         (HOST, PORT),
         Handler,
     )
 
-    print("")
-    print(
-        "========================================"
-    )
-    print(
-        "JOSJIS EXCEL ENGINE"
-    )
-    print(
-        "========================================"
-    )
+    print()
+    print("=" * 60)
+    print("JOSJIS EXCEL ENGINE")
+    print("=" * 60)
 
-    print(
-        f"Server: http://{HOST}:{PORT}"
-    )
+    print(f"Server: http://{HOST}:{PORT}")
+    print()
 
-    print("")
+    endpoints = [
+        "/raportmu/port-unit",
+        "/raportmu/easy-call",
+        "/raportmu/advis",
+        "/raportmu/booking/options",
+        "/raportmu/booking/process",
+        "/health",
+    ]
 
-    print(
-        "Endpoint 2A:"
-    )
+    print("Endpoint tersedia:")
 
-    print(
-        f"http://{HOST}:{PORT}"
-        "/raportmu/port-unit"
-    )
+    for endpoint in endpoints:
+        print(f"  http://{HOST}:{PORT}{endpoint}")
 
-    print("")
-
-    print(
-        "Endpoint Easy Call:"
-    )
-
-    print(
-        f"http://{HOST}:{PORT}"
-        "/raportmu/easy-call"
-    )
-
-    print("")
-
-    print(
-        "Endpoint Booking Options:"
-    )
-
-    print(
-        f"http://{HOST}:{PORT}"
-        "/raportmu/booking/options"
-    )
-
-    print("")
-
-    print(
-        "Endpoint Booking Process:"
-    )
-
-    print(
-        f"http://{HOST}:{PORT}"
-        "/raportmu/booking/process"
-    )
-
-    print("")
-
-    print(
-        "Endpoint Health:"
-    )
-
-    print(
-        f"http://{HOST}:{PORT}"
-        "/health"
-    )
-
-    print("")
-
-    print(
-        "Engine siap menerima request dari JOSJIS."
-    )
-
-    print(
-        "Tekan CTRL+C untuk menghentikan."
-    )
-
-    print("")
+    print()
+    print("Engine siap menerima request dari JOSJIS.")
+    print("Tekan CTRL+C untuk menghentikan.")
+    print()
 
     try:
         server.serve_forever()
 
     except KeyboardInterrupt:
-        print(
-            "Excel Engine dihentikan."
-        )
+        print()
+        print("Excel Engine dihentikan.")
 
     finally:
         server.server_close()

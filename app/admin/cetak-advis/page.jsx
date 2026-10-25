@@ -1,1805 +1,822 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
-  Calculator,
-  Check,
+  ChevronLeft,
   ChevronRight,
-  FileSpreadsheet,
+  Download,
+  Loader2,
+  Printer,
+  Share2,
   FileText,
-  Plus,
-  Search,
-  WalletCards,
-  X,
+  RefreshCw,
 } from "lucide-react";
 
-import { useUnit } from "@/components/UnitContext";
-
-// ============================================================
-// HELPER TERBILANG
-// ============================================================
-
-const ANGKA_TERBILANG = [
-  "nol",
-  "satu",
-  "dua",
-  "tiga",
-  "empat",
-  "lima",
-  "enam",
-  "tujuh",
-  "delapan",
-  "sembilan",
-  "sepuluh",
-  "sebelas",
-];
-
-function terbilangInteger(value) {
-  let n = Math.floor(Math.abs(Number(value)));
-
-  if (!Number.isFinite(n)) {
-    return "";
-  }
-
-  if (n < 12) {
-    return ANGKA_TERBILANG[n];
-  }
-
-  if (n < 20) {
-    return `${terbilangInteger(n - 10)} belas`;
-  }
-
-  if (n < 100) {
-    const puluh = Math.floor(n / 10);
-    const satuan = n % 10;
-
-    return `${terbilangInteger(puluh)} puluh${
-      satuan ? ` ${terbilangInteger(satuan)}` : ""
-    }`;
-  }
-
-  if (n < 200) {
-    return `seratus${n > 100 ? ` ${terbilangInteger(n - 100)}` : ""}`;
-  }
-
-  if (n < 1000) {
-    const ratus = Math.floor(n / 100);
-    const sisa = n % 100;
-
-    return `${terbilangInteger(ratus)} ratus${
-      sisa ? ` ${terbilangInteger(sisa)}` : ""
-    }`;
-  }
-
-  if (n < 2000) {
-    return `seribu${n > 1000 ? ` ${terbilangInteger(n - 1000)}` : ""}`;
-  }
-
-  if (n < 1_000_000) {
-    const ribu = Math.floor(n / 1000);
-    const sisa = n % 1000;
-
-    return `${terbilangInteger(ribu)} ribu${
-      sisa ? ` ${terbilangInteger(sisa)}` : ""
-    }`;
-  }
-
-  if (n < 2_000_000) {
-    return `satu juta${
-      n > 1_000_000 ? ` ${terbilangInteger(n - 1_000_000)}` : ""
-    }`;
-  }
-
-  if (n < 1_000_000_000) {
-    const juta = Math.floor(n / 1_000_000);
-    const sisa = n % 1_000_000;
-
-    return `${terbilangInteger(juta)} juta${
-      sisa ? ` ${terbilangInteger(sisa)}` : ""
-    }`;
-  }
-
-  if (n < 2_000_000_000) {
-    return `satu miliar${
-      n > 1_000_000_000 ? ` ${terbilangInteger(n - 1_000_000_000)}` : ""
-    }`;
-  }
-
-  if (n < 1_000_000_000_000) {
-    const miliar = Math.floor(n / 1_000_000_000);
-    const sisa = n % 1_000_000_000;
-
-    return `${terbilangInteger(miliar)} miliar${
-      sisa ? ` ${terbilangInteger(sisa)}` : ""
-    }`;
-  }
-
-  if (n < 2_000_000_000_000) {
-    return `satu triliun${
-      n > 1_000_000_000_000 ? ` ${terbilangInteger(n - 1_000_000_000_000)}` : ""
-    }`;
-  }
-
-  if (n < 1_000_000_000_000_000) {
-    const triliun = Math.floor(n / 1_000_000_000_000);
-    const sisa = n % 1_000_000_000_000;
-
-    return `${terbilangInteger(triliun)} triliun${
-      sisa ? ` ${terbilangInteger(sisa)}` : ""
-    }`;
-  }
-
-  return String(n);
-}
-
-// ============================================================
-// TERBILANG NOMINAL EXACT
-//
-// Contoh:
-// 49.050.005,02
-// menjadi:
-// empat puluh sembilan juta lima puluh ribu lima koma dua rupiah
-//
-// TIDAK menggunakan istilah "sen".
-// ============================================================
-
-function terbilangRupiahExact(value) {
-  if (value === null || value === undefined || String(value).trim() === "") {
-    return "";
-  }
-
-  let raw = String(value).replace(/rp/gi, "").replace(/\s/g, "").trim();
-
-  // Hilangkan titik ribuan.
-  raw = raw.replace(/\./g, "");
-
-  const parts = raw.split(",");
-
-  let integerPart = parts[0] || "0";
-
-  // Jika ada lebih dari satu koma, gabungkan bagian desimal.
-  let decimalPart = parts.length > 1 ? parts.slice(1).join("") : "";
-
-  integerPart = integerPart.replace(/\D/g, "");
-  decimalPart = decimalPart.replace(/\D/g, "");
-
-  if (!integerPart) {
-    integerPart = "0";
-  }
-
-  integerPart = integerPart.replace(/^0+(?=\d)/, "");
-
-  const integerNumber = Number(integerPart);
-
-  if (!Number.isFinite(integerNumber)) {
-    return "";
-  }
-
-  let hasil = terbilangInteger(integerNumber);
-
-  if (decimalPart) {
-    // Contoh:
-    // 02 -> 2
-    // 20 -> 20
-    // 50 -> 50
-    const decimalNumber = Number(decimalPart);
-
-    if (Number.isFinite(decimalNumber) && decimalNumber > 0) {
-      hasil += ` koma ${terbilangInteger(decimalNumber)}`;
-    }
-  }
-
-  return `${hasil} rupiah`;
-}
-
-// ============================================================
-// PARSE NOMINAL INDONESIA
-//
-// 50.000.000       -> 50000000
-// 1.250.000        -> 1250000
-// 49.050.005,02    -> 49050005.02
-// ============================================================
-
-function parseNominalIndonesia(value) {
-  if (value === null || value === undefined || String(value).trim() === "") {
-    return 0;
-  }
-
-  let raw = String(value).replace(/rp/gi, "").replace(/\s/g, "").trim();
-
-  if (!raw) {
-    return 0;
-  }
-
-  if (raw.includes(",")) {
-    raw = raw.replace(/\./g, "").replace(",", ".");
-  } else {
-    raw = raw.replace(/\./g, "");
-  }
-
-  raw = raw.replace(/[^\d.-]/g, "");
-
-  const result = Number(raw);
-
-  return Number.isFinite(result) ? result : 0;
-}
-
-// ============================================================
-// FORMAT NOMINAL DI INPUT
-//
-// User mengetik:
-// 50000000
-//
-// Input tampil:
-// 50.000.000
-//
-// Tetapi state tetap:
-// 50000000
-//
-// Untuk desimal:
-// 49050005,02
-//
-// tampil:
-// 49.050.005,02
-//
-// state:
-// 49050005,02
-// ============================================================
-
-function formatNominalInput(value) {
-  if (value === null || value === undefined || String(value) === "") {
-    return "";
-  }
-
-  let raw = String(value);
-
-  // Hanya izinkan angka dan koma.
-  raw = raw.replace(/[^\d,]/g, "");
-
-  if (!raw) {
-    return "";
-  }
-
-  const commaIndex = raw.indexOf(",");
-
-  let integerPart;
-  let decimalPart = "";
-
-  if (commaIndex >= 0) {
-    integerPart = raw.slice(0, commaIndex);
-
-    decimalPart = raw.slice(commaIndex + 1).replace(/,/g, "");
-  } else {
-    integerPart = raw;
-  }
-
-  integerPart = integerPart.replace(/\D/g, "");
-
-  if (!integerPart) {
-    integerPart = "0";
-  }
-
-  // Buang nol depan kecuali hanya "0".
-  integerPart = integerPart.replace(/^0+(?=\d)/, "");
-
-  const formattedInteger = Number(integerPart).toLocaleString("id-ID");
-
-  if (commaIndex >= 0) {
-    return `${formattedInteger},${decimalPart}`;
-  }
-
-  return formattedInteger;
-}
-
-// ============================================================
-// NORMALISASI INPUT NOMINAL
-//
-// Dipakai supaya nilai internal bersih.
-// Tidak menghilangkan koma desimal Pelunasan.
-// ============================================================
-
-function normalizeNominalInput(value) {
-  if (value === null || value === undefined) {
-    return "";
-  }
-
-  let raw = String(value);
-
-  raw = raw.replace(/[^\d,]/g, "");
-
-  const commaIndex = raw.indexOf(",");
-
-  if (commaIndex === -1) {
-    return raw;
-  }
-
-  const integerPart = raw.slice(0, commaIndex).replace(/\D/g, "");
-
-  const decimalPart = raw.slice(commaIndex + 1).replace(/\D/g, "");
-
-  return `${integerPart},${decimalPart}`;
-}
-
-// ============================================================
-// INPUT NOMINAL
-// ============================================================
-
-function NominalInput({ value, onChange, placeholder = "0" }) {
-  function handleChange(event) {
-    const cleanValue = normalizeNominalInput(event.target.value);
-
-    onChange(cleanValue);
-  }
-
-  return (
-    <input
-      type="text"
-      inputMode="decimal"
-      value={formatNominalInput(value)}
-      onChange={handleChange}
-      placeholder={placeholder}
-      className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-right font-medium text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-    />
-  );
-}
-
-// ============================================================
-// BULAT KE ATAS RP1.000
-// ============================================================
-
-function roundUpThousand(value) {
-  const number = parseNominalIndonesia(value);
-
-  if (!Number.isFinite(number) || number <= 0) {
-    return 0;
-  }
-
-  return Math.ceil(number / 1000) * 1000;
-}
-
-// ============================================================
-// FORMAT RUPIAH INTEGER
-// ============================================================
+const STORAGE_KEY = "raportmu_advis_data";
+const ENGINE_URL = "http://127.0.0.1:8765/raportmu/advis";
+
+const TRANSACTIONS = {
+  4056: {
+    code: "4056",
+    label: "4056-Angsuran",
+    description: "Pembayaran Angsuran",
+  },
+  4052: {
+    code: "4052",
+    label: "4052-Angsuran dari GNC",
+    description: "Pembayaran Angsuran",
+  },
+  4204: {
+    code: "4204",
+    label: "4204-Pelunasan",
+    description: "Pelunasan Kredit",
+  },
+  1314: {
+    code: "1314",
+    label: "1314-GNC ke Tabungan",
+    description: "Pindah Buku",
+  },
+  4234: {
+    code: "4234",
+    label: "4234-Penarikan Kelebihan Bayar",
+    description: "Penarikan Kelebihan Bayar",
+  },
+  4104: {
+    code: "4104",
+    label: "4104-Pelunasan Pokok Sebagian",
+    description: "Pelunasan Pokok Sebagian",
+  },
+};
 
 function formatRupiah(value) {
   const number = Number(value);
 
-  if (!Number.isFinite(number)) {
-    return "Rp0";
-  }
+  if (!Number.isFinite(number)) return "0";
 
-  return new Intl.NumberFormat("id-ID", {
-    style: "currency",
-    currency: "IDR",
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(number);
+  return Math.round(number).toLocaleString("id-ID");
 }
 
-// ============================================================
-// FORMAT RUPIAH EXACT
-//
-// 49050005,02
-// -> Rp49.050.005,02
-//
-// Tidak mengubah desimal.
-// ============================================================
+function getTransaction(item) {
+  const raw =
+    item?.transactionCode ??
+    item?.transaction_code ??
+    item?.transaction?.code ??
+    item?.transaction?.label ??
+    item?.transaction ??
+    item?.kotran ??
+    item?.kode_kotran ??
+    item?.kode_transaksi ??
+    "4056";
 
-function formatRupiahExact(value) {
-  if (value === null || value === undefined || String(value).trim() === "") {
-    return "Rp0";
-  }
+  const match = String(raw)
+    .trim()
+    .match(/(?:^|\D)(4056|4052|4204|1314|4234|4104)(?!\d)/);
 
-  let raw = String(value).replace(/rp/gi, "").replace(/\s/g, "").trim();
-
-  raw = raw.replace(/[^\d,]/g, "");
-
-  if (!raw) {
-    return "Rp0";
-  }
-
-  const parts = raw.split(",");
-
-  let integerPart = parts[0] || "0";
-
-  const decimalPart = parts.length > 1 ? parts.slice(1).join("") : "";
-
-  integerPart = integerPart.replace(/\./g, "");
-  integerPart = integerPart.replace(/\D/g, "");
-
-  if (!integerPart) {
-    integerPart = "0";
-  }
-
-  integerPart = integerPart.replace(/^0+(?=\d)/, "");
-
-  const formattedInteger = Number(integerPart).toLocaleString("id-ID");
-
-  return decimalPart
-    ? `Rp${formattedInteger},${decimalPart}`
-    : `Rp${formattedInteger}`;
+  return TRANSACTIONS[match?.[1] || "4056"];
 }
 
-// ============================================================
-// DATA DUMMY 2A
-// ============================================================
+function prepareItem(item, index) {
+  const rawAmount = item?.total_tgg ?? 0;
+  const amount =
+    typeof rawAmount === "string"
+      ? Number(
+          rawAmount
+            .replace(/rp/gi, "")
+            .replace(/\s/g, "")
+            .replace(/\.(?=\d{3}(?:\D|$))/g, "")
+            .replace(",", "."),
+        )
+      : Number(rawAmount);
 
-const dummy2AJKK1 = [
-  {
-    id: "2a-jkk1-001",
-    nama: "Budi Santoso",
-    norek: "11081A000123456",
-    tunggakan: 1_250_000,
-  },
-  {
-    id: "2a-jkk1-002",
-    nama: "Andi Saputra",
-    norek: "11081A000123457",
-    tunggakan: 2_350_000,
-  },
-  {
-    id: "2a-jkk1-003",
-    nama: "Siti Aminah",
-    norek: "11081A000123458",
-    tunggakan: 875_500,
-  },
-  {
-    id: "2a-jkk1-004",
-    nama: "Dedi Irawan",
-    norek: "11081A000123459",
-    tunggakan: 1_005_000,
-  },
-];
+  return {
+    ...item,
+    _id: `${index}-${String(item?.acctno ?? "")}-${String(item?.nama ?? "")}`,
+    nama: String(item?.nama ?? "").trim(),
+    acctno: String(item?.acctno ?? "").trim(),
+    agf1: String(item?.agf1 ?? "").trim(),
+    alamat: String(item?.alamat ?? "").trim(),
+    mbu: String(item?.mbu ?? "").trim(),
+    nama_mks: String(item?.nama_mks ?? "").trim(),
+    total_tgg: Number.isFinite(amount) ? amount : 0,
+    transaction: getTransaction(item),
+  };
+}
 
-const dummy2AJKK2 = [
-  {
-    id: "2a-jkk2-001",
-    nama: "Rudi Hartono",
-    norek: "11081B000223456",
-    tunggakan: 1_750_000,
-  },
-  {
-    id: "2a-jkk2-002",
-    nama: "Yuli Astuti",
-    norek: "11081B000223457",
-    tunggakan: 925_000,
-  },
-  {
-    id: "2a-jkk2-003",
-    nama: "Hendra Wijaya",
-    norek: "11081B000223458",
-    tunggakan: 3_125_000,
-  },
-];
+function getDateStamp() {
+  const date = new Date();
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
-// ============================================================
-// DATA DUMMY EASY CALL
-// ============================================================
+  return `${year}-${month}-${day}`;
+}
 
-const dummyEasyCallJKK1 = [
-  {
-    id: "ec-jkk1-001",
-    unit: "JKK 1",
-    nama: "Budi Santoso",
-    norek: "11081A000123456",
-    nominal: 1_250_000,
-  },
-  {
-    id: "ec-jkk1-002",
-    unit: "JKK 1",
-    nama: "Siti Aminah",
-    norek: "11081A000123458",
-    nominal: 875_500,
-  },
-];
-
-const dummyEasyCallJKK2 = [
-  {
-    id: "ec-jkk2-001",
-    unit: "JKK 2",
-    nama: "Rudi Hartono",
-    norek: "11081B000223456",
-    nominal: 1_750_000,
-  },
-  {
-    id: "ec-jkk2-002",
-    unit: "JKK 2",
-    nama: "Hendra Wijaya",
-    norek: "11081B000223458",
-    nominal: 3_125_000,
-  },
-];
-
-// ============================================================
-// MENU CARD
-// ============================================================
-
-function MenuCard({ icon: Icon, title, description, onClick }) {
+function safeFilename(value) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="group flex w-full items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md"
-    >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-900 text-white">
-        <Icon size={22} />
-      </div>
-
-      <div className="min-w-0 flex-1">
-        <div className="font-semibold text-slate-900">{title}</div>
-
-        <div className="mt-0.5 text-sm text-slate-500">{description}</div>
-      </div>
-
-      <ChevronRight
-        size={20}
-        className="shrink-0 text-slate-400 transition group-hover:translate-x-0.5"
-      />
-    </button>
+    String(value || "Advis_Easy_Call")
+      .normalize("NFKD")
+      .replace(/[^\w.-]+/g, "_")
+      .replace(/^_+|_+$/g, "")
+      .slice(0, 80) || "Advis_Easy_Call"
   );
 }
 
-// ============================================================
-// PAGE
-// ============================================================
+function makePdfFilename() {
+  return `Advis_Easy_Call_${getDateStamp()}.pdf`;
+}
+
+/**
+ * Backend menerima array data Easy Call yang sudah diproses.
+ * PDF dibuat oleh Excel menggunakan template asli.
+ */
+async function requestAdvisPdf(items) {
+  if (!items.length) {
+    throw new Error("Pilih minimal satu debitur.");
+  }
+
+  const payload = items.map((item) => ({
+    nama: item.nama,
+    acctno: item.acctno,
+    agf1: item.agf1,
+    alamat: item.alamat || "",
+    total_tgg: item.total_tgg,
+    mbu: item.mbu,
+    nama_mks: item.nama_mks,
+    transactionCode: item.transaction.code,
+  }));
+
+  let response;
+
+  try {
+    response = await fetch(ENGINE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({ data: payload }),
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error(
+      "Tidak dapat terhubung ke Excel Engine. Pastikan server.py sedang berjalan di komputer ini dan port 8765 aktif.",
+    );
+  }
+
+  const responseText = await response.text();
+
+  let result;
+
+  try {
+    result = JSON.parse(responseText);
+  } catch {
+    throw new Error(
+      `Respons Excel Engine tidak valid (HTTP ${response.status}). Pastikan endpoint /raportmu/advis aktif.`,
+    );
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      result?.error ||
+        result?.message ||
+        `Excel Engine gagal memproses PDF (HTTP ${response.status}).`,
+    );
+  }
+
+  if (result?.success === false) {
+    throw new Error(
+      result?.error || result?.message || "Gagal membuat PDF Advis.",
+    );
+  }
+
+  if (!result?.pdfBase64) {
+    throw new Error(
+      result?.error ||
+        result?.message ||
+        "PDF tidak ditemukan dalam respons Excel Engine.",
+    );
+  }
+
+  // Decode Base64 menjadi PDF Blob.
+  const binary = atob(result.pdfBase64);
+  const chunks = [];
+  const chunkSize = 1024 * 512;
+
+  for (let offset = 0; offset < binary.length; offset += chunkSize) {
+    const slice = binary.slice(offset, offset + chunkSize);
+    const bytes = new Uint8Array(slice.length);
+
+    for (let i = 0; i < slice.length; i++) {
+      bytes[i] = slice.charCodeAt(i);
+    }
+
+    chunks.push(bytes);
+  }
+
+  const blob = new Blob(chunks, {
+    type: "application/pdf",
+  });
+
+  if (!blob.size) {
+    throw new Error("PDF hasil Excel kosong.");
+  }
+
+  return {
+    blob,
+    count: Number(result.count) || items.length,
+    fileName: safeFilename(result.fileName || "Advis_EasyCall").endsWith(".pdf")
+      ? safeFilename(result.fileName || "Advis_EasyCall.pdf")
+      : `${safeFilename(result.fileName || "Advis_EasyCall")}.pdf`,
+    fileSize: Number(result.fileSize) || blob.size,
+  };
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
 
 export default function CetakAdvisPage() {
-  const { activeUnit } = useUnit();
+  const router = useRouter();
 
-  const [mode, setMode] = useState(null);
+  const [items, setItems] = useState([]);
+  const [selected, setSelected] = useState(new Set());
+  const [currentId, setCurrentId] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
 
-  // ==========================================================
-  // MANUAL
-  // ==========================================================
+  const [pdfBlob, setPdfBlob] = useState(null);
+  const [pdfUrl, setPdfUrl] = useState("");
+  const [pdfFilename, setPdfFilename] = useState("");
+  const [pdfCount, setPdfCount] = useState(0);
+  const [pdfSignature, setPdfSignature] = useState("");
 
-  const [manualRows, setManualRows] = useState([
-    {
-      id: 1,
-      nama: "",
-      norek: "",
-      nominal: "",
-      keterangan: "",
-    },
-  ]);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
 
-  // ==========================================================
-  // PELUNASAN
-  // ==========================================================
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        setError(
+          "Data Easy Call tidak ditemukan. Kembali ke tabel Easy Call dan klik Proses Advis.",
+        );
+        return;
+      }
 
-  const [pelunasanRows, setPelunasanRows] = useState([
-    {
-      id: 1,
-      nama: "",
-      norek: "",
-      nominal: "",
-      keterangan: "",
-    },
-  ]);
+      const prepared = parsed.map(prepareItem);
 
-  // ==========================================================
-  // 2A
-  // ==========================================================
-
-  const [sumber2A, setSumber2A] = useState("JKK1");
-
-  const [selected2A, setSelected2A] = useState([]);
-
-  const [saldo2A, setSaldo2A] = useState({});
-
-  // ==========================================================
-  // EASY CALL
-  // ==========================================================
-
-  const [selectedEC, setSelectedEC] = useState([]);
-
-  // ==========================================================
-  // SEARCH
-  // ==========================================================
-
-  const [search2A, setSearch2A] = useState("");
-
-  const [searchEC, setSearchEC] = useState("");
-
-  // ==========================================================
-  // DATA 2A
-  // ==========================================================
-
-  const data2A = useMemo(() => {
-    return sumber2A === "JKK1" ? dummy2AJKK1 : dummy2AJKK2;
-  }, [sumber2A]);
-
-  // ==========================================================
-  // DATA EASY CALL
-  // ==========================================================
-
-  const dataEasyCall = useMemo(() => {
-    return [...dummyEasyCallJKK1, ...dummyEasyCallJKK2];
+      setItems(prepared);
+      setSelected(new Set(prepared.map((item) => item._id)));
+      setCurrentId(prepared[0]._id);
+    } catch (loadError) {
+      setError(loadError?.message || "Gagal membaca data Easy Call.");
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
-  // ==========================================================
-  // FILTER 2A
-  // ==========================================================
+  // Bersihkan object URL ketika PDF diganti atau halaman ditutup.
+  useEffect(() => {
+    return () => {
+      if (pdfUrl) URL.revokeObjectURL(pdfUrl);
+    };
+  }, [pdfUrl]);
 
-  const filtered2A = useMemo(() => {
-    const keyword = search2A.trim().toLowerCase();
+  const visibleItems = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
 
-    if (!keyword) {
-      return data2A;
-    }
+    if (!keyword) return items;
 
-    return data2A.filter((item) => {
-      return (
-        item.nama.toLowerCase().includes(keyword) ||
-        item.norek.toLowerCase().includes(keyword)
-      );
-    });
-  }, [data2A, search2A]);
-
-  // ==========================================================
-  // FILTER EASY CALL
-  // ==========================================================
-
-  const filteredEC = useMemo(() => {
-    const keyword = searchEC.trim().toLowerCase();
-
-    if (!keyword) {
-      return dataEasyCall;
-    }
-
-    return dataEasyCall.filter((item) => {
-      return (
-        item.nama.toLowerCase().includes(keyword) ||
-        item.norek.toLowerCase().includes(keyword) ||
-        item.unit.toLowerCase().includes(keyword)
-      );
-    });
-  }, [dataEasyCall, searchEC]);
-
-  // ==========================================================
-  // MANUAL
-  // ==========================================================
-
-  function tambahManual() {
-    setManualRows((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        nama: "",
-        norek: "",
-        nominal: "",
-        keterangan: "",
-      },
-    ]);
-  }
-
-  function hapusManual(id) {
-    setManualRows((prev) => {
-      if (prev.length <= 1) {
-        return prev;
-      }
-
-      return prev.filter((item) => item.id !== id);
-    });
-  }
-
-  function updateManual(id, field, value) {
-    setManualRows((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              [field]: value,
-            }
-          : item,
+    return items.filter((item) =>
+      [
+        item.nama,
+        item.acctno,
+        item.agf1,
+        item.mbu,
+        item.transaction.label,
+      ].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(keyword),
       ),
     );
-  }
+  }, [items, search]);
 
-  // ==========================================================
-  // PELUNASAN
-  // ==========================================================
+  const selectedItems = useMemo(
+    () => items.filter((item) => selected.has(item._id)),
+    [items, selected],
+  );
 
-  function tambahPelunasan() {
-    setPelunasanRows((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        nama: "",
-        norek: "",
-        nominal: "",
-        keterangan: "",
-      },
-    ]);
-  }
+  const currentPreviewIndex = Math.max(
+    0,
+    selectedItems.findIndex((item) => item._id === currentId),
+  );
 
-  function hapusPelunasan(id) {
-    setPelunasanRows((prev) => {
-      if (prev.length <= 1) {
-        return prev;
+  const previewItem =
+    selectedItems[currentPreviewIndex] ||
+    items.find((item) => item._id === currentId) ||
+    null;
+
+  const allVisibleSelected =
+    visibleItems.length > 0 &&
+    visibleItems.every((item) => selected.has(item._id));
+
+  const currentSignature = useMemo(
+    () =>
+      JSON.stringify(
+        selectedItems.map((item) => ({
+          nama: item.nama,
+          acctno: item.acctno,
+          agf1: item.agf1,
+          alamat: item.alamat,
+          total_tgg: item.total_tgg,
+          transaction: item.transaction.code,
+        })),
+      ),
+    [selectedItems],
+  );
+
+  const hasCurrentPdf = Boolean(pdfBlob) && pdfSignature === currentSignature;
+
+  const invalidatePdf = useCallback(() => {
+    setPdfBlob(null);
+    setPdfUrl("");
+    setPdfFilename("");
+    setPdfCount(0);
+    setPdfSignature("");
+  }, []);
+
+  const toggleItem = useCallback(
+    (id, checked) => {
+      setSelected((previous) => {
+        const next = new Set(previous);
+
+        if (checked) next.add(id);
+        else next.delete(id);
+
+        return next;
+      });
+
+      if (checked) setCurrentId(id);
+      invalidatePdf();
+      setError("");
+    },
+    [invalidatePdf],
+  );
+
+  function toggleAllVisible() {
+    setSelected((previous) => {
+      const next = new Set(previous);
+
+      if (allVisibleSelected) {
+        visibleItems.forEach((item) => next.delete(item._id));
+      } else {
+        visibleItems.forEach((item) => next.add(item._id));
       }
 
-      return prev.filter((item) => item.id !== id);
+      return next;
     });
+
+    invalidatePdf();
+    setError("");
   }
 
-  function updatePelunasan(id, field, value) {
-    setPelunasanRows((prev) =>
-      prev.map((item) =>
-        item.id === id
-          ? {
-              ...item,
-              [field]: value,
-            }
-          : item,
-      ),
+  function changePage(direction) {
+    if (!selectedItems.length) return;
+
+    const nextIndex = Math.max(
+      0,
+      Math.min(selectedItems.length - 1, currentPreviewIndex + direction),
     );
+
+    setCurrentId(selectedItems[nextIndex]._id);
   }
 
-  // ==========================================================
-  // 2A
-  // ==========================================================
+  async function ensurePdf() {
+    if (!selectedItems.length) {
+      throw new Error("Pilih minimal satu debitur.");
+    }
 
-  function toggle2A(id) {
-    setSelected2A((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
+    if (hasCurrentPdf) {
+      return {
+        blob: pdfBlob,
+        fileName: pdfFilename,
+        count: pdfCount,
+      };
+    }
+
+    const result = await requestAdvisPdf(selectedItems);
+    const newUrl = URL.createObjectURL(result.blob);
+
+    setPdfBlob(result.blob);
+    setPdfUrl(newUrl);
+    setPdfFilename(result.fileName);
+    setPdfCount(result.count);
+    setPdfSignature(currentSignature);
+
+    return result;
   }
 
-  function updateSaldo2A(id, value) {
-    setSaldo2A((prev) => ({
-      ...prev,
-      [id]: value,
-    }));
-  }
+  async function handleGenerate() {
+    if (!selectedItems.length || working) return;
 
-  function selectAll2A() {
-    const ids = filtered2A.map((item) => item.id);
+    setError("");
+    setWorking(true);
 
-    const semuaDipilih =
-      ids.length > 0 && ids.every((id) => selected2A.includes(id));
-
-    if (semuaDipilih) {
-      setSelected2A((prev) => prev.filter((id) => !ids.includes(id)));
-    } else {
-      setSelected2A((prev) => [...new Set([...prev, ...ids])]);
+    try {
+      await ensurePdf();
+    } catch (err) {
+      setError(err?.message || "Gagal membuat PDF Advis.");
+    } finally {
+      setWorking(false);
     }
   }
 
-  // ==========================================================
-  // HITUNG TAMBAHAN SALDO 2A
-  // ==========================================================
+  async function handleDownload() {
+    if (!selectedItems.length || working) return;
 
-  function hitungTambahanSaldo2A(item) {
-    const saldo = parseNominalIndonesia(saldo2A[item.id] || 0);
+    setError("");
+    setWorking(true);
 
-    const minimumBalance = 100_000;
-
-    if (saldo >= minimumBalance) {
-      return 0;
-    }
-
-    return minimumBalance - saldo;
-  }
-
-  // ==========================================================
-  // HITUNG NOMINAL 2A
-  // ==========================================================
-
-  function hitungNominal2A(item) {
-    const tambahanSaldo = hitungTambahanSaldo2A(item);
-
-    const total = Number(item.tunggakan || 0) + tambahanSaldo;
-
-    return roundUpThousand(total);
-  }
-
-  // ==========================================================
-  // EASY CALL
-  // ==========================================================
-
-  function toggleEC(id) {
-    setSelectedEC((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
-    );
-  }
-
-  function selectAllEC() {
-    const ids = filteredEC.map((item) => item.id);
-
-    const semuaDipilih =
-      ids.length > 0 && ids.every((id) => selectedEC.includes(id));
-
-    if (semuaDipilih) {
-      setSelectedEC((prev) => prev.filter((id) => !ids.includes(id)));
-    } else {
-      setSelectedEC((prev) => [...new Set([...prev, ...ids])]);
+    try {
+      const result = await ensurePdf();
+      downloadBlob(result.blob, result.fileName || makePdfFilename());
+    } catch (err) {
+      setError(err?.message || "Gagal mengunduh PDF Advis.");
+    } finally {
+      setWorking(false);
     }
   }
 
-  // ==========================================================
-  // GENERATE MANUAL
-  // ==========================================================
+  async function handleShare() {
+    if (!selectedItems.length || working) return;
 
-  function generateManual() {
-    const hasil = manualRows
-      .filter(
-        (item) =>
-          item.nama.trim() ||
-          item.norek.trim() ||
-          item.nominal.trim() ||
-          item.keterangan.trim(),
-      )
-      .map((item) => {
-        const nominal = roundUpThousand(item.nominal);
+    setError("");
+    setWorking(true);
 
-        return {
-          nama: item.nama,
-          norek: item.norek,
-          nominal,
-          nominalDisplay: formatRupiah(nominal),
-          terbilang: terbilangRupiahExact(String(nominal)),
-          keterangan: item.keterangan,
-          tanggal: new Date().toISOString().slice(0, 10),
-        };
-      });
+    try {
+      const result = await ensurePdf();
 
-    if (!hasil.length) {
-      alert("Belum ada data Advis Manual.");
-      return;
+      const file = new File(
+        [result.blob],
+        result.fileName || makePdfFilename(),
+        { type: "application/pdf" },
+      );
+
+      if (
+        typeof navigator !== "undefined" &&
+        navigator.share &&
+        navigator.canShare?.({ files: [file] })
+      ) {
+        await navigator.share({
+          title: "Advis Easy Call",
+          text: `Advis untuk ${result.count} debitur`,
+          files: [file],
+        });
+      } else {
+        downloadBlob(result.blob, file.name);
+
+        window.open(
+          `https://wa.me/?text=${encodeURIComponent(
+            `Advis Easy Call untuk ${result.count} debitur sudah diunduh. Silakan lampirkan file PDF ${file.name} ke chat WhatsApp.`,
+          )}`,
+          "_blank",
+          "noopener,noreferrer",
+        );
+
+        setError(
+          "PDF sudah diunduh. WhatsApp dibuka; lampirkan PDF secara manual jika browser tidak mendukung berbagi file.",
+        );
+      }
+    } catch (err) {
+      if (err?.name !== "AbortError") {
+        setError(err?.message || "Gagal membagikan PDF Advis.");
+      }
+    } finally {
+      setWorking(false);
     }
-
-    console.log("HASIL ADVIS MANUAL:", hasil);
-
-    alert(
-      `Data Advis Manual siap dibuat.\n\nJumlah data: ${hasil.length}\n\nTemplate Excel akan dihubungkan setelah template di-upload.`,
-    );
   }
 
-  // ==========================================================
-  // GENERATE 2A
-  // ==========================================================
+  async function handlePrint() {
+    if (!selectedItems.length || working) return;
 
-  function generate2A() {
-    const dataTerpilih = data2A
-      .filter((item) => selected2A.includes(item.id))
-      .map((item) => {
-        const saldo = parseNominalIndonesia(saldo2A[item.id] || 0);
+    // Buka jendela lebih awal agar mengurangi risiko pemblokir pop-up.
+    const printWindow = window.open("", "_blank");
 
-        const tambahanSaldo = hitungTambahanSaldo2A(item);
+    setError("");
+    setWorking(true);
 
-        const nominal = hitungNominal2A(item);
+    try {
+      const result = await ensurePdf();
+      const url = URL.createObjectURL(result.blob);
 
-        return {
-          sumber: sumber2A,
-          nama: item.nama,
-          norek: item.norek,
-          tunggakan: item.tunggakan,
-          saldoSekarang: saldo,
-          tambahanSaldo,
-          nominal,
-          nominalDisplay: formatRupiah(nominal),
-          terbilang: terbilangRupiahExact(String(nominal)),
-          keterangan:
-            tambahanSaldo > 0
-              ? "2A + penyesuaian saldo minimum Rp100.000"
-              : "2A",
-          tanggal: new Date().toISOString().slice(0, 10),
-        };
-      });
+      if (!printWindow) {
+        downloadBlob(result.blob, result.fileName || makePdfFilename());
+        setError(
+          "Pop-up diblokir. PDF sudah diunduh; buka file tersebut untuk mencetak.",
+        );
+        return;
+      }
 
-    if (!dataTerpilih.length) {
-      alert("Pilih minimal satu data 2A.");
-      return;
+      printWindow.location.href = url;
+
+      // Jangan mencabut URL terlalu cepat; PDF viewer perlu waktu memuat.
+      window.setTimeout(() => URL.revokeObjectURL(url), 5 * 60_000);
+    } catch (err) {
+      if (printWindow && !printWindow.closed) printWindow.close();
+
+      setError(err?.message || "Gagal menyiapkan PDF untuk dicetak.");
+    } finally {
+      setWorking(false);
     }
-
-    console.log("HASIL ADVIS 2A:", dataTerpilih);
-
-    alert(
-      `Data Advis 2A siap dibuat.\n\nSumber: ${sumber2A}\nJumlah data: ${dataTerpilih.length}\n\nTemplate Excel akan dihubungkan setelah template di-upload.`,
-    );
   }
-
-  // ==========================================================
-  // GENERATE EASY CALL
-  // ==========================================================
-
-  function generateEasyCall() {
-    const dataTerpilih = dataEasyCall
-      .filter((item) => selectedEC.includes(item.id))
-      .map((item) => ({
-        sumber: "EASY CALL",
-        unit: item.unit,
-        nama: item.nama,
-        norek: item.norek,
-
-        // EC mengikuti nominal sumber.
-        nominal: item.nominal,
-
-        nominalDisplay: formatRupiah(item.nominal),
-
-        terbilang: terbilangRupiahExact(String(item.nominal)),
-
-        keterangan: "Easy Call",
-
-        tanggal: new Date().toISOString().slice(0, 10),
-      }));
-
-    if (!dataTerpilih.length) {
-      alert("Pilih minimal satu data Easy Call.");
-      return;
-    }
-
-    console.log("HASIL ADVIS EASY CALL:", dataTerpilih);
-
-    alert(
-      `Data Advis Easy Call siap dibuat.\n\nSumber: JKK 1 + JKK 2\nJumlah data: ${dataTerpilih.length}\n\nTemplate Excel akan dihubungkan setelah template di-upload.`,
-    );
-  }
-
-  // ==========================================================
-  // GENERATE PELUNASAN
-  // ==========================================================
-
-  function generatePelunasan() {
-    const hasil = pelunasanRows
-      .filter(
-        (item) =>
-          item.nama.trim() ||
-          item.norek.trim() ||
-          item.nominal.trim() ||
-          item.keterangan.trim(),
-      )
-      .map((item) => {
-        // PENTING:
-        // Jangan Number().
-        // Nominal harus dipertahankan persis.
-        const nominalRaw = item.nominal.trim();
-
-        return {
-          nama: item.nama,
-          norek: item.norek,
-
-          nominal: nominalRaw,
-
-          nominalDisplay: formatRupiahExact(nominalRaw),
-
-          terbilang: terbilangRupiahExact(nominalRaw),
-
-          keterangan: item.keterangan,
-
-          tanggal: new Date().toISOString().slice(0, 10),
-        };
-      });
-
-    if (!hasil.length) {
-      alert("Belum ada data Advis Pelunasan.");
-      return;
-    }
-
-    const nominalKosong = hasil.some((item) => !item.nominal);
-
-    if (nominalKosong) {
-      alert("Nominal Pelunasan belum diisi.");
-      return;
-    }
-
-    console.log("HASIL ADVIS PELUNASAN:", hasil);
-
-    alert(
-      `Data Advis Pelunasan siap dibuat.\n\nJumlah data: ${hasil.length}\n\nNominal tidak dibulatkan dan desimal dipertahankan.`,
-    );
-  }
-
-  // ==========================================================
-  // RESET 2A
-  // ==========================================================
-
-  function reset2A() {
-    setSelected2A([]);
-    setSaldo2A({});
-    setSearch2A("");
-  }
-
-  // ==========================================================
-  // HEADER
-  // ==========================================================
-
-  const unitLabel =
-    activeUnit?.nama_unit ||
-    activeUnit?.nama ||
-    activeUnit?.kode_unit ||
-    "Unit";
-
-  const tanggalHariIni = new Intl.DateTimeFormat("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
-
-  // ==========================================================
-  // LANDING
-  // ==========================================================
-
-  function renderLanding() {
-    return (
-      <div className="space-y-5">
-        <div>
-          <h1 className="text-xl font-bold text-slate-900">Cetak Advis</h1>
-
-          <p className="mt-1 text-sm text-slate-500">
-            Pilih jenis advis yang akan dibuat.
-          </p>
-        </div>
-
-        <div className="grid gap-3 md:grid-cols-2">
-          <MenuCard
-            icon={FileText}
-            title="Advis Manual"
-            description="Input data transaksi secara manual."
-            onClick={() => setMode("manual")}
-          />
-
-          <MenuCard
-            icon={FileSpreadsheet}
-            title="Advis 2A"
-            description="Ambil data 2A dari JKK 1 atau JKK 2."
-            onClick={() => setMode("2a")}
-          />
-
-          <MenuCard
-            icon={WalletCards}
-            title="Advis EC / Easy Call"
-            description="Gabungkan data Easy Call JKK 1 dan JKK 2."
-            onClick={() => setMode("easycall")}
-          />
-
-          <MenuCard
-            icon={Calculator}
-            title="Advis Pelunasan"
-            description="Input nominal pelunasan tanpa pembulatan."
-            onClick={() => setMode("pelunasan")}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================================
-  // HEADER MODE
-  // ==========================================================
-
-  function renderModeHeader(title, description) {
-    return (
-      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-start gap-3">
-          <button
-            type="button"
-            onClick={() => setMode(null)}
-            className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-            title="Kembali"
-          >
-            <ArrowLeft size={18} />
-          </button>
-
-          <div>
-            <h1 className="text-xl font-bold text-slate-900">{title}</h1>
-
-            <p className="mt-1 text-sm text-slate-500">{description}</p>
-          </div>
-        </div>
-
-        <div className="rounded-xl bg-slate-100 px-3 py-2 text-sm text-slate-600">
-          {unitLabel}
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================================
-  // MANUAL UI
-  // ==========================================================
-
-  function renderManual() {
-    return (
-      <div>
-        {renderModeHeader(
-          "Advis Manual",
-          "Input transaksi secara manual. Nominal dibulatkan ke atas kelipatan Rp1.000.",
-        )}
-
-        <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-800">
-          <div className="font-semibold">Ketentuan nominal</div>
-
-          <div className="mt-1">
-            Nominal bebas diinput. Sistem membulatkan ke atas ke kelipatan
-            Rp1.000.
-          </div>
-
-          <div className="mt-1">
-            Contoh: <b>Rp4.500 → Rp5.000</b>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {manualRows.map((row, index) => {
-            const nominalHasil = roundUpThousand(row.nominal);
-
-            return (
-              <div
-                key={row.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="font-semibold text-slate-900">
-                    Data {index + 1}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => hapusManual(row.id)}
-                    disabled={manualRows.length <= 1}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <X size={17} />
-                  </button>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      Nama Debitur
-                    </label>
-
-                    <input
-                      type="text"
-                      value={row.nama}
-                      onChange={(e) =>
-                        updateManual(row.id, "nama", e.target.value)
-                      }
-                      placeholder="Nama debitur"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      No. Rekening Pinjaman
-                    </label>
-
-                    <input
-                      type="text"
-                      value={row.norek}
-                      onChange={(e) =>
-                        updateManual(row.id, "norek", e.target.value)
-                      }
-                      placeholder="No. rekening"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      Nominal Transaksi
-                    </label>
-
-                    <NominalInput
-                      value={row.nominal}
-                      onChange={(value) =>
-                        updateManual(row.id, "nominal", value)
-                      }
-                    />
-
-                    {row.nominal && (
-                      <div className="mt-2 text-right text-xs text-slate-500">
-                        Menjadi:{" "}
-                        <span className="font-semibold text-slate-700">
-                          {formatRupiah(nominalHasil)}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      Keterangan Transaksi
-                    </label>
-
-                    <input
-                      type="text"
-                      value={row.keterangan}
-                      onChange={(e) =>
-                        updateManual(row.id, "keterangan", e.target.value)
-                      }
-                      placeholder="Keterangan"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between">
-          <button
-            type="button"
-            onClick={tambahManual}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <Plus size={17} />
-            Tambah Data
-          </button>
-
-          <button
-            type="button"
-            onClick={generateManual}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            <FileText size={17} />
-            Buat Advis
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================================
-  // 2A UI
-  // ==========================================================
-
-  function render2A() {
-    return (
-      <div>
-        {renderModeHeader(
-          "Advis 2A",
-          "Pilih sumber JKK, kemudian pilih data 2A yang akan dibuat.",
-        )}
-
-        <div className="mb-4 grid gap-3 md:grid-cols-[auto_1fr_auto]">
-          <div className="flex rounded-xl border border-slate-200 bg-white p-1">
-            <button
-              type="button"
-              onClick={() => {
-                setSumber2A("JKK1");
-                reset2A();
-              }}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-                sumber2A === "JKK1"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              JKK 1
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setSumber2A("JKK2");
-                reset2A();
-              }}
-              className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-                sumber2A === "JKK2"
-                  ? "bg-slate-900 text-white"
-                  : "text-slate-600 hover:bg-slate-50"
-              }`}
-            >
-              JKK 2
-            </button>
-          </div>
-
-          <div className="relative">
-            <Search
-              size={17}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
-            <input
-              type="text"
-              value={search2A}
-              onChange={(e) => setSearch2A(e.target.value)}
-              placeholder="Cari nama atau nomor rekening..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={selectAll2A}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <Check size={17} />
-            Pilih Semua
-          </button>
-        </div>
-
-        <div className="mb-4 rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-800">
-          <div className="font-semibold">Aturan saldo 2A</div>
-
-          <div className="mt-1">
-            Saldo Sekarang harus menyisakan minimal <b>Rp100.000</b>.
-          </div>
-
-          <div className="mt-1">
-            Jika saldo Rp25.000, sistem menambahkan Rp75.000 ke nominal
-            tunggakan sebelum pembulatan.
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[40px_1.3fr_1fr_150px_150px_150px] md:gap-3">
-            <div />
-            <div>Debitur</div>
-            <div>No. Rekening</div>
-            <div className="text-right">Tunggakan</div>
-            <div className="text-right">Saldo Sekarang</div>
-            <div className="text-right">Nominal Advis</div>
-          </div>
-
-          {filtered2A.map((item) => {
-            const checked = selected2A.includes(item.id);
-
-            const tambahan = hitungTambahanSaldo2A(item);
-
-            const nominal = hitungNominal2A(item);
-
-            return (
-              <div
-                key={item.id}
-                className={`border-b border-slate-100 p-4 last:border-b-0 ${
-                  checked ? "bg-slate-50" : "bg-white"
-                }`}
-              >
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => toggle2A(item.id)}
-                    className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                      checked
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-300 bg-white"
-                    }`}
-                  >
-                    {checked && <Check size={13} />}
-                  </button>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="grid gap-3 md:grid-cols-[1.3fr_1fr_150px_150px_150px]">
-                      <div>
-                        <div className="font-semibold text-slate-900">
-                          {item.nama}
-                        </div>
-
-                        <div className="mt-0.5 text-xs text-slate-500 md:hidden">
-                          {item.norek}
-                        </div>
-                      </div>
-
-                      <div className="hidden items-center text-sm text-slate-600 md:flex">
-                        {item.norek}
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-slate-500 md:hidden">
-                          Tunggakan
-                        </div>
-
-                        <div className="text-sm font-semibold text-slate-900 md:text-right">
-                          {formatRupiah(item.tunggakan)}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className="mb-1.5 text-xs text-slate-500 md:hidden">
-                          Saldo Sekarang
-                        </div>
-
-                        <NominalInput
-                          value={saldo2A[item.id] || ""}
-                          onChange={(value) => updateSaldo2A(item.id, value)}
-                        />
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-slate-500 md:hidden">
-                          Nominal Advis
-                        </div>
-
-                        <div className="text-sm font-bold text-slate-900 md:text-right">
-                          {formatRupiah(nominal)}
-                        </div>
-
-                        {tambahan > 0 && (
-                          <div className="mt-1 text-right text-xs text-amber-600">
-                            +{formatRupiah(tambahan)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {!filtered2A.length && (
-            <div className="px-4 py-10 text-center text-sm text-slate-500">
-              Data tidak ditemukan.
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-slate-500">
-            {selected2A.length} data dipilih
-          </div>
-
-          <button
-            type="button"
-            onClick={generate2A}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            <FileText size={17} />
-            Buat Advis 2A
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================================
-  // EASY CALL UI
-  // ==========================================================
-
-  function renderEasyCall() {
-    return (
-      <div>
-        {renderModeHeader(
-          "Advis EC / Easy Call",
-          "Data Easy Call JKK 1 dan JKK 2 digabung otomatis.",
-        )}
-
-        <div className="mb-4 grid gap-3 md:grid-cols-[1fr_auto]">
-          <div className="relative">
-            <Search
-              size={17}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-
-            <input
-              type="text"
-              value={searchEC}
-              onChange={(e) => setSearchEC(e.target.value)}
-              placeholder="Cari nama, nomor rekening, atau unit..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-            />
-          </div>
-
-          <button
-            type="button"
-            onClick={selectAllEC}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <Check size={17} />
-            Pilih Semua
-          </button>
-        </div>
-
-        <div className="mb-4 rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-800">
-          <div className="font-semibold">Sumber Easy Call</div>
-
-          <div className="mt-1">
-            Data berasal dari Easy Call RaportMU dan menggabungkan{" "}
-            <b>JKK 1 + JKK 2</b>.
-          </div>
-
-          <div className="mt-1">
-            Tidak menggunakan aturan saldo minimum Rp100.000.
-          </div>
-        </div>
-
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="hidden border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500 md:grid md:grid-cols-[40px_100px_1.3fr_1fr_160px] md:gap-3">
-            <div />
-            <div>Unit</div>
-            <div>Debitur</div>
-            <div>No. Rekening</div>
-            <div className="text-right">Nominal</div>
-          </div>
-
-          {filteredEC.map((item) => {
-            const checked = selectedEC.includes(item.id);
-
-            return (
-              <div
-                key={item.id}
-                className={`border-b border-slate-100 p-4 last:border-b-0 ${
-                  checked ? "bg-slate-50" : "bg-white"
-                }`}
-              >
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => toggleEC(item.id)}
-                    className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border ${
-                      checked
-                        ? "border-slate-900 bg-slate-900 text-white"
-                        : "border-slate-300 bg-white"
-                    }`}
-                  >
-                    {checked && <Check size={13} />}
-                  </button>
-
-                  <div className="min-w-0 flex-1">
-                    <div className="grid gap-3 md:grid-cols-[100px_1.3fr_1fr_160px]">
-                      <div>
-                        <div className="text-xs text-slate-500 md:hidden">
-                          Unit
-                        </div>
-
-                        <span className="inline-flex rounded-lg bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                          {item.unit}
-                        </span>
-                      </div>
-
-                      <div>
-                        <div className="font-semibold text-slate-900">
-                          {item.nama}
-                        </div>
-                      </div>
-
-                      <div className="text-sm text-slate-600">
-                        <div className="text-xs text-slate-500 md:hidden">
-                          No. Rekening
-                        </div>
-
-                        {item.norek}
-                      </div>
-
-                      <div>
-                        <div className="text-xs text-slate-500 md:hidden">
-                          Nominal
-                        </div>
-
-                        <div className="text-sm font-bold text-slate-900 md:text-right">
-                          {formatRupiah(item.nominal)}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {!filteredEC.length && (
-            <div className="px-4 py-10 text-center text-sm text-slate-500">
-              Data tidak ditemukan.
-            </div>
-          )}
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-sm text-slate-500">
-            {selectedEC.length} data dipilih
-          </div>
-
-          <button
-            type="button"
-            onClick={generateEasyCall}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            <FileText size={17} />
-            Buat Advis Easy Call
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================================
-  // PELUNASAN UI
-  // ==========================================================
-
-  function renderPelunasan() {
-    return (
-      <div>
-        {renderModeHeader(
-          "Advis Pelunasan",
-          "Input transaksi pelunasan. Nominal dipertahankan persis tanpa pembulatan.",
-        )}
-
-        <div className="mb-4 rounded-2xl border border-red-100 bg-red-50 p-4 text-sm text-red-800">
-          <div className="font-semibold">Nominal Pelunasan</div>
-
-          <div className="mt-1">
-            Sistem <b>tidak melakukan pembulatan</b>.
-          </div>
-
-          <div className="mt-1">
-            Contoh:
-            <span className="mx-1 font-semibold">49.050.005,02</span>→
-            <span className="ml-1 font-semibold">
-              empat puluh sembilan juta lima puluh ribu lima koma dua rupiah
-            </span>
-          </div>
-        </div>
-
-        <div className="space-y-4">
-          {pelunasanRows.map((row, index) => {
-            const terbilang = terbilangRupiahExact(row.nominal);
-
-            return (
-              <div
-                key={row.id}
-                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="font-semibold text-slate-900">
-                    Data {index + 1}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => hapusPelunasan(row.id)}
-                    disabled={pelunasanRows.length <= 1}
-                    className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <X size={17} />
-                  </button>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-2">
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      Nama Debitur
-                    </label>
-
-                    <input
-                      type="text"
-                      value={row.nama}
-                      onChange={(e) =>
-                        updatePelunasan(row.id, "nama", e.target.value)
-                      }
-                      placeholder="Nama debitur"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      No. Rekening Pinjaman
-                    </label>
-
-                    <input
-                      type="text"
-                      value={row.norek}
-                      onChange={(e) =>
-                        updatePelunasan(row.id, "norek", e.target.value)
-                      }
-                      placeholder="No. rekening"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      Nominal Transaksi
-                    </label>
-
-                    <NominalInput
-                      value={row.nominal}
-                      onChange={(value) =>
-                        updatePelunasan(row.id, "nominal", value)
-                      }
-                      placeholder="49.050.005,02"
-                    />
-
-                    {row.nominal && (
-                      <>
-                        <div className="mt-2 text-right text-xs text-slate-500">
-                          Nominal:
-                          <span className="ml-1 font-semibold text-slate-700">
-                            {formatRupiahExact(row.nominal)}
-                          </span>
-                        </div>
-
-                        <div className="mt-2 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">
-                          <span className="font-semibold text-slate-700">
-                            Terbilang:
-                          </span>{" "}
-                          {terbilang || "-"}
-                        </div>
-                      </>
-                    )}
-                  </div>
-
-                  <div>
-                    <label className="mb-1.5 block text-xs font-medium text-slate-500">
-                      Keterangan Transaksi
-                    </label>
-
-                    <input
-                      type="text"
-                      value={row.keterangan}
-                      onChange={(e) =>
-                        updatePelunasan(row.id, "keterangan", e.target.value)
-                      }
-                      placeholder="Keterangan"
-                      className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-100"
-                    />
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-between">
-          <button
-            type="button"
-            onClick={tambahPelunasan}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-          >
-            <Plus size={17} />
-            Tambah Data
-          </button>
-
-          <button
-            type="button"
-            onClick={generatePelunasan}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white hover:bg-slate-800"
-          >
-            <FileText size={17} />
-            Buat Advis Pelunasan
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // ==========================================================
-  // RENDER
-  // ==========================================================
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-3 py-4 sm:px-5 lg:px-6">
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs text-slate-500">
-          <span>Cetak Advis</span>
+    <main className="min-h-screen bg-zinc-100 p-4 text-zinc-900 md:p-6">
+      <div className="mx-auto flex max-w-[1600px] flex-col gap-4">
+        <header className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+          <div className="flex items-start gap-3">
+            <button
+              type="button"
+              onClick={() => router.back()}
+              className="mt-0.5 rounded-lg border border-zinc-200 p-2 hover:bg-zinc-100"
+              aria-label="Kembali"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </button>
 
-          {mode && (
-            <>
-              <ChevronRight size={14} />
+            <div>
+              <h1 className="text-xl font-semibold">Advis Easy Call</h1>
+              <p className="mt-1 text-sm text-zinc-500">
+                PDF dibuat menggunakan template Excel asli. Satu debitur satu
+                halaman.
+              </p>
+            </div>
+          </div>
 
-              <span className="font-medium text-slate-700">
-                {mode === "manual"
-                  ? "Advis Manual"
-                  : mode === "2a"
-                    ? "Advis 2A"
-                    : mode === "easycall"
-                      ? "Advis EC / Easy Call"
-                      : "Advis Pelunasan"}
-              </span>
-            </>
-          )}
-        </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handlePrint}
+              disabled={loading || working || !selectedItems.length}
+              className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm font-medium hover:bg-zinc-50 disabled:opacity-50"
+            >
+              <Printer className="h-4 w-4" />
+              Cetak
+            </button>
 
-        <div className="hidden text-xs text-slate-400 sm:block">
-          {tanggalHariIni}
+            <button
+              type="button"
+              onClick={handleShare}
+              disabled={loading || working || !selectedItems.length}
+              className="inline-flex items-center gap-2 rounded-lg border border-green-200 bg-green-50 px-3 py-2 text-sm font-medium text-green-800 hover:bg-green-100 disabled:opacity-50"
+            >
+              <Share2 className="h-4 w-4" />
+              Bagikan
+            </button>
+
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={loading || working || !selectedItems.length}
+              className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:opacity-50"
+            >
+              {working ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="h-4 w-4" />
+              )}
+              Unduh PDF ({selectedItems.length})
+            </button>
+          </div>
+        </header>
+
+        {error && (
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+          >
+            {error}
+          </div>
+        )}
+
+        <div className="grid min-h-[75vh] gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
+          <aside className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+            <div className="border-b border-zinc-200 p-3">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div>
+                  <div className="font-semibold">Pilih Debitur</div>
+                  <div className="text-xs text-zinc-500">
+                    {selectedItems.length} dari {items.length} dipilih
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleAllVisible}
+                  disabled={loading || !visibleItems.length || working}
+                  className="text-xs font-medium text-blue-700 hover:underline disabled:opacity-40"
+                >
+                  {allVisibleSelected ? "Lepas pilihan" : "Pilih semua"}
+                </button>
+              </div>
+
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Cari nama / rekening..."
+                className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm outline-none focus:border-zinc-400"
+              />
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-auto">
+              {loading ? (
+                <div className="flex items-center justify-center gap-2 p-6 text-sm text-zinc-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Memuat data...
+                </div>
+              ) : (
+                visibleItems.map((item) => (
+                  <div
+                    key={item._id}
+                    className={`flex gap-3 border-b border-zinc-100 p-3 hover:bg-zinc-50 ${
+                      previewItem?._id === item._id ? "bg-blue-50" : ""
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selected.has(item._id)}
+                      onChange={(event) =>
+                        toggleItem(item._id, event.target.checked)
+                      }
+                      disabled={working}
+                      className="mt-1 h-4 w-4 rounded border-zinc-300"
+                      aria-label={`Pilih Advis ${item.nama}`}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setCurrentId(item._id)}
+                      className="min-w-0 flex-1 text-left"
+                    >
+                      <div className="truncate text-sm font-medium">
+                        {item.nama || "Nama tidak tersedia"}
+                      </div>
+
+                      <div className="mt-0.5 truncate text-xs text-zinc-500">
+                        {item.acctno || "-"}
+                      </div>
+
+                      <div className="mt-1 text-xs text-zinc-700">
+                        {item.transaction.code} ·{" "}
+                        <strong>Rp {formatRupiah(item.total_tgg)}</strong>
+                      </div>
+                    </button>
+                  </div>
+                ))
+              )}
+
+              {!loading && visibleItems.length === 0 && (
+                <div className="p-6 text-center text-sm text-zinc-500">
+                  Tidak ada debitur yang cocok.
+                </div>
+              )}
+            </div>
+          </aside>
+
+          <section className="flex min-h-[65vh] flex-col overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 p-3">
+              <div className="min-w-0">
+                <div className="font-semibold">
+                  {previewItem?.nama || "Pratinjau PDF Advis"}
+                </div>
+
+                <div className="text-xs text-zinc-500">
+                  {previewItem
+                    ? `${previewItem.transaction.code} · ${previewItem.acctno || "-"}`
+                    : "Pilih debitur di sebelah kiri"}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  disabled={loading || working || !selectedItems.length}
+                  className="inline-flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 disabled:opacity-50"
+                >
+                  {working ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : hasCurrentPdf ? (
+                    <RefreshCw className="h-4 w-4" />
+                  ) : (
+                    <FileText className="h-4 w-4" />
+                  )}
+                  {working
+                    ? "Memproses Excel..."
+                    : hasCurrentPdf
+                      ? "Buat Ulang PDF"
+                      : "Buat Pratinjau PDF"}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => changePage(-1)}
+                  disabled={!selectedItems.length || currentPreviewIndex <= 0}
+                  className="rounded-lg border border-zinc-300 p-2 hover:bg-zinc-50 disabled:opacity-40"
+                  aria-label="Advis sebelumnya"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <span className="min-w-[88px] text-center text-xs text-zinc-600">
+                  {selectedItems.length
+                    ? `${currentPreviewIndex + 1} / ${selectedItems.length}`
+                    : "0 / 0"}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => changePage(1)}
+                  disabled={
+                    !selectedItems.length ||
+                    currentPreviewIndex >= selectedItems.length - 1
+                  }
+                  className="rounded-lg border border-zinc-300 p-2 hover:bg-zinc-50 disabled:opacity-40"
+                  aria-label="Advis berikutnya"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-auto bg-zinc-200 p-3 md:p-6">
+              {hasCurrentPdf && pdfUrl ? (
+                <div className="mx-auto h-[75vh] min-h-[500px] w-full max-w-[900px] overflow-hidden rounded-lg bg-white shadow-lg">
+                  <iframe
+                    key={`${pdfUrl}-${currentPreviewIndex}`}
+                    title={`Pratinjau PDF Advis halaman ${
+                      currentPreviewIndex + 1
+                    }`}
+                    src={`${pdfUrl}#page=${currentPreviewIndex + 1}&view=FitH`}
+                    className="h-full w-full border-0"
+                  />
+                </div>
+              ) : (
+                <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 px-4 text-center">
+                  {working ? (
+                    <>
+                      <Loader2 className="h-10 w-10 animate-spin text-zinc-500" />
+                      <div className="font-medium">
+                        Sedang membuat PDF menggunakan Excel
+                      </div>
+                      <p className="max-w-md text-sm text-zinc-500">
+                        Template asli sedang diisi. Waktu proses bergantung pada
+                        jumlah debitur yang dipilih.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="h-12 w-12 text-zinc-400" />
+                      <div className="font-medium">
+                        Pratinjau PDF belum dibuat
+                      </div>
+                      <p className="max-w-md text-sm text-zinc-500">
+                        Pilih debitur yang dibutuhkan, lalu klik Buat Pratinjau
+                        PDF. PDF akan dibuat dari template Excel asli, bukan
+                        digambar ulang oleh browser.
+                      </p>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-zinc-200 px-4 py-3 text-xs text-zinc-500">
+              {hasCurrentPdf
+                ? `PDF Excel siap · ${pdfCount} halaman · ${(
+                    pdfBlob.size / 1024
+                  ).toFixed(1)} KB`
+                : "PDF dibuat saat diperlukan agar Excel tidak berjalan setiap kali halaman dibuka."}{" "}
+              Nama MKS, unit, dan alamat tidak ditambahkan secara otomatis jika
+              tidak tersedia pada data sumber.
+            </div>
+          </section>
         </div>
       </div>
-
-      {mode === null && renderLanding()}
-
-      {mode === "manual" && renderManual()}
-
-      {mode === "2a" && render2A()}
-
-      {mode === "easycall" && renderEasyCall()}
-
-      {mode === "pelunasan" && renderPelunasan()}
-    </div>
+    </main>
   );
 }

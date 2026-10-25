@@ -5,6 +5,7 @@ import PkSelect from "../../shared/PkSelect";
 import PkSection from "../../shared/PkSection";
 
 const maritalStatuses = [
+  { value: "", label: "Pilih status" },
   { value: "MENIKAH", label: "Menikah" },
   { value: "LAJANG", label: "Lajang" },
   { value: "DUDA", label: "Duda" },
@@ -14,6 +15,7 @@ const maritalStatuses = [
 ];
 
 const genders = [
+  { value: "", label: "Pilih jenis kelamin" },
   { value: "LAKI-LAKI", label: "Laki-laki" },
   { value: "PEREMPUAN", label: "Perempuan" },
 ];
@@ -92,7 +94,7 @@ export default function PkDebtorSection({ pk, setPk, canEdit, locked }) {
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
         <PkSelect
           label="Status"
-          value={pk?.status_debitur || ""}
+          value={pk?.status_debitur ?? ""}
           onChange={(e) => update("status_debitur", e.target.value)}
           disabled={disabled}
           options={maritalStatuses}

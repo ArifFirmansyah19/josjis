@@ -7,6 +7,7 @@ import { EXCEL_ENGINE_URL } from "@/lib/excel-engine";
 import { Download, Loader2, MessageCircle, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
+import { useRouter } from "next/navigation";
 
 const BRANCH_1 = "Jambi Kuamang Kuning 1";
 const BRANCH_2 = "Jambi Kuamang Kuning 2";
@@ -312,6 +313,7 @@ function buildExcelFile(rows) {
 }
 
 export default function EasyCallModal({ open, onClose, file }) {
+  const router = useRouter();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -480,20 +482,59 @@ export default function EasyCallModal({ open, onClose, file }) {
     }
   }
 
-  /**
-   * ============================================================
-   * DOWNLOAD EXCEL
-   * ============================================================
-   *
-   * PENTING:
-   *
-   * filteredRows = data yang tampil di tabel.
-   *
-   * Tidak menggunakan branch1Rows.
-   * Tidak menggunakan branch2Rows.
-   *
-   * Jadi seluruh data langsung masuk Excel.
-   */
+  function handleProcessAdvis() {
+    setError("");
+
+    if (!processed) {
+      setError("Proses Easy Call terlebih dahulu.");
+      return;
+    }
+
+    if (!Array.isArray(filteredRows) || filteredRows.length === 0) {
+      setError("Tidak ada data Easy Call untuk dibuatkan Advis.");
+      return;
+    }
+
+    try {
+      // Hanya gunakan data yang memang ditampilkan pada tabel.
+      const advisData = filteredRows
+        .filter((row) => {
+          const branch = getBranch(row);
+          return branch === BRANCH_1 || branch === BRANCH_2;
+        })
+        .map((row, index) => ({
+          id: `${String(row?.[5] ?? "").trim()}-${index}`,
+          acctno: String(row?.[5] ?? "").trim(),
+          agf1: String(row?.[25] ?? "").trim(),
+          nama: String(row?.[6] ?? "").trim(),
+          total_tgg: getYNumber(row?.[24]),
+          mbu: getBranch(row),
+          nama_mks: String(row?.[30] ?? "").trim(),
+        }))
+        .filter((row) => row.nama && row.acctno);
+
+      if (advisData.length === 0) {
+        setError(
+          "Tidak ada data Advis yang valid. Periksa nama dan nomor rekening pada tabel Easy Call.",
+        );
+        return;
+      }
+
+      // Simpan data terbaru agar halaman Advis tidak memakai
+      // data lama dari proses Easy Call sebelumnya.
+      sessionStorage.removeItem("raportmu_advis_data");
+      sessionStorage.setItem("raportmu_advis_data", JSON.stringify(advisData));
+
+      router.push("/admin/cetak-advis");
+    } catch (processError) {
+      console.error("Gagal menyiapkan data Advis:", processError);
+
+      setError(
+        "Data Advis gagal disiapkan. Periksa penyimpanan browser dan coba kembali.",
+      );
+    }
+  }
+
   function handleDownloadExcel() {
     if (!filteredRows.length) {
       setError("Tidak ada data Easy Call yang dapat diexport.");
@@ -649,6 +690,15 @@ export default function EasyCallModal({ open, onClose, file }) {
                   <Download className="h-4 w-4" />
                 )}
                 Unduh Excel
+              </button>
+
+              <button
+                type="button"
+                onClick={handleProcessAdvis}
+                disabled={!filteredRows.length || exporting || sharing}
+                className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Proses Advis
               </button>
 
               {isMobile && (
