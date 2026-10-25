@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Calculator, RotateCcw } from "lucide-react";
+import { Calculator, RotateCcw, ShieldCheck, CalendarDays } from "lucide-react";
 
 const STANDARD_RULES = {
   KUM: [
@@ -59,9 +59,7 @@ function formatRupiah(value) {
 function formatInputNominal(value) {
   const numeric = String(value).replace(/\D/g, "");
 
-  if (!numeric) {
-    return "";
-  }
+  if (!numeric) return "";
 
   return new Intl.NumberFormat("id-ID").format(Number(numeric));
 }
@@ -84,10 +82,170 @@ function findStandardRule(loanType, limit) {
   return rules.find((rule) => limit >= rule.min && limit <= rule.max) || null;
 }
 
+/**
+ * Menghitung umur berdasarkan tanggal lahir.
+ * Umur dihitung dalam tahun penuh, bukan sekadar
+ * selisih tahun kalender.
+ */
+function calculateAge(birthDate) {
+  if (!birthDate) return null;
+
+  const parts = birthDate.split("-").map(Number);
+
+  if (parts.length !== 3 || parts.some(Number.isNaN)) {
+    return null;
+  }
+
+  const [year, month, day] = parts;
+
+  const birth = new Date(year, month - 1, day);
+  const today = new Date();
+
+  // Pastikan tanggal yang dimasukkan valid.
+  if (
+    birth.getFullYear() !== year ||
+    birth.getMonth() !== month - 1 ||
+    birth.getDate() !== day ||
+    birth > today
+  ) {
+    return null;
+  }
+
+  let age = today.getFullYear() - year;
+
+  const birthdayHasNotPassed =
+    today.getMonth() < month - 1 ||
+    (today.getMonth() === month - 1 && today.getDate() < day);
+
+  if (birthdayHasNotPassed) {
+    age -= 1;
+  }
+
+  return age;
+}
+
+/**
+ * Aturan asuransi:
+ * 1. Umur > 50 tahun: AMFS + MMS, semua limit.
+ * 2. Umur <= 50 tahun dan limit < Rp300 juta:
+ *    AII MAGI + SI JITU.
+ * 3. Umur <= 50 tahun dan limit Rp300-500 juta:
+ *    AMFS + SI JITU.
+ *
+ * Limit di atas Rp500 juta untuk umur <= 50 tahun
+ * belum memiliki ketentuan asuransi dalam aturan ini.
+ */
+function determineInsurance(age, limit) {
+  if (age === null || age === undefined || limit <= 0) {
+    return {
+      names: [],
+      message:
+        "Masukkan umur atau tanggal lahir dan limit kredit untuk menentukan asuransi.",
+      status: "incomplete",
+    };
+  }
+
+  // Prioritas utama: umur di atas 50 tahun.
+  if (age > 50) {
+    return {
+      names: ["AMFS", "MMS"],
+      message:
+        "Debitur berumur di atas 50 tahun. Asuransi AMFS + MMS berlaku untuk semua limit KUR maupun KUM.",
+      status: "determined",
+    };
+  }
+
+  // Umur 50 tahun atau kurang, limit di bawah Rp300 juta.
+  if (limit < 300000000) {
+    return {
+      names: ["AII MAGI", "SI JITU"],
+      message: "Umur 50 tahun atau kurang dengan limit di bawah Rp300 juta.",
+      status: "determined",
+    };
+  }
+
+  // Umur 50 tahun atau kurang, limit Rp300-500 juta.
+  if (limit <= 500000000) {
+    return {
+      names: ["AMFS", "SI JITU"],
+      message:
+        "Umur 50 tahun atau kurang dengan limit Rp300 juta sampai Rp500 juta.",
+      status: "determined",
+    };
+  }
+
+  return {
+    names: [],
+    message:
+      "Ketentuan asuransi untuk limit di atas Rp500 juta bagi debitur berumur 50 tahun atau kurang belum ditentukan.",
+    status: "unsupported",
+  };
+}
+
+const STANDARD_TABLE = [
+  {
+    product: "KUM",
+    limit: "Rp1–Rp100 juta",
+    service: "0,50%",
+    provision: "0,50%",
+  },
+  {
+    product: "KUM",
+    limit: ">Rp100–Rp250 juta",
+    service: "0,75%",
+    provision: "0,50%",
+  },
+  {
+    product: "KUM",
+    limit: ">Rp250–Rp500 juta",
+    service: "1,00%",
+    provision: "0,50%",
+  },
+  {
+    product: "KUR",
+    limit: "s.d. Rp10 juta",
+    service: "Rp1",
+    provision: "Rp0",
+  },
+  {
+    product: "KUR",
+    limit: ">Rp10–Rp100 juta",
+    service: "2,00%",
+    provision: "Rp0",
+  },
+  {
+    product: "KUR",
+    limit: ">Rp100–Rp500 juta",
+    service: "1,90%",
+    provision: "Rp0",
+  },
+];
+
 export default function PraPencairanPage() {
   const [loanType, setLoanType] = useState("KUM");
   const [limitInput, setLimitInput] = useState("");
-  const [insuranceEnabled, setInsuranceEnabled] = useState(false);
+  const [ageInput, setAgeInput] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+
+  // Jika tanggal lahir diisi, umur otomatis dihitung.
+  // Jika tidak, umur menggunakan input manual.
+  const calculatedAge = useMemo(() => {
+    if (birthDate) {
+      return calculateAge(birthDate);
+    }
+
+    if (ageInput.trim() === "") {
+      return null;
+    }
+
+    const parsed = Number(ageInput);
+
+    if (!Number.isInteger(parsed) || parsed < 0 || parsed > 120) {
+      return null;
+    }
+
+    return parsed;
+  }, [ageInput, birthDate]);
 
   const calculation = useMemo(() => {
     const limit = parseNominal(limitInput);
@@ -129,7 +287,6 @@ export default function PraPencairanPage() {
 
     if (standardRule.serviceFeeType === "fixed") {
       serviceFee = standardRule.serviceFeeValue;
-
       serviceFeeRate = 0;
     } else {
       serviceFee = limit * standardRule.serviceFeeRate;
@@ -137,17 +294,10 @@ export default function PraPencairanPage() {
 
     const provision = limit * standardRule.provisionRate;
 
-    /*
-     * Biaya notaris hanya ditampilkan
-     * jika pinjaman di atas Rp100 juta.
-     *
-     * Untuk saat ini nominal tetap Rp0.
-     */
-    const notaryFee = limit > 100000000 ? 0 : 0;
+    // Nominal notaris tetap Rp0 untuk saat ini.
+    const notaryFee = 0;
 
-    /*
-     * Biaya lainnya saat ini tetap Rp0.
-     */
+    // Biaya lainnya tetap Rp0 untuk saat ini.
     const otherCost = 0;
 
     const totalFee = serviceFee + provision + notaryFee + otherCost;
@@ -166,21 +316,51 @@ export default function PraPencairanPage() {
     };
   }, [loanType, limitInput]);
 
+  const insurance = useMemo(
+    () => determineInsurance(calculatedAge, calculation.limit),
+    [calculatedAge, calculation.limit],
+  );
+
   function handleLimitChange(event) {
     setLimitInput(formatInputNominal(event.target.value));
+  }
+
+  function handleAgeChange(event) {
+    const value = event.target.value;
+
+    // Izinkan input kosong ketika pengguna menghapus angka.
+    if (value === "") {
+      setAgeInput("");
+      return;
+    }
+
+    // Umur hanya boleh berupa angka bulat.
+    if (!/^\d+$/.test(value)) return;
+
+    const age = Number(value);
+
+    if (age <= 120) {
+      setAgeInput(value);
+    }
+  }
+
+  function handleBirthDateChange(event) {
+    setBirthDate(event.target.value);
   }
 
   function handleReset() {
     setLoanType("KUM");
     setLimitInput("");
-    setInsuranceEnabled(false);
+    setAgeInput("");
+    setBirthDate("");
   }
+
+  const insuranceHasResult =
+    insurance.status === "determined" && insurance.names.length > 0;
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
-      {/* =====================================================
-            HEADER
-        ===================================================== */}
+      {/* HEADER */}
       <div className="flex items-center gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-900 text-white">
           <Calculator className="h-5 w-5" />
@@ -192,46 +372,52 @@ export default function PraPencairanPage() {
           </h1>
 
           <p className="mt-1 text-xs text-zinc-500 sm:text-sm">
-            Hitung biaya layanan, provisi, dan total biaya pencairan.
+            Hitung biaya layanan, provisi, dan rekomendasi asuransi berdasarkan
+            umur serta limit kredit.
           </p>
         </div>
       </div>
 
-      {/* =====================================================
-            INPUT
-        ===================================================== */}
-      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      {/* INPUT PENCairan DAN DATA UMUR */}
+      <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-4 py-4 sm:px-6">
           <h2 className="text-base font-semibold text-zinc-900">
             Input Pencairan
           </h2>
 
           <p className="mt-0.5 text-xs text-zinc-500">
-            Pilih jenis pinjaman dan masukkan limit kredit.
+            Masukkan jenis pinjaman, limit kredit, dan umur atau tanggal lahir
+            debitur.
           </p>
         </div>
 
         <div className="grid gap-5 p-4 sm:grid-cols-2 sm:p-6">
           {/* JENIS PINJAMAN */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+            <label
+              htmlFor="loanType"
+              className="mb-1.5 block text-sm font-medium text-zinc-700"
+            >
               Jenis Pinjaman
             </label>
 
             <select
+              id="loanType"
               value={loanType}
               onChange={(event) => setLoanType(event.target.value)}
               className="h-11 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
             >
               <option value="KUM">KUM</option>
-
               <option value="KUR">KUR</option>
             </select>
           </div>
 
           {/* LIMIT */}
           <div>
-            <label className="mb-1.5 block text-sm font-medium text-zinc-700">
+            <label
+              htmlFor="loanLimit"
+              className="mb-1.5 block text-sm font-medium text-zinc-700"
+            >
               Limit Kredit
             </label>
 
@@ -241,6 +427,7 @@ export default function PraPencairanPage() {
               </span>
 
               <input
+                id="loanLimit"
                 type="text"
                 inputMode="numeric"
                 value={limitInput}
@@ -250,28 +437,92 @@ export default function PraPencairanPage() {
               />
             </div>
           </div>
+
+          {/* UMUR */}
+          <div>
+            <label
+              htmlFor="debtorAge"
+              className="mb-1.5 block text-sm font-medium text-zinc-700"
+            >
+              Umur Debitur
+            </label>
+
+            <div className="relative">
+              <input
+                id="debtorAge"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max="120"
+                step="1"
+                value={
+                  birthDate && calculatedAge !== null ? calculatedAge : ageInput
+                }
+                onChange={handleAgeChange}
+                readOnly={Boolean(birthDate)}
+                placeholder="Contoh: 45"
+                className={`h-11 w-full rounded-xl border border-zinc-200 px-3 pr-14 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100 ${
+                  birthDate ? "bg-zinc-50 text-zinc-500" : "bg-white"
+                }`}
+              />
+
+              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-zinc-400">
+                tahun
+              </span>
+            </div>
+
+            <p className="mt-1.5 text-xs text-zinc-400">
+              {birthDate
+                ? "Umur dihitung otomatis dari tanggal lahir."
+                : "Isi umur jika tanggal lahir tidak diketahui."}
+            </p>
+          </div>
+
+          {/* TANGGAL LAHIR */}
+          <div>
+            <label
+              htmlFor="birthDate"
+              className="mb-1.5 block text-sm font-medium text-zinc-700"
+            >
+              Tanggal Lahir
+            </label>
+
+            <div className="relative">
+              <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+
+              <input
+                id="birthDate"
+                type="date"
+                value={birthDate}
+                onChange={handleBirthDateChange}
+                max={new Date().toLocaleDateString("en-CA")}
+                className="h-11 w-full rounded-xl border border-zinc-200 bg-white pl-9 pr-3 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+              />
+            </div>
+
+            <p className="mt-1.5 text-xs text-zinc-400">
+              Jika diisi, tanggal lahir menjadi acuan umur otomatis. Hapus
+              tanggal lahir untuk kembali memakai umur manual.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* =====================================================
-            WARNING
-        ===================================================== */}
-      {calculation.limit > 0 && (
+      {/* PERINGATAN BIAYA */}
+      {calculation.limit > 0 && !calculation.error && (
         <section className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 sm:px-6">
           <div className="text-sm font-semibold text-amber-900">
-            BIAYA STANDAR KETENTUAN SEKARANG, BUKAN TERMASUK PROMO
+            BIAYA STANDAR KETENTUAN, BELUM TERMASUK PROMO
           </div>
 
           <div className="mt-1 text-xs text-amber-700">
-            Harga promo bisa berbeda.
+            Biaya promo dapat berbeda dari biaya standar yang ditampilkan.
           </div>
         </section>
       )}
 
-      {/* =====================================================
-            HASIL
-        ===================================================== */}
-      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      {/* HASIL PERHITUNGAN */}
+      <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-4 py-4 sm:px-6">
           <h2 className="text-base font-semibold text-zinc-900">
             Hasil Perhitungan
@@ -287,7 +538,7 @@ export default function PraPencairanPage() {
         ) : (
           <div className="p-4 sm:p-6">
             <div className="space-y-1">
-              {/* BIAYA PROVISI */}
+              {/* PROVISI */}
               <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
                 <div className="min-w-0">
                   <div className="text-sm text-zinc-500">Biaya Provisi</div>
@@ -304,7 +555,7 @@ export default function PraPencairanPage() {
                 </span>
               </div>
 
-              {/* BIAYA LAYANAN */}
+              {/* LAYANAN */}
               <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
                 <div className="min-w-0">
                   <div className="text-sm text-zinc-500">Biaya Layanan</div>
@@ -321,7 +572,7 @@ export default function PraPencairanPage() {
                 </span>
               </div>
 
-              {/* BIAYA NOTARIS */}
+              {/* NOTARIS */}
               {calculation.limit > 100000000 && (
                 <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
                   <div className="min-w-0">
@@ -338,7 +589,7 @@ export default function PraPencairanPage() {
                 </div>
               )}
 
-              {/* BIAYA LAINNYA */}
+              {/* LAINNYA */}
               <div className="flex items-center justify-between gap-4 border-b border-zinc-100 py-3">
                 <span className="text-sm text-zinc-500">Biaya Lainnya</span>
 
@@ -370,168 +621,187 @@ export default function PraPencairanPage() {
               </div>
             </div>
 
-            {/* ASURANSI */}
-            <div className="mt-4 flex items-center gap-3 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3">
-              <input
-                id="insurance"
-                type="checkbox"
-                checked={insuranceEnabled}
-                onChange={(event) => setInsuranceEnabled(event.target.checked)}
-                className="h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-200"
-              />
+            {/* HASIL ASURANSI */}
+            <div className="mt-5 overflow-hidden rounded-2xl border border-emerald-200 bg-white">
+              <div className="flex items-center gap-3 border-b border-emerald-100 bg-emerald-50 px-4 py-4">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-800">
+                  <ShieldCheck className="h-5 w-5" />
+                </div>
 
-              <label
-                htmlFor="insurance"
-                className="cursor-pointer text-sm font-medium text-zinc-700"
-              >
-                Asuransi
-              </label>
-            </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-emerald-950">
+                    Rekomendasi Asuransi
+                  </h3>
 
-            <div className="mt-2 px-1 text-xs text-zinc-400">
-              Perhitungan asuransi akan terhubung ke kalkulator Excel.
+                  <p className="mt-0.5 text-xs text-emerald-800">
+                    Ditentukan otomatis dari umur dan limit kredit.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-4 sm:p-5">
+                {insuranceHasResult ? (
+                  <>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {insurance.names.map((name) => (
+                        <div
+                          key={name}
+                          className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-4"
+                        >
+                          <div className="text-xs font-medium text-emerald-700">
+                            Asuransi yang digunakan
+                          </div>
+
+                          <div className="mt-1 text-lg font-bold text-emerald-950">
+                            {name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-3 rounded-xl bg-zinc-50 px-3 py-3 text-xs leading-5 text-zinc-600">
+                      {insurance.message}
+                    </div>
+                  </>
+                ) : (
+                  <div
+                    className={`rounded-xl border px-4 py-3 text-sm leading-6 ${
+                      insurance.status === "unsupported"
+                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                        : "border-zinc-200 bg-zinc-50 text-zinc-500"
+                    }`}
+                  >
+                    {insurance.message}
+                  </div>
+                )}
+
+                {calculatedAge !== null && (
+                  <div className="mt-3 text-xs text-zinc-500">
+                    Umur yang digunakan:{" "}
+                    <span className="font-semibold text-zinc-700">
+                      {calculatedAge} tahun
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
       </section>
 
-      {/* =====================================================
-            KETENTUAN STANDAR
-        ===================================================== */}
-      <section className="rounded-2xl border border-zinc-200 bg-white shadow-sm">
+      {/* KETENTUAN STANDAR BIAYA */}
+
+      <div className="w-full min-w-0 p-3 sm:p-5 md:p-6">
+        <div className="w-full overflow-hidden rounded-xl border border-zinc-100">
+          <table className="w-full table-fixed text-[11px] sm:text-xs md:text-sm">
+            <colgroup>
+              <col className="w-[15%]" />
+              <col className="w-[39%]" />
+              <col className="w-[23%]" />
+              <col className="w-[23%]" />
+            </colgroup>
+
+            <thead>
+              <tr className="border-b border-zinc-200 bg-zinc-50">
+                <th className="px-1.5 py-2 text-left font-semibold text-zinc-500 sm:px-2.5 sm:py-3">
+                  Produk
+                </th>
+                <th className="px-1.5 py-2 text-left font-semibold text-zinc-500 sm:px-2.5 sm:py-3">
+                  Limit
+                </th>
+                <th className="px-1.5 py-2 text-left font-semibold text-zinc-500 sm:px-2.5 sm:py-3">
+                  Layanan
+                </th>
+                <th className="px-1.5 py-2 text-left font-semibold text-zinc-500 sm:px-2.5 sm:py-3">
+                  Provisi
+                </th>
+              </tr>
+            </thead>
+
+            <tbody className="divide-y divide-zinc-100">
+              {STANDARD_TABLE.map((row, index) => (
+                <tr
+                  key={`${row.product}-${index}`}
+                  className="hover:bg-zinc-50"
+                >
+                  <td className="break-words px-1.5 py-2 font-medium text-zinc-900 sm:px-2.5 sm:py-3">
+                    {row.product}
+                  </td>
+
+                  <td className="break-words px-1.5 py-2 leading-4 text-zinc-600 sm:px-2.5 sm:py-3 sm:leading-5">
+                    {row.limit}
+                  </td>
+
+                  <td className="break-words px-1.5 py-2 text-zinc-600 sm:px-2.5 sm:py-3">
+                    {row.service}
+                  </td>
+
+                  <td className="break-words px-1.5 py-2 text-zinc-600 sm:px-2.5 sm:py-3">
+                    {row.provision}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* KETENTUAN ASURANSI */}
+      <section className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
         <div className="border-b border-zinc-100 px-4 py-4 sm:px-6">
           <h2 className="text-base font-semibold text-zinc-900">
-            Ketentuan Standar
+            Ketentuan Pemilihan Asuransi
           </h2>
 
           <p className="mt-0.5 text-xs text-zinc-500">
-            Ketentuan biaya berdasarkan jenis pinjaman dan limit kredit.
+            Aturan umur diprioritaskan sebelum aturan limit.
           </p>
         </div>
 
-        {/* RESPONSIVE TABLE */}
-        <div className="p-4 sm:p-6">
-          <div className="overflow-hidden rounded-xl border border-zinc-100">
-            <table className="w-full table-fixed text-xs sm:text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50">
-                  <th className="w-[16%] px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:w-[15%] sm:px-3 sm:text-xs">
-                    Produk
-                  </th>
+        <div className="space-y-3 p-4 sm:p-6">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="text-sm font-bold text-amber-950">
+              Umur di atas 50 tahun
+            </div>
 
-                  <th className="w-[38%] px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:w-[40%] sm:px-3 sm:text-xs">
-                    Limit
-                  </th>
+            <div className="mt-1 text-sm text-amber-900">
+              AMFS + MMS, berapa pun limit pinjaman KUR maupun KUM.
+            </div>
 
-                  <th className="w-[23%] px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:w-[22%] sm:px-3 sm:text-xs">
-                    Layanan
-                  </th>
-
-                  <th className="w-[23%] px-2 py-3 text-left text-[10px] font-semibold uppercase tracking-wide text-zinc-500 sm:w-[23%] sm:px-3 sm:text-xs">
-                    Provisi
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="divide-y divide-zinc-100">
-                {/* KUM 1 */}
-                <tr>
-                  <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
-                    KUM
-                  </td>
-
-                  <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
-                    Rp1 - Rp100 juta
-                  </td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">0,50%</td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">0,50%</td>
-                </tr>
-
-                {/* KUM 2 */}
-                <tr>
-                  <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
-                    KUM
-                  </td>
-
-                  <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
-                    &gt;Rp100 - Rp250 juta
-                  </td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">0,75%</td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">0,50%</td>
-                </tr>
-
-                {/* KUM 3 */}
-                <tr>
-                  <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
-                    KUM
-                  </td>
-
-                  <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
-                    &gt;Rp250 - Rp500 juta
-                  </td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">1,00%</td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">0,50%</td>
-                </tr>
-
-                {/* KUR 1 */}
-                <tr>
-                  <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
-                    KUR
-                  </td>
-
-                  <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
-                    s.d. Rp10 juta
-                  </td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">Rp1</td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">Rp0</td>
-                </tr>
-
-                {/* KUR 2 */}
-                <tr>
-                  <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
-                    KUR
-                  </td>
-
-                  <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
-                    &gt;Rp10 - Rp100 juta
-                  </td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">2,00%</td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">Rp0</td>
-                </tr>
-
-                {/* KUR 3 */}
-                <tr>
-                  <td className="px-2 py-3 font-medium text-zinc-900 sm:px-3">
-                    KUR
-                  </td>
-
-                  <td className="break-words px-2 py-3 leading-5 text-zinc-600 sm:px-3">
-                    &gt;Rp100 - Rp500 juta
-                  </td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">1,90%</td>
-
-                  <td className="px-2 py-3 text-zinc-600 sm:px-3">Rp0</td>
-                </tr>
-              </tbody>
-            </table>
+            <div className="mt-1 text-xs text-amber-800">
+              Aturan ini menjadi prioritas utama.
+            </div>
           </div>
+
+          <div className="rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="text-sm font-bold text-zinc-900">
+              Umur 50 tahun atau kurang
+            </div>
+
+            <div className="mt-2 space-y-2 text-sm text-zinc-700">
+              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
+                <span>Limit di bawah Rp300 juta</span>
+                <span className="font-semibold">AII MAGI + SI JITU</span>
+              </div>
+
+              <div className="border-t border-zinc-200" />
+
+              <div className="flex flex-col gap-1 sm:flex-row sm:justify-between">
+                <span>Limit Rp300 juta–Rp500 juta</span>
+                <span className="font-semibold">AMFS + SI JITU</span>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-xs leading-5 text-zinc-500">
+            Untuk debitur berumur 50 tahun atau kurang dengan limit di atas
+            Rp500 juta, rekomendasi asuransi tidak ditentukan karena belum ada
+            ketentuan yang diberikan.
+          </p>
         </div>
       </section>
 
-      {/* =====================================================
-            RESET
-        ===================================================== */}
+      {/* RESET */}
       <div className="flex justify-end">
         <button
           type="button"

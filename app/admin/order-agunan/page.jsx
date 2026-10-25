@@ -1,1668 +1,981 @@
-/* eslint-disable react-hooks/set-state-in-effect */
-
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  RefreshCw,
+  Search,
+  Eye,
+  CheckCircle2,
+  XCircle,
+  MessageSquareText,
+  PackageCheck,
+  Clock3,
+  FileImage,
   CalendarDays,
-  FileDown,
-  FileText,
-  Pencil,
-  Plus,
-  Printer,
-  Trash2,
-  Upload,
-  X,
+  Filter,
+  LoaderCircle,
+  AlertCircle,
+  ClipboardList,
+  ChevronDown,
+  ChevronUp,
+  Send,
 } from "lucide-react";
-
 import { useUnit } from "@/components/UnitContext";
 
-import {
-  TopUpModal,
-  ManualModal,
-  EditNotasiModal,
-  DeleteOrderModal,
-} from "@/components/order-agunan/OrderAgunanModals";
-
-import OrderAgunanPrint from "@/components/order-agunan/OrderAgunanPrint";
-
-import {
-  prepareExportAssets,
-  downloadOverallPdf,
-  downloadWord,
-  downloadZip,
-} from "@/components/order-agunan/OrderAgunanExport";
-
-/* =========================================================
-   CONSTANT
-========================================================= */
-
-const NEXT_NOMOR_SURAT = {
-  "JKK 1": "157",
-  "JKK 2": "001",
-};
-
-const MASTER_KEY = "josjis_pegawai_unit";
-
-const UNIT_INFO = {
-  JKK1: {
-    code: "11081A",
-    name: "Jambi Kuamang Kuning 1",
-    workUnit: "KCP KUAMANG KUNING 1",
+const STATUS = {
+  MENUNGGU_PEMERIKSAAN: {
+    label: "Menunggu pemeriksaan",
+    color: "bg-amber-100 text-amber-800 ring-amber-200",
   },
-  JKK2: {
-    code: "11081B",
-    name: "Jambi Kuamang Kuning 2",
-    workUnit: "KCP KUAMANG KUNING 2",
+  DITERIMA: {
+    label: "Diterima",
+    color: "bg-emerald-100 text-emerald-800 ring-emerald-200",
+  },
+  PERLU_REVISI: {
+    label: "Perlu revisi",
+    color: "bg-orange-100 text-orange-800 ring-orange-200",
+  },
+  DITOLAK: {
+    label: "Ditolak",
+    color: "bg-rose-100 text-rose-800 ring-rose-200",
+  },
+  DIPROSES: {
+    label: "Sedang diproses",
+    color: "bg-blue-100 text-blue-800 ring-blue-200",
+  },
+  SELESAI: {
+    label: "Selesai",
+    color: "bg-slate-100 text-slate-700 ring-slate-200",
   },
 };
 
-const DEFAULT_MASTER = {
-  JKK1: {
-    supervisor: {
-      name: "",
-      nip: "",
-      position: "",
-    },
-    mka: [],
-  },
-  JKK2: {
-    supervisor: {
-      name: "",
-      nip: "",
-      position: "",
-    },
-    mka: [],
-  },
+const BUNDLE_STATUS = {
+  TERBUKA: "Terbuka",
+  DITUTUP: "Ditutup",
+  DIPROSES: "Diproses",
+  SELESAI: "Selesai",
 };
 
-/* =========================================================
-   DUMMY DATA
-========================================================= */
-
-const DUMMY_LUNAS = [
-  {
-    id: "ORD-001",
-    noNotasi: "156",
-    namaDebitur: "JISMI",
-    norekPinjaman: "1234567890",
-    status: "Lunas",
-    agunan: [
-      {
-        jenis: "SHM",
-        nomor: "1147",
-        desa: "Mendalo",
-        namaSertifikat: "JISMI",
-        keteranganPemilik: "milik sendiri",
-        luas: "120",
-        keterangan: "Bundel, MAP No. 1",
-      },
-    ],
-  },
-  {
-    id: "ORD-002",
-    noNotasi: "",
-    namaDebitur: "BUDI SANTOSO",
-    norekPinjaman: "1234567891",
-    status: "Lunas",
-    agunan: [
-      {
-        jenis: "SHM",
-        nomor: "2251",
-        desa: "Sungai Duren",
-        namaSertifikat: "BUDI SANTOSO",
-        keteranganPemilik: "milik sendiri",
-        luas: "150",
-        keterangan: "Bundel, MAP No. 2",
-      },
-    ],
-  },
-];
-
-const DUMMY_BELUM_LUNAS = [
-  {
-    id: "TOPUP-001",
-    noNotasi: "",
-    namaDebitur: "ANDI SAPUTRA",
-    norekPinjaman: "1234567893",
-    status: "Top Up",
-    agunan: [
-      {
-        jenis: "SHM",
-        nomor: "4412",
-        desa: "Simpang Sungai Duren",
-        namaSertifikat: "ANDI SAPUTRA",
-        keteranganPemilik: "milik sendiri",
-        luas: "180",
-        keterangan: "Bundel, MAP No. 3",
-      },
-    ],
-  },
-  {
-    id: "TOPUP-002",
-    noNotasi: "",
-    namaDebitur: "FADIL",
-    norekPinjaman: "1234567892",
-    status: "Top Up",
-    agunan: [
-      {
-        jenis: "SHM",
-        nomor: "3301",
-        desa: "Pematang Gajah",
-        namaSertifikat: "FADIL",
-        keteranganPemilik: "milik sendiri",
-        luas: "200",
-        keterangan: "Bundel, MAP No. 4",
-      },
-    ],
-  },
-  {
-    id: "TOPUP-003",
-    noNotasi: "",
-    namaDebitur: "RINA",
-    norekPinjaman: "1234567894",
-    status: "Top Up",
-    agunan: [
-      {
-        jenis: "SHM",
-        nomor: "5521",
-        desa: "Mendalo",
-        namaSertifikat: "RINA",
-        keteranganPemilik: "milik sendiri",
-        luas: "110",
-        keterangan: "Bundel, MAP No. 5",
-      },
-    ],
-  },
-];
-
-/* =========================================================
-   MASTER PEGAWAI
-========================================================= */
-
-function readMaster() {
-  if (typeof window === "undefined") {
-    return DEFAULT_MASTER;
-  }
-
-  try {
-    const saved = localStorage.getItem(MASTER_KEY);
-
-    if (!saved) {
-      return DEFAULT_MASTER;
-    }
-
-    const parsed = JSON.parse(saved);
-
-    return {
-      JKK1: {
-        supervisor: {
-          ...DEFAULT_MASTER.JKK1.supervisor,
-          ...(parsed?.JKK1?.supervisor || {}),
-        },
-        mka: Array.isArray(parsed?.JKK1?.mka) ? parsed.JKK1.mka : [],
-      },
-
-      JKK2: {
-        supervisor: {
-          ...DEFAULT_MASTER.JKK2.supervisor,
-          ...(parsed?.JKK2?.supervisor || {}),
-        },
-        mka: Array.isArray(parsed?.JKK2?.mka) ? parsed.JKK2.mka : [],
-      },
-    };
-  } catch {
-    return DEFAULT_MASTER;
-  }
+function cn(...values) {
+  return values.filter(Boolean).join(" ");
 }
 
-/* =========================================================
-   HELPERS
-========================================================= */
+function formatDate(value) {
+  if (!value) return "-";
 
-function formatDokumenLengkap(agunan) {
-  if (!agunan) {
-    return "—";
-  }
-
-  return `${agunan.jenis} No. ${agunan.nomor}/${agunan.desa} an. ${agunan.namaSertifikat} (${agunan.keteranganPemilik}) Luas ${agunan.luas} M2`;
-}
-
-function getTanggalHariIni() {
   return new Intl.DateTimeFormat("id-ID", {
     day: "2-digit",
     month: "long",
     year: "numeric",
-  }).format(new Date());
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(value));
+}
+
+function formatDateTime(value) {
+  if (!value) return "-";
+
+  return new Intl.DateTimeFormat("id-ID", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Asia/Jakarta",
+  }).format(new Date(value));
 }
 
 function StatusBadge({ status }) {
-  const isLunas = status === "Lunas";
+  const item = STATUS[status] || {
+    label: status || "Belum diketahui",
+    color: "bg-slate-100 text-slate-700 ring-slate-200",
+  };
 
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-        isLunas
-          ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200"
-          : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-      }`}
+      className={cn(
+        "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset",
+        item.color,
+      )}
     >
-      {status}
+      {item.label}
     </span>
   );
 }
 
-/* =========================================================
-   PAGE
-========================================================= */
+function StatCard({ title, value, icon: Icon, color }) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm text-slate-500">{title}</p>
+          <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+        </div>
+        <div className={cn("rounded-xl p-3", color)}>
+          <Icon size={22} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-export default function OrderAgunanPage() {
+function Field({ label, children }) {
+  return (
+    <div className="min-w-0">
+      <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">
+        {label}
+      </p>
+      <div className="break-words text-sm font-medium text-slate-800">
+        {children || "-"}
+      </div>
+    </div>
+  );
+}
+
+export default function AdminRequestOrderAgunanPage() {
   const { activeUnit } = useUnit();
 
-  /* =======================================================
-     UNIT
-  ======================================================= */
+  const [items, setItems] = useState([]);
+  const [bundles, setBundles] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("SEMUA");
+  const [bundleFilter, setBundleFilter] = useState("SEMUA");
+  const [expanded, setExpanded] = useState({});
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [decision, setDecision] = useState("DITERIMA");
+  const [adminNote, setAdminNote] = useState("");
+  const [previewUrl, setPreviewUrl] = useState("");
 
-  const currentUnit = activeUnit?.value || "JKK1";
+  const unitCode = activeUnit?.value || "";
+  const unitName = activeUnit?.name || "Unit belum dipilih";
 
-  const currentUnitInfo = UNIT_INFO[currentUnit] || UNIT_INFO.JKK1;
-
-  const currentSuratKeluar = currentUnit === "JKK2" ? "JKK 2" : "JKK 1";
-
-  /* =======================================================
-     MASTER
-  ======================================================= */
-
-  const [master, setMaster] = useState(DEFAULT_MASTER);
-
-  useEffect(() => {
-    setMaster(readMaster());
-  }, [activeUnit?.value]);
-
-  const currentMaster =
-    master[currentUnit] || DEFAULT_MASTER[currentUnit] || DEFAULT_MASTER.JKK1;
-
-  const supervisor = currentMaster?.supervisor || {};
-
-  /* =======================================================
-     ORDER
-  ======================================================= */
-
-  const [orders, setOrders] = useState(DUMMY_LUNAS);
-
-  /* =======================================================
-     TOP UP
-  ======================================================= */
-
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedTopUps, setSelectedTopUps] = useState([]);
-
-  /* =======================================================
-     MANUAL
-  ======================================================= */
-
-  const [manualOpen, setManualOpen] = useState(false);
-
-  const [manualForm, setManualForm] = useState({
-    namaDebitur: "",
-    norekPinjaman: "",
-    jenis: "SHM",
-    nomor: "",
-    desa: "",
-    namaSertifikat: "",
-    keteranganPemilik: "milik sendiri",
-    luas: "",
-    keterangan: "",
-  });
-
-  /* =======================================================
-     EDIT NOTASI
-  ======================================================= */
-
-  const [editOpen, setEditOpen] = useState(false);
-  const [editingOrder, setEditingOrder] = useState(null);
-  const [editNoNotasi, setEditNoNotasi] = useState("");
-
-  /* =======================================================
-     DELETE
-  ======================================================= */
-
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deletingOrder, setDeletingOrder] = useState(null);
-
-  /* =======================================================
-     SURAT BERTANDA TANGAN
-  ======================================================= */
-
-  const [signedLetter, setSignedLetter] = useState(null);
-
-  /* =======================================================
-     FOTO BDS
-
-     GLOBAL
-     TIDAK TERKAIT ORDER / DEBITUR
-
-     Urutan array = urutan foto saat export
-  ======================================================= */
-
-  const [bdsPhotos, setBdsPhotos] = useState([]);
-  const [isDraggingBds, setIsDraggingBds] = useState(false);
-
-  /* =======================================================
-     PREVIEW
-  ======================================================= */
-
-  const [previewOpen, setPreviewOpen] = useState(false);
-
-  /* =======================================================
-     NOMOR SURAT
-  ======================================================= */
-
-  const [suratKeluar, setSuratKeluar] = useState(currentSuratKeluar);
-
-  const [noSurat, setNoSurat] = useState(
-    NEXT_NOMOR_SURAT[currentSuratKeluar] || "",
-  );
-
-  /* =======================================================
-     EXPORT
-  ======================================================= */
-
-  const [exporting, setExporting] = useState(false);
-
-  /* =======================================================
-     SYNC SURAT KELUAR DENGAN UNIT AKTIF
-  ======================================================= */
-
-  useEffect(() => {
-    setSuratKeluar(currentSuratKeluar);
-    setNoSurat(NEXT_NOMOR_SURAT[currentSuratKeluar] || "");
-  }, [currentSuratKeluar]);
-
-  /* =======================================================
-     FILTER TOP UP
-  ======================================================= */
-
-  const filteredTopUps = useMemo(() => {
-    const keyword = searchTerm.trim().toLowerCase();
-
-    if (!keyword) {
-      return DUMMY_BELUM_LUNAS;
-    }
-
-    return DUMMY_BELUM_LUNAS.filter(
-      (item) =>
-        item.namaDebitur.toLowerCase().includes(keyword) ||
-        item.norekPinjaman.includes(keyword),
-    );
-  }, [searchTerm]);
-
-  /* =======================================================
-     SURAT ROWS
-
-     Satu sumber data untuk:
-     - Preview
-     - Print
-     - PDF
-     - Word
-  ======================================================= */
-
-  const suratRows = useMemo(() => {
-    return orders.map((order, index) => ({
-      id: order.id,
-      no: index + 1,
-      notasi: order.noNotasi || "—",
-      namaDebitur: order.namaDebitur || "—",
-      norekPinjaman: order.norekPinjaman || "—",
-
-      // Keterangan surat = STATUS
-      status: order.status || "—",
-
-      agunan: Array.isArray(order.agunan) ? order.agunan : [],
-    }));
-  }, [orders]);
-
-  /* =======================================================
-     CEK FOTO BDS
-
-     GLOBAL
-  ======================================================= */
-
-  const hasBdsPhotos = bdsPhotos.length > 0;
-
-  /* =======================================================
-     TANGGAL
-  ======================================================= */
-
-  const tanggalHariIni = useMemo(() => getTanggalHariIni(), []);
-
-  /* =======================================================
-     NOMOR SURAT
-  ======================================================= */
-
-  function handleSuratKeluarChange(event) {
-    const value = event.target.value;
-
-    setSuratKeluar(value);
-
-    setNoSurat(NEXT_NOMOR_SURAT[value] || "");
-  }
-
-  /* =======================================================
-     TOP UP
-  ======================================================= */
-
-  function toggleTopUp(id) {
-    setSelectedTopUps((current) => {
-      if (current.includes(id)) {
-        return current.filter((item) => item !== id);
-      }
-
-      return [...current, id];
-    });
-  }
-
-  function tambahTopUp() {
-    if (selectedTopUps.length === 0) {
-      window.alert("Pilih minimal satu data untuk ditambahkan sebagai Top Up.");
+  const loadData = useCallback(async () => {
+    if (!unitCode) {
+      setItems([]);
+      setBundles([]);
+      setLoading(false);
+      setError("Pilih unit kerja pada topbar terlebih dahulu.");
       return;
     }
 
-    const selected = DUMMY_BELUM_LUNAS.filter((item) =>
-      selectedTopUps.includes(item.id),
-    );
+    setLoading(true);
+    setError("");
 
-    setOrders((current) => {
-      const existingIds = new Set(current.map((item) => item.id));
-
-      const newItems = selected
-        .filter((item) => !existingIds.has(item.id))
-        .map((item) => ({
-          ...item,
-          status: "Top Up",
-        }));
-
-      return [...current, ...newItems];
-    });
-
-    setSelectedTopUps([]);
-    setSearchTerm("");
-    setSearchOpen(false);
-  }
-
-  /* =======================================================
-     MANUAL
-  ======================================================= */
-
-  function handleManualChange(event) {
-    const { name, value } = event.target;
-
-    setManualForm((current) => ({
-      ...current,
-      [name]: value,
-    }));
-  }
-
-  function resetManualForm() {
-    setManualForm({
-      namaDebitur: "",
-      norekPinjaman: "",
-      jenis: "SHM",
-      nomor: "",
-      desa: "",
-      namaSertifikat: "",
-      keteranganPemilik: "milik sendiri",
-      luas: "",
-      keterangan: "",
-    });
-  }
-
-  function simpanManual() {
-    if (!manualForm.namaDebitur.trim() || !manualForm.norekPinjaman.trim()) {
-      window.alert("Nama debitur dan nomor rekening wajib diisi.");
-      return;
-    }
-
-    const newOrder = {
-      id: `MANUAL-${Date.now()}`,
-      noNotasi: "",
-      namaDebitur: manualForm.namaDebitur.trim(),
-      norekPinjaman: manualForm.norekPinjaman.trim(),
-      status: "Lunas",
-
-      agunan: [
+    try {
+      const response = await fetch(
+        `/api/request-order-agunan?unit=${encodeURIComponent(unitCode)}`,
         {
-          jenis: manualForm.jenis,
-          nomor: manualForm.nomor,
-          desa: manualForm.desa,
-          namaSertifikat: manualForm.namaSertifikat,
-          keteranganPemilik: manualForm.keteranganPemilik,
-          luas: manualForm.luas,
-          keterangan: manualForm.keterangan,
+          method: "GET",
+          cache: "no-store",
         },
-      ],
-    };
+      );
 
-    setOrders((current) => [...current, newOrder]);
+      const result = await response.json();
 
-    resetManualForm();
-    setManualOpen(false);
-  }
-
-  /* =======================================================
-     EDIT NOTASI
-  ======================================================= */
-
-  function openEditNotasi(order) {
-    setEditingOrder(order);
-    setEditNoNotasi(order.noNotasi || "");
-    setEditOpen(true);
-  }
-
-  function simpanEdit() {
-    if (!editingOrder) {
-      return;
-    }
-
-    setOrders((current) =>
-      current.map((item) =>
-        item.id === editingOrder.id
-          ? {
-              ...item,
-              noNotasi: editNoNotasi.trim(),
-            }
-          : item,
-      ),
-    );
-
-    setEditOpen(false);
-    setEditingOrder(null);
-    setEditNoNotasi("");
-  }
-
-  /* =======================================================
-     DELETE
-
-     BDS TIDAK DISENTUH
-     karena BDS adalah data global.
-  ======================================================= */
-
-  function openDelete(order) {
-    setDeletingOrder(order);
-    setDeleteOpen(true);
-  }
-
-  function hapusOrder() {
-    if (!deletingOrder) {
-      return;
-    }
-
-    const orderId = deletingOrder.id;
-
-    setOrders((current) => current.filter((item) => item.id !== orderId));
-
-    setDeleteOpen(false);
-    setDeletingOrder(null);
-  }
-
-  /* =======================================================
-     SURAT BERTANDA TANGAN
-  ======================================================= */
-
-  function handleSignedLetter(event) {
-    const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
-
-    if (!file.type.startsWith("image/")) {
-      window.alert("File surat harus berupa foto atau gambar.");
-
-      event.target.value = "";
-      return;
-    }
-
-    if (signedLetter?.url) {
-      URL.revokeObjectURL(signedLetter.url);
-    }
-
-    const url = URL.createObjectURL(file);
-
-    setSignedLetter({
-      file,
-      url,
-      name: file.name,
-    });
-
-    event.target.value = "";
-  }
-
-  function removeSignedLetter() {
-    if (signedLetter?.url) {
-      URL.revokeObjectURL(signedLetter.url);
-    }
-
-    setSignedLetter(null);
-  }
-
-  /* =======================================================
-     FOTO BDS GLOBAL
-
-     Bisa:
-     - pilih banyak file sekaligus
-     - drag & drop banyak file
-     - urutan dipertahankan
-  ======================================================= */
-
-  function addBdsFiles(files) {
-    if (!files || files.length === 0) {
-      return;
-    }
-
-    const imageFiles = Array.from(files).filter((file) =>
-      file.type.startsWith("image/"),
-    );
-
-    if (imageFiles.length === 0) {
-      window.alert("Hanya file gambar yang dapat digunakan sebagai foto BDS.");
-      return;
-    }
-
-    if (imageFiles.length < files.length) {
-      window.alert("Beberapa file dilewati karena bukan file gambar.");
-    }
-
-    const photos = imageFiles.map((file) => ({
-      file,
-      url: URL.createObjectURL(file),
-      name: file.name,
-    }));
-
-    setBdsPhotos((current) => [...current, ...photos]);
-  }
-
-  function handleBdsPhotos(event) {
-    addBdsFiles(event.target.files);
-
-    event.target.value = "";
-  }
-
-  function removeBdsPhoto(photoIndex) {
-    setBdsPhotos((current) => {
-      const photo = current[photoIndex];
-
-      if (photo?.url) {
-        URL.revokeObjectURL(photo.url);
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Gagal memuat Request Order Agunan.");
       }
 
-      return current.filter((_, index) => index !== photoIndex);
+      setItems(Array.isArray(result.items) ? result.items : []);
+      setBundles(Array.isArray(result.bundles) ? result.bundles : []);
+    } catch (err) {
+      setError(err.message || "Terjadi kesalahan saat memuat data.");
+    } finally {
+      setLoading(false);
+    }
+  }, [unitCode]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const filteredItems = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+
+    return items.filter((item) => {
+      const matchesSearch =
+        !keyword ||
+        [
+          item.nama_debitur,
+          item.nomor_rekening_pinjaman,
+          item.pemohon_nama,
+          item.nomor_notasi,
+          item.agunan,
+        ].some((value) =>
+          String(value || "")
+            .toLowerCase()
+            .includes(keyword),
+        );
+
+      const matchesStatus =
+        statusFilter === "SEMUA" || item.status === statusFilter;
+
+      const matchesBundle =
+        bundleFilter === "SEMUA" || item.bundel_id === bundleFilter;
+
+      return matchesSearch && matchesStatus && matchesBundle;
     });
+  }, [items, search, statusFilter, bundleFilter]);
+
+  const stats = useMemo(() => {
+    return {
+      total: items.length,
+      waiting: items.filter((item) => item.status === "MENUNGGU_PEMERIKSAAN")
+        .length,
+      revision: items.filter((item) => item.status === "PERLU_REVISI").length,
+      processing: items.filter((item) => item.status === "DIPROSES").length,
+      done: items.filter((item) => item.status === "SELESAI").length,
+    };
+  }, [items]);
+
+  const groupedItems = useMemo(() => {
+    const groups = new Map();
+
+    for (const item of filteredItems) {
+      const key = item.bundel_id || "tanpa-bundel";
+
+      if (!groups.has(key)) {
+        groups.set(key, []);
+      }
+
+      groups.get(key).push(item);
+    }
+
+    return [...groups.entries()].map(([id, rows]) => ({
+      id,
+      rows,
+      bundle: bundles.find((bundle) => bundle.id === id) || null,
+    }));
+  }, [filteredItems, bundles]);
+
+  async function performAction(payload, successMessage) {
+    setBusy(true);
+    setError("");
+    setNotice("");
+
+    try {
+      const response = await fetch("/api/request-order-agunan", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...payload,
+          unit: unitCode,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || "Tindakan gagal dilakukan.");
+      }
+
+      setNotice(result.message || successMessage);
+      setSelectedItem(null);
+      setAdminNote("");
+      await loadData();
+    } catch (err) {
+      setError(err.message || "Terjadi kesalahan.");
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function handleBdsDrop(event) {
+  async function submitDecision(event) {
     event.preventDefault();
 
-    setIsDraggingBds(false);
+    if (!selectedItem) return;
 
-    addBdsFiles(event.dataTransfer.files);
-  }
-
-  /* =======================================================
-     PREVIEW
-  ======================================================= */
-
-  function handleOpenPreview() {
-    if (orders.length === 0) {
-      window.alert("Belum ada data Order Agunan.");
+    if (["PERLU_REVISI", "DITOLAK"].includes(decision) && !adminNote.trim()) {
+      setError("Isi pesan untuk permintaan revisi atau penolakan.");
       return;
     }
 
-    setPreviewOpen(true);
+    await performAction(
+      {
+        action: "review",
+        id: selectedItem.id,
+        keputusan: decision,
+        pesan: adminNote.trim(),
+      },
+      "Keputusan berhasil disimpan.",
+    );
   }
 
-  /* =======================================================
-     PRINT SURAT
-  ======================================================= */
-
-  function printSurat() {
-    if (orders.length === 0) {
-      window.alert("Belum ada data Order Agunan.");
-      return;
-    }
-
-    setPreviewOpen(true);
-
-    setTimeout(() => {
-      window.print();
-    }, 500);
+  function toggleExpanded(bundleId) {
+    setExpanded((previous) => ({
+      ...previous,
+      [bundleId]: !(previous[bundleId] ?? true),
+    }));
   }
 
-  function handlePrintPreview() {
-    printSurat();
+  async function processBundle(bundleId) {
+    const confirmed = window.confirm(
+      "Proses semua pengajuan berstatus Diterima dalam bundel ini?",
+    );
+
+    if (!confirmed) return;
+
+    await performAction(
+      {
+        action: "process_bundle",
+        bundel_id: bundleId,
+        id: items.find((item) => item.bundel_id === bundleId)?.id,
+      },
+      "Bundel mulai diproses.",
+    );
   }
 
-  /* =======================================================
-     CETAK PDF SURAT
+  async function finishBundle(bundleId) {
+    const confirmed = window.confirm(
+      "Selesaikan semua pengajuan yang sedang diproses dalam bundel ini?",
+    );
 
-     Hanya Preview Surat.
-     Menggunakan browser print.
-  ======================================================= */
+    if (!confirmed) return;
 
-  async function handleCetakPdfSurat() {
-    if (orders.length === 0) {
-      window.alert("Belum ada data Order Agunan.");
-      return;
-    }
-
-    setPreviewOpen(true);
-
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
-    window.print();
+    await performAction(
+      {
+        action: "finish",
+        bundel_id: bundleId,
+        id: items.find((item) => item.bundel_id === bundleId)?.id,
+      },
+      "Bundel berhasil diselesaikan.",
+    );
   }
-
-  /* =======================================================
-     PDF KESELURUHAN
-
-     Isi:
-     1. Surat bertanda tangan
-     2. Semua foto BDS global
-
-     BDS:
-     2 foto per halaman
-  ======================================================= */
-
-  async function handleCetakPdfKeseluruhan() {
-    if (!signedLetter && !hasBdsPhotos) {
-      window.alert("Belum ada surat bertanda tangan atau foto BDS.");
-      return;
-    }
-
-    try {
-      setExporting(true);
-
-      const assets = await prepareExportAssets({
-        signedLetter,
-        bdsPhotos,
-      });
-
-      await downloadOverallPdf({
-        assets,
-        suratKeluar,
-        date: new Date(),
-      });
-    } catch (error) {
-      console.error(error);
-
-      window.alert("PDF keseluruhan gagal dibuat.");
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  /* =======================================================
-     WORD
-
-     Isi:
-     1. Layout surat
-     2. Tabel berdasarkan Preview
-     3. Foto BDS global
-
-     BDS:
-     2 foto per halaman
-  ======================================================= */
-
-  async function handleCetakWord() {
-    try {
-      setExporting(true);
-
-      const assets = await prepareExportAssets({
-        signedLetter,
-        bdsPhotos,
-      });
-
-      await downloadWord({
-        rows: suratRows,
-        suratKeluar,
-        noSurat,
-        tanggal: tanggalHariIni,
-        supervisor,
-        assets,
-        date: new Date(),
-      });
-    } catch (error) {
-      console.error(error);
-
-      window.alert("Dokumen Word gagal dibuat.");
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  /* =======================================================
-     ZIP
-
-     Isi ZIP:
-     1. PDF keseluruhan
-     2. Word
-
-     Source foto TIDAK dimasukkan.
-  ======================================================= */
-
-  async function handleGenerateZip() {
-    if (!signedLetter && !hasBdsPhotos) {
-      window.alert("Belum ada surat bertanda tangan atau foto BDS.");
-      return;
-    }
-
-    try {
-      setExporting(true);
-
-      await downloadZip({
-        rows: suratRows,
-        bdsPhotos,
-        signedLetter,
-        suratKeluar,
-        noSurat,
-        tanggal: tanggalHariIni,
-        supervisor,
-        date: new Date(),
-      });
-    } catch (error) {
-      console.error(error);
-
-      window.alert("ZIP gagal dibuat.");
-    } finally {
-      setExporting(false);
-    }
-  }
-
-  /* =======================================================
-     RENDER
-  ======================================================= */
 
   return (
-    <div className="min-h-screen bg-[#f7f7f5] text-[#171717]">
-      {/* =================================================
-            PAGE HEADER
-        ================================================= */}
-
-      <div className="border-b border-zinc-200 bg-white">
-        <div className="px-6 py-5 lg:px-8">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+    <main className="min-h-screen bg-slate-50 p-4 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <section className="overflow-hidden rounded-3xl bg-gradient-to-r from-indigo-700 via-blue-700 to-sky-600 p-6 text-white shadow-lg sm:p-8">
+          <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl font-bold tracking-tight">
-                  Order Agunan
-                </h1>
+              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                <ClipboardList size={15} />
+                MODUL OPERASIONAL
+              </div>
 
-                <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-semibold text-zinc-600">
-                  {currentUnitInfo.name}
+              <h1 className="text-2xl font-bold sm:text-3xl">
+                Request Order Agunan
+              </h1>
+
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100">
+                Pemeriksaan pengajuan MKS, verifikasi bukti BDS, pengelolaan
+                bundel, dan pemantauan proses agunan.
+              </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-sm">
+                <span className="rounded-lg bg-white/15 px-3 py-2">
+                  Unit aktif: <strong>{unitName}</strong>
+                </span>
+                <span className="rounded-lg bg-white/15 px-3 py-2">
+                  <CalendarDays className="mr-1 inline" size={15} />
+                  Jadwal Selasa / Jumat
                 </span>
               </div>
-
-              <p className="mt-1 text-sm text-zinc-500">
-                Kelola data agunan untuk pengambilan kredit mikro.
-              </p>
             </div>
 
-            {/* BUTTON ATAS */}
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleCetakWord}
-                disabled={exporting}
-                className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FileText className="h-4 w-4" />
-
-                {exporting ? "Memproses..." : "Cetak Word"}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCetakPdfKeseluruhan}
-                disabled={exporting}
-                className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FileDown className="h-4 w-4" />
-
-                {exporting ? "Memproses..." : "Cetak PDF"}
-              </button>
-
-              <button
-                type="button"
-                onClick={handleGenerateZip}
-                disabled={exporting}
-                className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FileDown className="h-4 w-4" />
-
-                {exporting ? "Membuat ZIP..." : "Generate ZIP"}
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={loadData}
+              disabled={loading || busy}
+              className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 py-3 text-sm font-semibold text-indigo-700 shadow-sm transition hover:bg-blue-50 disabled:opacity-60"
+            >
+              <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
+              Muat ulang
+            </button>
           </div>
-        </div>
-      </div>
+        </section>
 
-      {/* =================================================
-            CONTENT
-        ================================================= */}
+        {error && (
+          <div className="flex items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
+            <AlertCircle className="mt-0.5 shrink-0" size={19} />
+            <div className="flex-1">{error}</div>
+            <button
+              type="button"
+              onClick={() => setError("")}
+              className="font-bold"
+              aria-label="Tutup pesan"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
-      <div className="px-6 py-6 lg:px-8">
-        {/* ===============================================
-              SURAT CONFIG
-          =============================================== */}
+        {notice && (
+          <div className="flex items-start gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+            <CheckCircle2 className="mt-0.5 shrink-0" size={19} />
+            <div className="flex-1">{notice}</div>
+            <button
+              type="button"
+              onClick={() => setNotice("")}
+              className="font-bold"
+              aria-label="Tutup pesan"
+            >
+              ×
+            </button>
+          </div>
+        )}
 
-        <div className="mb-5 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+          <StatCard
+            title="Total pengajuan"
+            value={stats.total}
+            icon={ClipboardList}
+            color="bg-indigo-50 text-indigo-700"
+          />
+          <StatCard
+            title="Menunggu pemeriksaan"
+            value={stats.waiting}
+            icon={Clock3}
+            color="bg-amber-50 text-amber-700"
+          />
+          <StatCard
+            title="Perlu revisi"
+            value={stats.revision}
+            icon={MessageSquareText}
+            color="bg-orange-50 text-orange-700"
+          />
+          <StatCard
+            title="Sedang diproses"
+            value={stats.processing}
+            icon={PackageCheck}
+            color="bg-blue-50 text-blue-700"
+          />
+          <StatCard
+            title="Selesai"
+            value={stats.done}
+            icon={CheckCircle2}
+            color="bg-emerald-50 text-emerald-700"
+          />
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-4 flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-zinc-100">
-              <FileText className="h-4 w-4 text-zinc-700" />
-            </div>
-
-            <div>
-              <h2 className="text-sm font-bold">Nomor Surat</h2>
-
-              <p className="text-xs text-zinc-500">
-                Nomor mengikuti surat keluar unit dan tetap dapat diedit.
-              </p>
-            </div>
+            <Filter size={18} className="text-indigo-600" />
+            <h2 className="font-bold text-slate-900">
+              Cari dan filter pengajuan
+            </h2>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-[180px_180px_1fr]">
-            {/* SURAT KELUAR */}
-
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-zinc-600">
-                Surat Keluar
-              </label>
-
-              <select
-                value={suratKeluar}
-                onChange={handleSuratKeluarChange}
-                className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
-              >
-                <option value="JKK 1">JKK 1</option>
-
-                <option value="JKK 2">JKK 2</option>
-              </select>
-            </div>
-
-            {/* NO SURAT */}
-
-            <div>
-              <label className="mb-1.5 block text-xs font-semibold text-zinc-600">
-                No. Surat
-              </label>
-
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="relative">
+              <Search
+                size={18}
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+              />
               <input
-                type="text"
-                value={noSurat}
-                onChange={(event) => setNoSurat(event.target.value)}
-                className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
-                placeholder="Nomor surat"
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Nama, rekening, MKS, agunan..."
+                className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm outline-none transition focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
               />
             </div>
 
-            {/* PREVIEW NUMBER */}
+            <select
+              value={statusFilter}
+              onChange={(event) => setStatusFilter(event.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-indigo-400"
+            >
+              <option value="SEMUA">Semua status</option>
+              {Object.entries(STATUS).map(([value, config]) => (
+                <option key={value} value={value}>
+                  {config.label}
+                </option>
+              ))}
+            </select>
 
-            <div className="flex items-end">
-              <div className="rounded-xl bg-zinc-50 px-4 py-2.5 text-xs text-zinc-600">
-                <span className="font-semibold">Nomor:</span>{" "}
-                NRF.R02.JBI.Um.JKK/
-                {suratKeluar}/{noSurat || "-"}/2026
-              </div>
-            </div>
+            <select
+              value={bundleFilter}
+              onChange={(event) => setBundleFilter(event.target.value)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-indigo-400"
+            >
+              <option value="SEMUA">Semua bundel</option>
+              {bundles.map((bundle) => (
+                <option key={bundle.id} value={bundle.id}>
+                  {formatDate(bundle.tanggal_proses)} —{" "}
+                  {BUNDLE_STATUS[bundle.status] || bundle.status}
+                </option>
+              ))}
+            </select>
           </div>
-        </div>
 
-        {/* ===============================================
-              ACTION
-          =============================================== */}
+          <p className="mt-3 text-xs text-slate-500">
+            Menampilkan {filteredItems.length} dari {items.length} pengajuan
+            pada unit aktif.
+          </p>
+        </section>
 
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-base font-bold">Daftar Order Agunan</h2>
-
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Data lunas otomatis tersedia. Data belum lunas dapat ditambahkan
-              sebagai Top Up.
+        {loading ? (
+          <div className="flex min-h-64 flex-col items-center justify-center gap-3 rounded-2xl border border-slate-200 bg-white">
+            <LoaderCircle size={32} className="animate-spin text-indigo-600" />
+            <p className="text-sm text-slate-500">
+              Memuat data Request Order Agunan...
             </p>
           </div>
-
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => setSearchOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50"
-            >
-              <Plus className="h-4 w-4" />
-              Tambah Pinjaman
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setManualOpen(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800"
-            >
-              <Plus className="h-4 w-4" />
-              Input Manual
-            </button>
+        ) : groupedItems.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-14 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
+              <ClipboardList size={27} />
+            </div>
+            <h2 className="font-bold text-slate-900">Belum ada pengajuan</h2>
+            <p className="mt-2 text-sm text-slate-500">
+              Tidak ada pengajuan yang cocok dengan pencarian atau filter.
+            </p>
           </div>
-        </div>
+        ) : (
+          <section className="space-y-5">
+            {groupedItems.map(({ id, rows, bundle }) => {
+              const isExpanded = expanded[id] ?? true;
+              const waitingCount = rows.filter(
+                (row) => row.status === "MENUNGGU_PEMERIKSAAN",
+              ).length;
+              const acceptedCount = rows.filter(
+                (row) => row.status === "DITERIMA",
+              ).length;
+              const processingCount = rows.filter(
+                (row) => row.status === "DIPROSES",
+              ).length;
 
-        {/* ===============================================
-              SIGNED LETTER
-          =============================================== */}
-
-        <div className="mb-5 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-            <div>
-              <h3 className="text-sm font-bold">Surat Bertanda Tangan</h3>
-
-              <p className="mt-1 text-xs text-zinc-500">
-                Upload foto/scan surat yang sudah ditandatangani. File ini masuk
-                ke PDF keseluruhan dan ZIP, bukan ke Word.
-              </p>
-            </div>
-
-            <label className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50">
-              <Upload className="h-4 w-4" />
-              Upload Surat
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleSignedLetter}
-              />
-            </label>
-          </div>
-
-          {signedLetter && (
-            <div className="mt-4 flex items-center gap-4 rounded-xl border border-zinc-200 bg-zinc-50 p-3">
-              <img
-                src={signedLetter.url}
-                alt="Preview surat bertanda tangan"
-                className="h-20 w-20 rounded-lg border border-zinc-200 bg-white object-contain"
-              />
-
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-semibold">
-                  {signedLetter.name}
-                </div>
-
-                <div className="mt-1 text-xs text-zinc-500">
-                  Surat siap dimasukkan ke PDF keseluruhan dan ZIP.
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={removeSignedLetter}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 transition hover:bg-red-50 hover:text-red-600"
-                title="Hapus surat"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ===============================================
-              MAIN TABLE
-          =============================================== */}
-
-        <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] border-collapse text-sm">
-              <thead>
-                <tr className="border-b border-zinc-200 bg-zinc-50">
-                  <th className="w-14 px-4 py-3 text-center text-xs font-bold text-zinc-600">
-                    No.
-                  </th>
-
-                  <th className="px-4 py-3 text-left text-xs font-bold text-zinc-600">
-                    No. Notasi
-                  </th>
-
-                  <th className="px-4 py-3 text-left text-xs font-bold text-zinc-600">
-                    Nama Debitur
-                  </th>
-
-                  <th className="px-4 py-3 text-left text-xs font-bold text-zinc-600">
-                    Norek. Pinjaman
-                  </th>
-
-                  <th className="px-4 py-3 text-left text-xs font-bold text-zinc-600">
-                    Dokumen
-                  </th>
-
-                  <th className="px-4 py-3 text-center text-xs font-bold text-zinc-600">
-                    Status
-                  </th>
-
-                  <th className="px-4 py-3 text-center text-xs font-bold text-zinc-600">
-                    Aksi
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {orders.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-14 text-center">
-                      <div className="mx-auto max-w-sm">
-                        <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100">
-                          <FileText className="h-5 w-5 text-zinc-400" />
-                        </div>
-
-                        <div className="text-sm font-semibold text-zinc-700">
-                          Belum ada Order Agunan
-                        </div>
-
-                        <div className="mt-1 text-xs text-zinc-500">
-                          Tambahkan pinjaman atau gunakan Input Manual.
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  orders.map((order, index) => {
-                    const agunanList = Array.isArray(order.agunan)
-                      ? order.agunan
-                      : [];
-
-                    return (
-                      <tr
-                        key={order.id}
-                        className="border-b border-zinc-100 align-top last:border-b-0 hover:bg-zinc-50/50"
-                      >
-                        {/* NO */}
-
-                        <td className="px-4 py-4 text-center text-xs font-semibold text-zinc-500">
-                          {index + 1}
-                        </td>
-
-                        {/* NOTASI */}
-
-                        <td className="px-4 py-4">
-                          <span className="font-semibold text-zinc-800">
-                            {order.noNotasi || "—"}
-                          </span>
-                        </td>
-
-                        {/* DEBITUR */}
-
-                        <td className="px-4 py-4">
-                          <div className="font-semibold text-zinc-800">
-                            {order.namaDebitur}
-                          </div>
-                        </td>
-
-                        {/* NOREK */}
-
-                        <td className="px-4 py-4 font-mono text-xs text-zinc-600">
-                          {order.norekPinjaman}
-                        </td>
-
-                        {/* DOKUMEN */}
-
-                        <td className="px-4 py-4">
-                          <div className="space-y-2">
-                            {agunanList.length === 0 ? (
-                              <div className="text-xs text-zinc-400">
-                                Belum ada dokumen
-                              </div>
-                            ) : (
-                              agunanList.map((agunan, agunanIndex) => (
-                                <div
-                                  key={`${order.id}-agunan-${agunanIndex}`}
-                                  className="rounded-xl border border-zinc-100 bg-zinc-50 px-3 py-2"
-                                >
-                                  {agunanList.length > 1 && (
-                                    <div className="mb-1 text-[10px] font-bold uppercase tracking-wide text-zinc-400">
-                                      Agunan {agunanIndex + 1}
-                                    </div>
-                                  )}
-
-                                  <div className="text-xs leading-5 text-zinc-700">
-                                    {formatDokumenLengkap(agunan)}
-                                  </div>
-                                </div>
-                              ))
-                            )}
-                          </div>
-                        </td>
-
-                        {/* STATUS */}
-
-                        <td className="px-4 py-4 text-center">
-                          <StatusBadge status={order.status} />
-                        </td>
-
-                        {/* AKSI */}
-
-                        <td className="px-4 py-4">
-                          <div className="flex flex-col items-center gap-2">
-                            <button
-                              type="button"
-                              onClick={() => openEditNotasi(order)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 bg-white px-2.5 py-2 text-xs font-semibold text-zinc-600 transition hover:bg-zinc-50 hover:text-zinc-800"
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                              Edit
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => openDelete(order)}
-                              className="inline-flex items-center gap-1.5 rounded-lg border border-red-100 bg-white px-2.5 py-2 text-xs font-semibold text-red-600 transition hover:bg-red-50"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Hapus
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          {/* =============================================
-                TABLE FOOTER
-            ============================================= */}
-
-          <div className="flex flex-col gap-3 border-t border-zinc-200 bg-zinc-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="text-xs text-zinc-500">
-              Total{" "}
-              <span className="font-bold text-zinc-700">{orders.length}</span>{" "}
-              data Order Agunan.
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={handleOpenPreview}
-                className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50"
-              >
-                <FileText className="h-4 w-4" />
-                Preview
-              </button>
-
-              <button
-                type="button"
-                onClick={handleCetakPdfSurat}
-                disabled={exporting}
-                className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 shadow-sm transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FileDown className="h-4 w-4" />
-                Cetak PDF
-              </button>
-
-              <button
-                type="button"
-                onClick={handlePrintPreview}
-                disabled={exporting}
-                className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Printer className="h-4 w-4" />
-                Print
-              </button>
-            </div>
-          </div>
-
-          {/* =============================================
-                GLOBAL FOTO BDS
-
-                TIDAK TERKAIT ORDER
-            ============================================= */}
-
-          <div className="border-t border-zinc-200 bg-white px-5 py-5">
-            <div className="mb-4">
-              <h3 className="text-sm font-bold text-zinc-800">Foto BDS</h3>
-
-              <p className="mt-1 text-xs text-zinc-500">
-                Foto BDS bersifat global dan tidak terkait dengan debitur atau
-                Order Agunan tertentu.
-              </p>
-            </div>
-
-            {/* DROPZONE */}
-
-            <label
-              htmlFor="bds-multiple-upload"
-              onDragOver={(event) => {
-                event.preventDefault();
-                setIsDraggingBds(true);
-              }}
-              onDragLeave={() => {
-                setIsDraggingBds(false);
-              }}
-              onDrop={handleBdsDrop}
-              className={`flex min-h-[170px] cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed px-6 py-8 text-center transition ${
-                isDraggingBds
-                  ? "border-zinc-500 bg-zinc-100"
-                  : "border-zinc-200 bg-zinc-50 hover:border-zinc-400 hover:bg-zinc-100/70"
-              }`}
-            >
-              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-sm">
-                <Upload className="h-5 w-5 text-zinc-500" />
-              </div>
-
-              <div className="text-sm font-semibold text-zinc-700">
-                Klik untuk memilih foto atau drag & drop di sini
-              </div>
-
-              <div className="mt-1 text-xs text-zinc-400">
-                Bisa memilih banyak foto sekaligus
-              </div>
-
-              <div className="mt-2 text-[11px] text-zinc-400">
-                JPG, JPEG, PNG, WEBP
-              </div>
-
-              <input
-                id="bds-multiple-upload"
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={handleBdsPhotos}
-              />
-            </label>
-
-            {/* PREVIEW BDS */}
-
-            {bdsPhotos.length > 0 && (
-              <div className="mt-5">
-                <div className="mb-3 flex items-center justify-between">
-                  <div>
-                    <div className="text-xs font-bold text-zinc-700">
-                      Foto BDS Terupload
-                    </div>
-
-                    <div className="mt-0.5 text-[11px] text-zinc-400">
-                      {bdsPhotos.length} foto
-                      {" · "}
-                      urutan sesuai susunan di bawah
-                    </div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-                  {bdsPhotos.map((photo, index) => (
-                    <div
-                      key={`${photo.name}-${index}`}
-                      className="group relative overflow-hidden rounded-xl border border-zinc-200 bg-zinc-50"
-                    >
-                      <img
-                        src={photo.url}
-                        alt={photo.name}
-                        className="aspect-square w-full object-cover"
-                      />
-
-                      {/* NOMOR URUT */}
-
-                      <div className="absolute left-2 top-2 inline-flex min-w-7 items-center justify-center rounded-lg bg-black/70 px-2 py-1 text-[10px] font-bold text-white">
-                        {index + 1}
-                      </div>
-
-                      {/* HAPUS */}
-
+              return (
+                <div
+                  key={id}
+                  className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
+                >
+                  <div className="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-indigo-50/50 p-4 sm:p-5">
+                    <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
                       <button
                         type="button"
-                        onClick={() => removeBdsPhoto(index)}
-                        className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-white/90 text-zinc-500 shadow-sm transition hover:bg-red-50 hover:text-red-600"
-                        title="Hapus foto"
+                        onClick={() => toggleExpanded(id)}
+                        className="flex min-w-0 items-start gap-3 text-left"
                       >
-                        <X className="h-3.5 w-3.5" />
+                        <div className="rounded-xl bg-indigo-100 p-3 text-indigo-700">
+                          <CalendarDays size={21} />
+                        </div>
+
+                        <div className="min-w-0">
+                          <h2 className="font-bold text-slate-900">
+                            Bundel{" "}
+                            {bundle
+                              ? formatDate(bundle.tanggal_proses)
+                              : "belum teridentifikasi"}
+                          </h2>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {rows.length} pengajuan pada hasil filter
+                            {bundle
+                              ? ` • Status bundel: ${BUNDLE_STATUS[bundle.status] || bundle.status}`
+                              : ""}
+                          </p>
+                          <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                            <span className="rounded-full bg-amber-100 px-2.5 py-1 font-semibold text-amber-800">
+                              {waitingCount} menunggu
+                            </span>
+                            <span className="rounded-full bg-emerald-100 px-2.5 py-1 font-semibold text-emerald-800">
+                              {acceptedCount} diterima
+                            </span>
+                            <span className="rounded-full bg-blue-100 px-2.5 py-1 font-semibold text-blue-800">
+                              {processingCount} diproses
+                            </span>
+                          </div>
+                        </div>
+
+                        <span className="ml-auto text-slate-400 lg:hidden">
+                          {isExpanded ? (
+                            <ChevronUp size={20} />
+                          ) : (
+                            <ChevronDown size={20} />
+                          )}
+                        </span>
                       </button>
 
-                      <div className="truncate px-2 py-2 text-[10px] text-zinc-500">
-                        {photo.name}
-                      </div>
+                      {bundle && (
+                        <div className="flex flex-wrap gap-2">
+                          {["TERBUKA", "DITUTUP"].includes(bundle.status) && (
+                            <button
+                              type="button"
+                              onClick={() => processBundle(bundle.id)}
+                              disabled={busy || acceptedCount === 0}
+                              className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <PackageCheck size={16} />
+                              Proses pengajuan diterima
+                            </button>
+                          )}
+
+                          {bundle.status === "DIPROSES" && (
+                            <button
+                              type="button"
+                              onClick={() => finishBundle(bundle.id)}
+                              disabled={busy || processingCount === 0}
+                              className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-3 py-2.5 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <CheckCircle2 size={16} />
+                              Selesaikan bundel
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={() => toggleExpanded(id)}
+                            className="hidden items-center gap-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-700 lg:inline-flex"
+                          >
+                            {isExpanded ? (
+                              <>
+                                Sembunyikan <ChevronUp size={15} />
+                              </>
+                            ) : (
+                              <>
+                                Lihat pengajuan <ChevronDown size={15} />
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  ))}
+                  </div>
+
+                  {isExpanded && (
+                    <div className="divide-y divide-slate-100">
+                      {rows.map((item) => (
+                        <article key={item.id} className="p-4 sm:p-5">
+                          <div className="flex flex-col justify-between gap-4 xl:flex-row xl:items-start">
+                            <div className="min-w-0 flex-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <h3 className="text-base font-bold text-slate-900">
+                                  {item.nama_debitur}
+                                </h3>
+                                <StatusBadge status={item.status} />
+                                <span
+                                  className={cn(
+                                    "rounded-full px-2.5 py-1 text-xs font-semibold",
+                                    item.alasan === "LUNAS"
+                                      ? "bg-violet-100 text-violet-800"
+                                      : "bg-cyan-100 text-cyan-800",
+                                  )}
+                                >
+                                  {item.alasan === "LUNAS"
+                                    ? "Pelunasan"
+                                    : "Top Up"}
+                                </span>
+                              </div>
+
+                              <p className="mt-2 text-sm text-slate-500">
+                                Rekening:{" "}
+                                <span className="font-semibold text-slate-700">
+                                  {item.nomor_rekening_pinjaman}
+                                </span>
+                              </p>
+
+                              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                                <Field label="Pemohon MKS">
+                                  {item.pemohon_nama}
+                                </Field>
+
+                                <Field label="Nomor notasi">
+                                  {item.nomor_notasi || "Tidak diisi"}
+                                </Field>
+
+                                <Field label="Waktu pengajuan">
+                                  {formatDateTime(item.created_at)}
+                                </Field>
+
+                                <div className="sm:col-span-2 xl:col-span-3">
+                                  <Field label="Data agunan">
+                                    {item.agunan ? (
+                                      <pre className="mt-1 whitespace-pre-wrap rounded-xl bg-slate-50 p-3 font-sans text-sm leading-6 text-slate-700">
+                                        {item.agunan}
+                                      </pre>
+                                    ) : (
+                                      <span className="font-normal text-slate-400">
+                                        Belum ada keterangan agunan
+                                      </span>
+                                    )}
+                                  </Field>
+                                </div>
+
+                                {item.catatan_admin_terakhir && (
+                                  <div className="sm:col-span-2 xl:col-span-3">
+                                    <Field label="Catatan Admin terakhir">
+                                      <div className="mt-1 rounded-xl border border-orange-200 bg-orange-50 p-3 font-normal leading-6 text-orange-900">
+                                        {item.catatan_admin_terakhir}
+                                      </div>
+                                    </Field>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="mt-4 flex flex-wrap gap-2">
+                                {item.bukti_bds_url ? (
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setPreviewUrl(item.bukti_bds_url)
+                                    }
+                                    className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700 transition hover:bg-indigo-100"
+                                  >
+                                    <FileImage size={16} />
+                                    Lihat bukti BDS
+                                    <Eye size={14} />
+                                  </button>
+                                ) : (
+                                  <span className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs text-slate-500">
+                                    <FileImage size={16} />
+                                    Bukti BDS tidak tersedia
+                                  </span>
+                                )}
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedItem(item);
+                                    setDecision("DITERIMA");
+                                    setAdminNote("");
+                                    setError("");
+                                  }}
+                                  disabled={
+                                    busy ||
+                                    item.status !== "MENUNGGU_PEMERIKSAAN"
+                                  }
+                                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  <Eye size={15} />
+                                  Periksa pengajuan
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedItem(item);
+                                    setDecision("PERLU_REVISI");
+                                    setAdminNote("");
+                                    setError("");
+                                  }}
+                                  disabled={
+                                    busy ||
+                                    item.status !== "MENUNGGU_PEMERIKSAAN"
+                                  }
+                                  className="inline-flex items-center gap-2 rounded-xl border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-800 transition hover:bg-orange-100 disabled:cursor-not-allowed disabled:opacity-40"
+                                >
+                                  <MessageSquareText size={15} />
+                                  Minta revisi
+                                </button>
+                              </div>
+
+                              {item.pesan?.length > 0 && (
+                                <details className="mt-4 rounded-xl border border-slate-200 bg-slate-50">
+                                  <summary className="cursor-pointer px-3 py-2.5 text-xs font-semibold text-slate-700">
+                                    Riwayat pesan ({item.pesan.length})
+                                  </summary>
+                                  <div className="space-y-3 border-t border-slate-200 p-3">
+                                    {item.pesan.map((message) => (
+                                      <div
+                                        key={message.id}
+                                        className="rounded-lg bg-white p-3"
+                                      >
+                                        <div className="flex flex-wrap justify-between gap-2">
+                                          <p className="text-xs font-bold text-slate-800">
+                                            {message.pengirim_nama}{" "}
+                                            <span className="font-normal text-slate-500">
+                                              ({message.pengirim_role})
+                                            </span>
+                                          </p>
+                                          <p className="text-xs text-slate-400">
+                                            {formatDateTime(message.created_at)}
+                                          </p>
+                                        </div>
+                                        <p className="mt-1 whitespace-pre-wrap text-sm leading-5 text-slate-700">
+                                          {message.pesan}
+                                        </p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </details>
+                              )}
+                            </div>
+                          </div>
+                        </article>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ===============================================
-              INFO
-          =============================================== */}
-
-        <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/60 px-5 py-4">
-          <div className="flex gap-3">
-            <CalendarDays className="mt-0.5 h-4 w-4 shrink-0 text-blue-600" />
-
-            <div className="text-xs leading-5 text-blue-800">
-              <div className="font-semibold">Informasi Order Agunan</div>
-
-              <div className="mt-1">
-                Data pada tabel adalah data kerja sementara. Foto BDS disimpan
-                sebagai kumpulan foto global untuk kebutuhan export PDF dan
-                Word.
-              </div>
-            </div>
-          </div>
-        </div>
+              );
+            })}
+          </section>
+        )}
       </div>
 
-      {/* =================================================
-            MODALS
-        ================================================= */}
-
-      <TopUpModal
-        open={searchOpen}
-        onClose={() => {
-          setSearchOpen(false);
-          setSearchTerm("");
-          setSelectedTopUps([]);
-        }}
-        searchTerm={searchTerm}
-        setSearchTerm={setSearchTerm}
-        filteredTopUps={filteredTopUps}
-        selectedTopUps={selectedTopUps}
-        toggleTopUp={toggleTopUp}
-        tambahTopUp={tambahTopUp}
-        formatDokumenLengkap={formatDokumenLengkap}
-        StatusBadge={StatusBadge}
-      />
-
-      <ManualModal
-        open={manualOpen}
-        onClose={() => setManualOpen(false)}
-        manualForm={manualForm}
-        handleManualChange={handleManualChange}
-        resetManualForm={resetManualForm}
-        simpanManual={simpanManual}
-      />
-
-      <EditNotasiModal
-        open={editOpen}
-        order={editingOrder}
-        editNoNotasi={editNoNotasi}
-        setEditNoNotasi={setEditNoNotasi}
-        onClose={() => {
-          setEditOpen(false);
-          setEditingOrder(null);
-          setEditNoNotasi("");
-        }}
-        simpanEdit={simpanEdit}
-      />
-
-      <DeleteOrderModal
-        open={deleteOpen}
-        order={deletingOrder}
-        onClose={() => {
-          setDeleteOpen(false);
-          setDeletingOrder(null);
-        }}
-        hapusOrder={hapusOrder}
-      />
-
-      {/* =================================================
-            PREVIEW
-        ================================================= */}
-
-      {previewOpen && (
-        <div className="order-agunan-preview-overlay">
-          {/* TOOLBAR - TIDAK IKUT PRINT */}
-
-          <div className="order-agunan-preview-toolbar no-print">
-            <div>
-              <div className="text-sm font-bold text-zinc-800">
-                Preview Surat Order Agunan
+      {selectedItem && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-950/50 p-0 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-t-3xl bg-white shadow-2xl sm:rounded-3xl">
+            <div className="sticky top-0 z-10 flex items-start justify-between gap-4 border-b border-slate-200 bg-white p-5">
+              <div>
+                <p className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+                  Pemeriksaan Admin
+                </p>
+                <h2 className="mt-1 text-xl font-bold text-slate-900">
+                  {selectedItem.nama_debitur}
+                </h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Rekening {selectedItem.nomor_rekening_pinjaman}
+                </p>
               </div>
 
-              <div className="text-xs text-zinc-500">
-                {suratKeluar} · No. {noSurat || "-"}
+              <button
+                type="button"
+                onClick={() => setSelectedItem(null)}
+                className="rounded-xl p-2 text-slate-500 hover:bg-slate-100"
+                aria-label="Tutup"
+              >
+                <XCircle size={22} />
+              </button>
+            </div>
+
+            <form onSubmit={submitDecision} className="space-y-5 p-5">
+              <div className="grid grid-cols-1 gap-4 rounded-2xl bg-slate-50 p-4 sm:grid-cols-2">
+                <Field label="Pemohon">{selectedItem.pemohon_nama}</Field>
+                <Field label="Jenis pengajuan">
+                  {selectedItem.alasan === "LUNAS" ? "Pelunasan" : "Top Up"}
+                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Agunan">
+                    {selectedItem.agunan || "Tidak ada keterangan agunan"}
+                  </Field>
+                </div>
               </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handleCetakPdfSurat}
-                disabled={exporting}
-                className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <FileDown className="h-4 w-4" />
-                Cetak PDF
-              </button>
+              {selectedItem.bukti_bds_url && (
+                <button
+                  type="button"
+                  onClick={() => setPreviewUrl(selectedItem.bukti_bds_url)}
+                  className="inline-flex items-center gap-2 rounded-xl border border-indigo-200 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-100"
+                >
+                  <FileImage size={18} />
+                  Buka bukti BDS
+                </button>
+              )}
 
-              <button
-                type="button"
-                onClick={handlePrintPreview}
-                disabled={exporting}
-                className="inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-3.5 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Printer className="h-4 w-4" />
-                Print
-              </button>
+              <div>
+                <label
+                  htmlFor="keputusan-admin"
+                  className="mb-2 block text-sm font-semibold text-slate-800"
+                >
+                  Keputusan
+                </label>
+                <select
+                  id="keputusan-admin"
+                  value={decision}
+                  onChange={(event) => setDecision(event.target.value)}
+                  className="w-full rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                >
+                  <option value="DITERIMA">Terima pengajuan</option>
+                  <option value="PERLU_REVISI">Minta revisi ke MKS</option>
+                  <option value="DITOLAK">Tolak pengajuan</option>
+                </select>
+              </div>
 
-              <button
-                type="button"
-                onClick={() => setPreviewOpen(false)}
-                className="inline-flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3.5 py-2 text-sm font-semibold text-zinc-700"
-              >
-                <X className="h-4 w-4" />
-                Tutup
-              </button>
-            </div>
-          </div>
+              <div>
+                <label
+                  htmlFor="catatan-admin"
+                  className="mb-2 block text-sm font-semibold text-slate-800"
+                >
+                  Pesan / catatan Admin
+                  {["PERLU_REVISI", "DITOLAK"].includes(decision) && (
+                    <span className="ml-1 text-rose-600">*</span>
+                  )}
+                </label>
+                <textarea
+                  id="catatan-admin"
+                  rows={4}
+                  value={adminNote}
+                  onChange={(event) => setAdminNote(event.target.value)}
+                  maxLength={1000}
+                  placeholder={
+                    decision === "PERLU_REVISI"
+                      ? "Jelaskan bagian yang harus diperbaiki MKS..."
+                      : decision === "DITOLAK"
+                        ? "Jelaskan alasan penolakan..."
+                        : "Catatan tambahan (opsional)..."
+                  }
+                  className="w-full resize-y rounded-xl border border-slate-200 px-3 py-3 text-sm outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100"
+                />
+                <p className="mt-1 text-right text-xs text-slate-400">
+                  {adminNote.length}/1000 karakter
+                </p>
+              </div>
 
-          {/* TARGET SURAT */}
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedItem(null)}
+                  disabled={busy}
+                  className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                >
+                  Batal
+                </button>
 
-          <div className="order-agunan-preview-scroll">
-            <OrderAgunanPrint
-              rows={suratRows}
-              suratKeluar={suratKeluar}
-              noSurat={noSurat}
-              tanggal={tanggalHariIni}
-              supervisor={supervisor}
-            />
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className={cn(
+                    "inline-flex items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white disabled:opacity-60",
+                    decision === "DITERIMA"
+                      ? "bg-emerald-600 hover:bg-emerald-700"
+                      : decision === "DITOLAK"
+                        ? "bg-rose-600 hover:bg-rose-700"
+                        : "bg-orange-600 hover:bg-orange-700",
+                  )}
+                >
+                  {busy ? (
+                    <LoaderCircle size={17} className="animate-spin" />
+                  ) : decision === "DITERIMA" ? (
+                    <CheckCircle2 size={17} />
+                  ) : decision === "DITOLAK" ? (
+                    <XCircle size={17} />
+                  ) : (
+                    <Send size={17} />
+                  )}
+                  Simpan keputusan
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
 
-      {/* =================================================
-            GLOBAL PRINT CSS
-        ================================================= */}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/80 p-4"
+          onClick={() => setPreviewUrl("")}
+          role="presentation"
+        >
+          <div
+            className="relative flex max-h-[92vh] w-full max-w-4xl flex-col rounded-2xl bg-white p-3 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Pratinjau bukti BDS"
+          >
+            <div className="flex items-center justify-between gap-3 px-2 pb-3">
+              <p className="font-semibold text-slate-800">
+                Pratinjau bukti BDS
+              </p>
+              <button
+                type="button"
+                onClick={() => setPreviewUrl("")}
+                className="rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100"
+              >
+                Tutup
+              </button>
+            </div>
 
-      <style jsx global>{`
-        .order-agunan-preview-overlay {
-          position: fixed;
-          inset: 0;
-          z-index: 100;
-          overflow-y: auto;
-          background: rgba(0, 0, 0, 0.6);
-        }
-
-        .order-agunan-preview-toolbar {
-          position: sticky;
-          top: 0;
-          z-index: 20;
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          padding: 16px 20px;
-          background: white;
-          border-bottom: 1px solid #e4e4e7;
-        }
-
-        .order-agunan-preview-scroll {
-          min-height: 100vh;
-          padding: 30px;
-        }
-
-        .order-agunan-print {
-          margin-left: auto;
-          margin-right: auto;
-        }
-
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 0;
-          }
-
-          html,
-          body {
-            margin: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-          }
-
-          body * {
-            visibility: hidden !important;
-          }
-
-          #order-agunan-print,
-          #order-agunan-print * {
-            visibility: visible !important;
-          }
-
-          #order-agunan-print {
-            position: absolute !important;
-            left: 0 !important;
-            top: 0 !important;
-            width: 210mm !important;
-            min-height: 297mm !important;
-            margin: 0 !important;
-            padding: 65px 70px !important;
-            box-shadow: none !important;
-            background: white !important;
-          }
-
-          .no-print {
-            display: none !important;
-          }
-
-          .order-agunan-preview-overlay {
-            position: static !important;
-            inset: auto !important;
-            overflow: visible !important;
-            background: white !important;
-          }
-
-          .order-agunan-preview-scroll {
-            min-height: 0 !important;
-            padding: 0 !important;
-            background: white !important;
-          }
-        }
-      `}</style>
-    </div>
+            <div className="flex min-h-0 flex-1 items-center justify-center overflow-auto rounded-xl bg-slate-100">
+              <img
+                src={previewUrl}
+                alt="Bukti capture BDS"
+                className="max-h-[75vh] max-w-full object-contain"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+    </main>
   );
 }

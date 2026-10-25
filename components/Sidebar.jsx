@@ -52,7 +52,7 @@ const mainMenus = [
     icon: BriefcaseBusiness,
   },
   {
-    label: "Buka / Tutup Blokiran",
+    label: "Request Buka Blokir",
     href: "/admin/blokiran",
     icon: LockKeyhole,
   },

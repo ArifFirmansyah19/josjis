@@ -81,6 +81,14 @@ const mksMenus = [
     icon: Calculator,
     color: "violet",
   },
+
+  {
+    label: "Kalkulator Pra Pencairan",
+    href: "/mks/rumus/pra-pencairan",
+    icon: Calculator,
+    color: "emerald",
+  },
+
   {
     label: "Checklist Doc PK",
     href: "/mks/checklist-doc-pk",

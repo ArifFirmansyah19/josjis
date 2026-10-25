@@ -1,143 +1,75 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  CalendarDays,
   CheckCircle2,
-  ChevronDown,
-  CircleDollarSign,
-  Edit3,
-  FileSearch,
+  Clock3,
+  FilePlus2,
+  FileText,
+  Info,
+  Landmark,
+  LoaderCircle,
   LockKeyhole,
-  Plus,
+  Pencil,
+  RefreshCw,
   Search,
-  Trash2,
-  UserRound,
-  WalletCards,
+  Send,
+  ShieldCheck,
+  Wallet,
   X,
+  XCircle,
+  UnlockKeyhole,
+  Check,
 } from "lucide-react";
+import { useUnit } from "@/components/UnitContext";
 
-/* =========================================================
-   MOCK DATA
-   SEMENTARA UNTUK TAMPILAN
-   NANTI DIGANTI DENGAN SUPABASE
-========================================================= */
-
-const mockPK = [
-  {
-    id: "pk-001",
-    unit: "JKK1",
-    mks: "Aris",
-    nama: "Budi Santoso",
-    rekTabungan: "11081-01-001234-5",
-    rekPinjaman: "11081-88-001122-3",
-    cif: "CIF00123",
-    produk: "KUM",
-    limit: 150000000,
-  },
-  {
-    id: "pk-002",
-    unit: "JKK1",
-    mks: "Fadilah Jismi",
-    nama: "Siti Rahma",
-    rekTabungan: "11081-01-002345-6",
-    rekPinjaman: "11081-88-002233-4",
-    cif: "CIF00234",
-    produk: "KUR",
-    limit: 200000000,
-  },
-  {
-    id: "pk-003",
-    unit: "JKK1",
-    mks: "Aris",
-    nama: "Andi Saputra",
-    rekTabungan: "11081-01-003456-7",
-    rekPinjaman: "11081-88-003344-5",
-    cif: "CIF00345",
-    produk: "KUM",
-    limit: 125000000,
-  },
-  {
-    id: "pk-004",
-    unit: "JKK2",
-    mks: "Fadilah Jismi",
-    nama: "Rudi Hartono",
-    rekTabungan: "11081-02-004567-8",
-    rekPinjaman: "11081-89-004455-6",
-    cif: "CIF00456",
-    produk: "KUR",
-    limit: 300000000,
-  },
+const MONTHS = [
+  "Januari",
+  "Februari",
+  "Maret",
+  "April",
+  "Mei",
+  "Juni",
+  "Juli",
+  "Agustus",
+  "September",
+  "Oktober",
+  "November",
+  "Desember",
 ];
 
-const initialBlocked = [
-  {
-    id: "blok-001",
-    unit: "JKK1",
+function getJakartaDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
 
-    mks: "Aris",
-    nama: "Budi Santoso",
+  const values = Object.fromEntries(parts.map((p) => [p.type, p.value]));
+  return `${values.year}-${values.month}-${values.day}`;
+}
 
-    rekTabungan: "11081-01-001234-5",
-    rekPinjaman: "11081-88-001122-3",
-    cif: "CIF00123",
-    produk: "KUM",
-    limit: 150000000,
+function formatDate(value) {
+  if (!value) return "-";
+  const [year, month, day] = String(value).slice(0, 10).split("-");
+  return `${Number(day)} ${MONTHS[Number(month) - 1] || ""} ${year}`;
+}
 
-    // JUMLAH BLOKIRAN AWAL
-    blokiranAwal: 5000000,
+function formatDateTime(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
 
-    // JUMLAH YANG SUDAH DIBUKA
-    jumlahDibuka: 2000000,
-
-    // STATUS
-    statusBayar: false,
-    tutupBlokiran: false,
-  },
-
-  {
-    id: "blok-002",
-    unit: "JKK1",
-
-    mks: "Fadilah Jismi",
-    nama: "Siti Rahma",
-
-    rekTabungan: "11081-01-002345-6",
-    rekPinjaman: "11081-88-002233-4",
-    cif: "CIF00234",
-    produk: "KUR",
-    limit: 200000000,
-
-    blokiranAwal: 7500000,
-    jumlahDibuka: 0,
-
-    statusBayar: false,
-    tutupBlokiran: false,
-  },
-
-  {
-    id: "blok-003",
-    unit: "JKK1",
-
-    mks: "Aris",
-    nama: "Andi Saputra",
-
-    rekTabungan: "11081-01-003456-7",
-    rekPinjaman: "11081-88-003344-5",
-    cif: "CIF00345",
-    produk: "KUM",
-    limit: 125000000,
-
-    blokiranAwal: 3000000,
-    jumlahDibuka: 3000000,
-
-    statusBayar: true,
-    tutupBlokiran: true,
-  },
-];
-
-/* =========================================================
-   HELPERS
-========================================================= */
+  return new Intl.DateTimeFormat("id-ID", {
+    timeZone: "Asia/Jakarta",
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(date);
+}
 
 function formatRupiah(value) {
   return new Intl.NumberFormat("id-ID", {
@@ -147,1443 +79,1371 @@ function formatRupiah(value) {
   }).format(Number(value) || 0);
 }
 
-function getSisaBlokiran(item) {
-  return Math.max(
-    0,
-    Number(item.blokiranAwal || 0) - Number(item.jumlahDibuka || 0),
-  );
+function emptyForm() {
+  return {
+    tanggal: getJakartaDate(),
+    nama_debitur: "",
+    nomor_rekening_pinjaman: "",
+    nomor_rekening_tabungan: "",
+    blokiran_awal: "",
+    blokiran_dibuka: "",
+    dikembalikan: "",
+    tujuan_bb: "",
+  };
 }
 
-/* =========================================================
-   STATUS BADGE
-========================================================= */
+function isLocked(row) {
+  return row?.is_locked === true;
+}
 
-function StatusBadge({ value, type = "default" }) {
-  const styles = value
-    ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
-    : "bg-zinc-100 text-zinc-500 ring-zinc-200";
+function StatusBadge({ value }) {
+  const done = value === "DONE";
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset ${styles}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ${
+        done
+          ? "bg-emerald-50 text-emerald-700 ring-emerald-200"
+          : "bg-amber-50 text-amber-800 ring-amber-200"
+      }`}
     >
-      {value ? (
+      {done ? (
         <CheckCircle2 className="h-3.5 w-3.5" />
       ) : (
-        <span className="h-3.5 w-3.5 rounded-full border border-zinc-300" />
+        <Clock3 className="h-3.5 w-3.5" />
       )}
-
-      {value ? "Sudah" : "Belum"}
+      {done ? "DONE" : "BELUM"}
     </span>
   );
 }
 
-/* =========================================================
-   PAGE
-========================================================= */
-
-export default function BlokiranPage() {
-  /*
-    SEMENTARA
-
-    Nanti activeUnit diambil dari UnitContext / Topbar.
-
-    Contoh:
-    const { activeUnit } = useUnit();
-
-    sehingga ketika Topbar berubah:
-    JKK1 -> JKK2
-
-    data halaman ini otomatis berubah.
-  */
-
-  const activeUnit = "JKK1";
-
-  const [data, setData] = useState(initialBlocked);
-
-  /* ADD */
-
-  const [showAddPanel, setShowAddPanel] = useState(false);
-  const [addMode, setAddMode] = useState("search");
-
-  const [search, setSearch] = useState("");
-  const [selectedSearch, setSelectedSearch] = useState([]);
-
-  /* DETAIL */
-
-  const [selectedRow, setSelectedRow] = useState(null);
-
-  /* EDIT */
-
-  const [showEdit, setShowEdit] = useState(false);
-
-  /* DELETE */
-
-  const [showDelete, setShowDelete] = useState(false);
-
-  /* MANUAL FORM */
-
-  const [manualForm, setManualForm] = useState({
-    mks: "",
-    nama: "",
-    rekTabungan: "",
-    rekPinjaman: "",
-    cif: "",
-    produk: "",
-    limit: "",
-    blokiranAwal: "",
-  });
-
-  /* =======================================================
-     FILTER UNIT AKTIF
-  ======================================================= */
-
-  const unitData = useMemo(() => {
-    return data.filter((item) => item.unit === activeUnit);
-  }, [data, activeUnit]);
-
-  /* =======================================================
-     SEARCH DATA PK
-  ======================================================= */
-
-  const searchResults = useMemo(() => {
-    const keyword = search.trim().toLowerCase();
-
-    if (!keyword) {
-      return [];
-    }
-
-    return mockPK.filter((item) => {
-      if (item.unit !== activeUnit) {
-        return false;
-      }
-
-      return [
-        item.nama,
-        item.mks,
-        item.rekTabungan,
-        item.rekPinjaman,
-        item.cif,
-        item.produk,
-      ].some((value) => String(value).toLowerCase().includes(keyword));
-    });
-  }, [search, activeUnit]);
-
-  /* =======================================================
-     SUMMARY
-  ======================================================= */
-
-  const summary = useMemo(() => {
-    const totalBlokiran = unitData.reduce(
-      (total, item) => total + Number(item.blokiranAwal || 0),
-      0,
-    );
-
-    const totalDibuka = unitData.reduce(
-      (total, item) => total + Number(item.jumlahDibuka || 0),
-      0,
-    );
-
-    return {
-      totalData: unitData.length,
-      totalBlokiran,
-      totalDibuka,
-
-      belumBayar: unitData.filter((item) => !item.statusBayar).length,
-
-      belumDitutup: unitData.filter((item) => !item.tutupBlokiran).length,
-    };
-  }, [unitData]);
-
-  /* =======================================================
-     SEARCH SELECTION
-  ======================================================= */
-
-  function toggleSearchSelection(id) {
-    setSelectedSearch((current) =>
-      current.includes(id)
-        ? current.filter((item) => item !== id)
-        : [...current, id],
-    );
-  }
-
-  /* =======================================================
-     ADD FROM PK
-  ======================================================= */
-
-  function addSelectedPK() {
-    const selected = mockPK.filter((item) => selectedSearch.includes(item.id));
-
-    const newRows = selected
-      .filter(
-        (item) =>
-          !data.some(
-            (existing) =>
-              existing.unit === activeUnit &&
-              existing.rekTabungan === item.rekTabungan,
-          ),
-      )
-      .map((item) => ({
-        id: `blok-${Date.now()}-${item.id}`,
-
-        unit: item.unit,
-
-        mks: item.mks,
-        nama: item.nama,
-
-        rekTabungan: item.rekTabungan,
-        rekPinjaman: item.rekPinjaman,
-
-        cif: item.cif,
-        produk: item.produk,
-        limit: item.limit,
-
-        blokiranAwal: 0,
-        jumlahDibuka: 0,
-
-        statusBayar: false,
-        tutupBlokiran: false,
-      }));
-
-    setData((current) => [...newRows, ...current]);
-
-    setSelectedSearch([]);
-    setSearch("");
-    setShowAddPanel(false);
-  }
-
-  /* =======================================================
-     ADD MANUAL
-  ======================================================= */
-
-  function addManual() {
-    if (
-      !manualForm.nama ||
-      !manualForm.rekTabungan ||
-      !manualForm.blokiranAwal
-    ) {
-      return;
-    }
-
-    const newRow = {
-      id: `blok-manual-${Date.now()}`,
-
-      unit: activeUnit,
-
-      mks: manualForm.mks,
-      nama: manualForm.nama,
-
-      rekTabungan: manualForm.rekTabungan,
-      rekPinjaman: manualForm.rekPinjaman,
-
-      cif: manualForm.cif,
-      produk: manualForm.produk,
-      limit: Number(manualForm.limit) || 0,
-
-      blokiranAwal: Number(manualForm.blokiranAwal) || 0,
-
-      jumlahDibuka: 0,
-
-      statusBayar: false,
-      tutupBlokiran: false,
-    };
-
-    setData((current) => [newRow, ...current]);
-
-    setManualForm({
-      mks: "",
-      nama: "",
-      rekTabungan: "",
-      rekPinjaman: "",
-      cif: "",
-      produk: "",
-      limit: "",
-      blokiranAwal: "",
-    });
-
-    setShowAddPanel(false);
-  }
-
-  /* =======================================================
-     UPDATE
-  ======================================================= */
-
-  function updateSelectedRow(patch) {
-    if (!selectedRow) return;
-
-    setData((current) =>
-      current.map((item) =>
-        item.id === selectedRow.id
-          ? {
-              ...item,
-              ...patch,
-            }
-          : item,
-      ),
-    );
-
-    setSelectedRow((current) =>
-      current
-        ? {
-            ...current,
-            ...patch,
-          }
-        : null,
-    );
-  }
-
-  /* =======================================================
-     DELETE
-
-     NANTI:
-     SUPABASE HARD DELETE
-
-     .from("blokiran")
-     .delete()
-     .eq("id", selectedRow.id)
-
-     Tidak menggunakan archive / soft delete.
-  ======================================================= */
-
-  function deleteSelectedRow() {
-    if (!selectedRow) return;
-
-    setData((current) => current.filter((item) => item.id !== selectedRow.id));
-
-    setSelectedRow(null);
-    setShowDelete(false);
-  }
-
-  /* =======================================================
-     RENDER
-  ======================================================= */
-
+function LockBadge({ locked }) {
   return (
-    <div className="space-y-6">
-      {/* =================================================
-            HEADER
-        ================================================= */}
-
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold tracking-tight text-zinc-900">
-              Blokiran
-            </h1>
-
-            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-semibold text-zinc-600">
-              {activeUnit}
-            </span>
-          </div>
-
-          <p className="mt-1 text-sm text-zinc-500">
-            Pengelolaan blokiran debitur pada unit aktif.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={() => {
-            setAddMode("search");
-            setShowAddPanel(true);
-          }}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
-        >
-          <Plus className="h-4 w-4" />
-          Tambah Blokiran
-        </button>
-      </div>
-
-      {/* =================================================
-            SUMMARY
-        ================================================= */}
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <SummaryCard
-          label="Total Data"
-          value={summary.totalData}
-          icon={LockKeyhole}
-        />
-
-        <SummaryCard
-          label="Total Blokiran"
-          value={formatRupiah(summary.totalBlokiran)}
-          icon={CircleDollarSign}
-          compact
-        />
-
-        <SummaryCard
-          label="Sudah Dibuka"
-          value={formatRupiah(summary.totalDibuka)}
-          icon={CheckCircle2}
-          compact
-        />
-
-        <SummaryCard
-          label="Belum Ditutup"
-          value={summary.belumDitutup}
-          icon={WalletCards}
-        />
-      </div>
-
-      {/* =================================================
-            TABLE
-        ================================================= */}
-
-      <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white">
-        {/* TABLE TOP */}
-
-        <div className="flex flex-col gap-3 border-b border-zinc-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="text-sm font-bold text-zinc-900">Data Blokiran</h2>
-
-            <p className="mt-0.5 text-xs text-zinc-500">
-              Data unit {activeUnit}
-            </p>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setAddMode("search");
-              setShowAddPanel(true);
-            }}
-            className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-zinc-200 px-3 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-50"
-          >
-            <Search className="h-3.5 w-3.5" />
-            Cari Debitur
-          </button>
-        </div>
-
-        {/* =================================================
-              DESKTOP
-          ================================================= */}
-
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[950px] text-left">
-            <thead>
-              <tr className="border-b border-zinc-200 bg-zinc-50/70">
-                <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                  Nama Debitur
-                </th>
-
-                <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                  Rek Tabungan
-                </th>
-
-                <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                  Jml Blokiran
-                </th>
-
-                <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                  Jml Dibuka
-                </th>
-
-                <th className="px-5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                  Status Bayar
-                </th>
-
-                <th className="px-5 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                  Tutup Blokiran
-                </th>
-
-                <th className="px-5 py-3 text-right text-[11px] font-bold uppercase tracking-wider text-zinc-500">
-                  Aksi
-                </th>
-              </tr>
-            </thead>
-
-            <tbody className="divide-y divide-zinc-100">
-              {unitData.map((item) => (
-                <tr
-                  key={item.id}
-                  onClick={() => setSelectedRow(item)}
-                  className="cursor-pointer transition hover:bg-zinc-50"
-                >
-                  {/* NAMA */}
-
-                  <td className="px-5 py-4">
-                    <div className="font-semibold text-zinc-900">
-                      {item.nama}
-                    </div>
-
-                    <div className="mt-0.5 text-xs text-zinc-400">
-                      {item.mks || "-"}
-                    </div>
-                  </td>
-
-                  {/* REK */}
-
-                  <td className="px-5 py-4">
-                    <span className="font-mono text-xs text-zinc-600">
-                      {item.rekTabungan}
-                    </span>
-                  </td>
-
-                  {/* BLOKIRAN */}
-
-                  <td className="px-5 py-4 text-right">
-                    <span className="font-semibold text-zinc-900">
-                      {formatRupiah(item.blokiranAwal)}
-                    </span>
-                  </td>
-
-                  {/* DIBUKA */}
-
-                  <td className="px-5 py-4 text-right">
-                    <span className="font-semibold text-emerald-600">
-                      {formatRupiah(item.jumlahDibuka)}
-                    </span>
-                  </td>
-
-                  {/* BAYAR */}
-
-                  <td className="px-5 py-4 text-center">
-                    <StatusBadge value={item.statusBayar} />
-                  </td>
-
-                  {/* TUTUP */}
-
-                  <td className="px-5 py-4 text-center">
-                    <StatusBadge value={item.tutupBlokiran} />
-                  </td>
-
-                  {/* AKSI */}
-
-                  <td
-                    className="px-5 py-4 text-right"
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <div className="flex justify-end gap-1">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedRow(item);
-                          setShowEdit(true);
-                        }}
-                        className="rounded-lg p-2 text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
-                        title="Edit"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSelectedRow(item);
-                          setShowDelete(true);
-                        }}
-                        className="rounded-lg p-2 text-zinc-400 transition hover:bg-red-50 hover:text-red-600"
-                        title="Hapus"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {unitData.length === 0 && (
-            <EmptyState onAdd={() => setShowAddPanel(true)} />
-          )}
-        </div>
-
-        {/* =================================================
-              MOBILE
-          ================================================= */}
-
-        <div className="divide-y divide-zinc-100 md:hidden">
-          {unitData.map((item) => (
-            <div
-              key={item.id}
-              onClick={() => setSelectedRow(item)}
-              className="flex cursor-pointer items-center gap-3 px-4 py-4 transition active:bg-zinc-50"
-            >
-              {/* ICON */}
-
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600">
-                <UserRound className="h-5 w-5" />
-              </div>
-
-              {/* NAMA */}
-
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-bold text-zinc-900">
-                  {item.nama}
-                </div>
-
-                <div className="mt-1 truncate font-mono text-[11px] text-zinc-500">
-                  {item.rekTabungan}
-                </div>
-              </div>
-
-              {/* JUMLAH */}
-
-              <div className="shrink-0 text-right">
-                <div className="text-[9px] font-bold uppercase tracking-wider text-zinc-400">
-                  Blokiran
-                </div>
-
-                <div className="mt-1 text-sm font-bold text-zinc-900">
-                  {formatRupiah(item.blokiranAwal)}
-                </div>
-              </div>
-
-              {/* ACTION */}
-
-              <div
-                className="flex shrink-0 items-center"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <button
-                  type="button"
-                  onClick={() => setSelectedRow(item)}
-                  className="rounded-lg p-1.5 text-zinc-300"
-                >
-                  <ChevronDown className="h-4 w-4 -rotate-90" />
-                </button>
-              </div>
-            </div>
-          ))}
-
-          {unitData.length === 0 && (
-            <EmptyState onAdd={() => setShowAddPanel(true)} />
-          )}
-        </div>
-      </div>
-
-      {/* =====================================================
-          TAMBAH
-      ===================================================== */}
-
-      {showAddPanel && (
-        <AddModal
-          activeUnit={activeUnit}
-          mode={addMode}
-          setMode={setAddMode}
-          onClose={() => setShowAddPanel(false)}
-          search={search}
-          setSearch={setSearch}
-          searchResults={searchResults}
-          selectedSearch={selectedSearch}
-          toggleSearchSelection={toggleSearchSelection}
-          addSelectedPK={addSelectedPK}
-          manualForm={manualForm}
-          setManualForm={setManualForm}
-          addManual={addManual}
-          data={data}
-        />
-      )}
-
-      {/* =====================================================
-          DETAIL
-      ===================================================== */}
-
-      {selectedRow && !showEdit && !showDelete && (
-        <DetailModal
-          item={selectedRow}
-          onClose={() => setSelectedRow(null)}
-          onEdit={() => setShowEdit(true)}
-          onDelete={() => setShowDelete(true)}
-        />
-      )}
-
-      {/* =====================================================
-          EDIT
-      ===================================================== */}
-
-      {selectedRow && showEdit && (
-        <EditModal
-          item={selectedRow}
-          onClose={() => setShowEdit(false)}
-          onSave={(patch) => {
-            updateSelectedRow(patch);
-            setShowEdit(false);
-          }}
-        />
-      )}
-
-      {/* =====================================================
-          DELETE
-      ===================================================== */}
-
-      {selectedRow && showDelete && (
-        <DeleteModal
-          item={selectedRow}
-          onClose={() => setShowDelete(false)}
-          onDelete={deleteSelectedRow}
-        />
-      )}
-    </div>
-  );
-}
-
-/* =========================================================
-   SUMMARY CARD
-========================================================= */
-
-function SummaryCard({ label, value, icon: Icon, compact = false }) {
-  return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600">
-          <Icon className="h-4 w-4" />
-        </div>
-
-        <span
-          className={`font-bold tracking-tight text-zinc-900 ${
-            compact ? "text-sm sm:text-base" : "text-2xl"
-          }`}
-        >
-          {value}
-        </span>
-      </div>
-
-      <div className="mt-3 text-xs font-medium text-zinc-500">{label}</div>
-    </div>
-  );
-}
-
-/* =========================================================
-   ADD MODAL
-========================================================= */
-
-function AddModal({
-  activeUnit,
-  mode,
-  setMode,
-  onClose,
-
-  search,
-  setSearch,
-
-  searchResults,
-  selectedSearch,
-  toggleSearchSelection,
-  addSelectedPK,
-
-  manualForm,
-  setManualForm,
-  addManual,
-
-  data,
-}) {
-  return (
-    <Modal
-      title="Tambah Blokiran"
-      subtitle={`Unit aktif: ${activeUnit}`}
-      onClose={onClose}
-      wide
-    >
-      {/* MODE */}
-
-      <div className="mb-5 flex rounded-xl bg-zinc-100 p-1">
-        <button
-          type="button"
-          onClick={() => setMode("search")}
-          className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition ${
-            mode === "search"
-              ? "bg-white text-zinc-900 shadow-sm"
-              : "text-zinc-500"
-          }`}
-        >
-          Cari dari PK
-        </button>
-
-        <button
-          type="button"
-          onClick={() => setMode("manual")}
-          className={`flex-1 rounded-lg px-3 py-2 text-xs font-semibold transition ${
-            mode === "manual"
-              ? "bg-white text-zinc-900 shadow-sm"
-              : "text-zinc-500"
-          }`}
-        >
-          Input Manual
-        </button>
-      </div>
-
-      {/* =================================================
-          SEARCH
-      ================================================= */}
-
-      {mode === "search" && (
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-
-            <input
-              type="text"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Cari nama, rekening, CIF..."
-              autoFocus
-              className="h-11 w-full rounded-xl border border-zinc-200 bg-white pl-10 pr-4 text-sm outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
-            />
-          </div>
-
-          {search && (
-            <div className="overflow-hidden rounded-xl border border-zinc-200">
-              {searchResults.length > 0 ? (
-                <div className="divide-y divide-zinc-100">
-                  {searchResults.map((item) => {
-                    const checked = selectedSearch.includes(item.id);
-
-                    const alreadyAdded = data.some(
-                      (existing) =>
-                        existing.unit === activeUnit &&
-                        existing.rekTabungan === item.rekTabungan,
-                    );
-
-                    return (
-                      <label
-                        key={item.id}
-                        className={`flex cursor-pointer items-center gap-3 px-4 py-3 transition ${
-                          checked ? "bg-zinc-50" : "hover:bg-zinc-50"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={alreadyAdded}
-                          onChange={() => toggleSearchSelection(item.id)}
-                          className="h-4 w-4 rounded border-zinc-300"
-                        />
-
-                        <div className="min-w-0 flex-1">
-                          <div className="text-sm font-semibold text-zinc-900">
-                            {item.nama}
-                          </div>
-
-                          <div className="mt-0.5 text-xs text-zinc-500">
-                            {item.mks} · {item.produk} · {item.rekTabungan}
-                          </div>
-                        </div>
-
-                        {alreadyAdded && (
-                          <span className="text-[10px] font-semibold text-emerald-600">
-                            Sudah ada
-                          </span>
-                        )}
-                      </label>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="px-5 py-8 text-center">
-                  <FileSearch className="mx-auto h-7 w-7 text-zinc-300" />
-
-                  <p className="mt-2 text-sm font-medium text-zinc-700">
-                    Data tidak ditemukan
-                  </p>
-
-                  <p className="mt-1 text-xs text-zinc-400">
-                    Coba gunakan nama, rekening, atau CIF.
-                  </p>
-                </div>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <span className="text-xs text-zinc-500">
-              {selectedSearch.length} data dipilih
-            </span>
-
-            <button
-              type="button"
-              disabled={selectedSearch.length === 0}
-              onClick={addSelectedPK}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <Plus className="h-4 w-4" />
-              Tambahkan
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* =================================================
-          MANUAL
-      ================================================= */}
-
-      {mode === "manual" && (
-        <div className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <InputField
-              label="Nama Debitur"
-              required
-              value={manualForm.nama}
-              onChange={(value) =>
-                setManualForm({
-                  ...manualForm,
-                  nama: value,
-                })
-              }
-            />
-
-            <InputField
-              label="MKS"
-              value={manualForm.mks}
-              onChange={(value) =>
-                setManualForm({
-                  ...manualForm,
-                  mks: value,
-                })
-              }
-            />
-
-            <InputField
-              label="Rek Tabungan"
-              required
-              value={manualForm.rekTabungan}
-              onChange={(value) =>
-                setManualForm({
-                  ...manualForm,
-                  rekTabungan: value,
-                })
-              }
-            />
-
-            <InputField
-              label="Rek Pinjaman"
-              value={manualForm.rekPinjaman}
-              onChange={(value) =>
-                setManualForm({
-                  ...manualForm,
-                  rekPinjaman: value,
-                })
-              }
-            />
-
-            <InputField
-              label="CIF"
-              value={manualForm.cif}
-              onChange={(value) =>
-                setManualForm({
-                  ...manualForm,
-                  cif: value,
-                })
-              }
-            />
-
-            <InputField
-              label="Produk"
-              value={manualForm.produk}
-              onChange={(value) =>
-                setManualForm({
-                  ...manualForm,
-                  produk: value,
-                })
-              }
-            />
-
-            <InputField
-              label="Limit"
-              type="number"
-              value={manualForm.limit}
-              onChange={(value) =>
-                setManualForm({
-                  ...manualForm,
-                  limit: value,
-                })
-              }
-            />
-
-            <InputField
-              label="Jumlah Blokiran Awal"
-              required
-              type="number"
-              value={manualForm.blokiranAwal}
-              onChange={(value) =>
-                setManualForm({
-                  ...manualForm,
-                  blokiranAwal: value,
-                })
-              }
-            />
-          </div>
-
-          <div className="flex justify-end border-t border-zinc-100 pt-4">
-            <button
-              type="button"
-              onClick={addManual}
-              className="inline-flex h-10 items-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-            >
-              <Plus className="h-4 w-4" />
-              Tambahkan
-            </button>
-          </div>
-        </div>
-      )}
-    </Modal>
-  );
-}
-
-/* =========================================================
-   DETAIL MODAL
-========================================================= */
-
-function DetailModal({ item, onClose, onEdit, onDelete }) {
-  const sisa = getSisaBlokiran(item);
-
-  return (
-    <Modal
-      title="Detail Blokiran"
-      subtitle={`${item.nama} · ${item.unit}`}
-      onClose={onClose}
-      wide
-    >
-      <div className="space-y-5">
-        {/* PROFILE */}
-
-        <div className="flex items-center gap-4 rounded-2xl bg-zinc-50 p-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-zinc-900 text-white">
-            <UserRound className="h-6 w-6" />
-          </div>
-
-          <div className="min-w-0">
-            <div className="text-base font-bold text-zinc-900">{item.nama}</div>
-
-            <div className="mt-1 text-xs text-zinc-500">
-              MKS:{" "}
-              <span className="font-semibold text-zinc-700">
-                {item.mks || "-"}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* DATA DEBITUR */}
-
-        <div>
-          <SectionTitle title="Data Debitur" />
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <DetailItem label="Rek Tabungan" value={item.rekTabungan} mono />
-
-            <DetailItem
-              label="Rek Pinjaman"
-              value={item.rekPinjaman || "-"}
-              mono
-            />
-
-            <DetailItem label="CIF" value={item.cif || "-"} />
-
-            <DetailItem label="Produk" value={item.produk || "-"} />
-
-            <DetailItem label="Limit" value={formatRupiah(item.limit)} />
-          </div>
-        </div>
-
-        {/* BLOKIRAN */}
-
-        <div>
-          <SectionTitle title="Informasi Blokiran" />
-
-          <div className="grid gap-3 sm:grid-cols-3">
-            <DetailItem
-              label="Blokiran Awal"
-              value={formatRupiah(item.blokiranAwal)}
-              strong
-            />
-
-            <DetailItem
-              label="Sudah Dibuka"
-              value={formatRupiah(item.jumlahDibuka)}
-              strong
-            />
-
-            <DetailItem
-              label="Sisa Blokiran"
-              value={formatRupiah(sisa)}
-              strong
-            />
-          </div>
-        </div>
-
-        {/* STATUS */}
-
-        <div>
-          <SectionTitle title="Status" />
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <StatusBox label="Status Bayar" value={item.statusBayar} />
-
-            <StatusBox label="Tutup Blokiran" value={item.tutupBlokiran} />
-          </div>
-        </div>
-
-        {/* ACTION */}
-
-        <div className="flex flex-col-reverse gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-between">
-          <button
-            type="button"
-            onClick={onDelete}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-red-600 hover:bg-red-50"
-          >
-            <Trash2 className="h-4 w-4" />
-            Hapus Permanen
-          </button>
-
-          <button
-            type="button"
-            onClick={onEdit}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-          >
-            <Edit3 className="h-4 w-4" />
-            Edit Data
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/* =========================================================
-   EDIT MODAL
-========================================================= */
-
-function EditModal({ item, onClose, onSave }) {
-  const [blokiranAwal, setBlokiranAwal] = useState(item.blokiranAwal);
-
-  const [jumlahDibuka, setJumlahDibuka] = useState(item.jumlahDibuka);
-
-  const [statusBayar, setStatusBayar] = useState(item.statusBayar);
-
-  const [tutupBlokiran, setTutupBlokiran] = useState(item.tutupBlokiran);
-
-  return (
-    <Modal title="Edit Blokiran" subtitle={item.nama} onClose={onClose}>
-      <div className="space-y-5">
-        {/* IDENTITAS */}
-
-        <div className="rounded-xl bg-zinc-50 p-4">
-          <div className="text-sm font-bold text-zinc-900">{item.nama}</div>
-
-          <div className="mt-1 font-mono text-xs text-zinc-500">
-            {item.rekTabungan}
-          </div>
-        </div>
-
-        {/* NOMINAL */}
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <InputField
-            label="Blokiran Awal"
-            type="number"
-            value={blokiranAwal}
-            onChange={(value) => setBlokiranAwal(Number(value) || 0)}
-          />
-
-          <InputField
-            label="Blokiran yang Dibuka"
-            type="number"
-            value={jumlahDibuka}
-            onChange={(value) => setJumlahDibuka(Number(value) || 0)}
-          />
-        </div>
-
-        {/* STATUS */}
-
-        <div className="space-y-2">
-          <EditToggle
-            label="Status Bayar"
-            description="Blokiran sudah dibayar"
-            value={statusBayar}
-            onChange={setStatusBayar}
-          />
-
-          <EditToggle
-            label="Tutup Blokiran"
-            description="Blokiran sudah ditutup kembali"
-            value={tutupBlokiran}
-            onChange={setTutupBlokiran}
-          />
-        </div>
-
-        {/* SAVE */}
-
-        <div className="flex justify-end gap-2 border-t border-zinc-100 pt-4">
-          <button
-            type="button"
-            onClick={onClose}
-            className="h-10 rounded-xl border border-zinc-200 px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-          >
-            Batal
-          </button>
-
-          <button
-            type="button"
-            onClick={() =>
-              onSave({
-                blokiranAwal,
-                jumlahDibuka,
-                statusBayar,
-                tutupBlokiran,
-              })
-            }
-            className="h-10 rounded-xl bg-zinc-900 px-4 text-sm font-semibold text-white hover:bg-zinc-800"
-          >
-            Simpan Perubahan
-          </button>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-/* =========================================================
-   DELETE MODAL
-========================================================= */
-
-function DeleteModal({ item, onClose, onDelete }) {
-  return (
-    <Modal
-      title="Hapus Data Blokiran"
-      subtitle="Tindakan ini tidak dapat dibatalkan."
-      onClose={onClose}
-    >
-      <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-        <div className="flex gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
-            <Trash2 className="h-4 w-4" />
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-red-900">
-              Hapus {item.nama}?
-            </p>
-
-            <p className="mt-1 text-xs leading-5 text-red-700">
-              Data blokiran akan dihapus secara permanen dari database. Tidak
-              ada arsip atau data cadangan di dalam proses penghapusan ini.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <div className="mt-5 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onClose}
-          className="h-10 rounded-xl border border-zinc-200 px-4 text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-        >
-          Batal
-        </button>
-
-        <button
-          type="button"
-          onClick={onDelete}
-          className="h-10 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-700"
-        >
-          Hapus Permanen
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-/* =========================================================
-   EDIT TOGGLE
-========================================================= */
-
-function EditToggle({ label, description, value, onChange }) {
-  return (
-    <button
-      type="button"
-      onClick={() => onChange(!value)}
-      className="flex w-full items-center justify-between rounded-xl border border-zinc-200 px-4 py-3 text-left transition hover:bg-zinc-50"
-    >
-      <div>
-        <div className="text-sm font-semibold text-zinc-700">{label}</div>
-
-        <div className="mt-0.5 text-xs text-zinc-400">{description}</div>
-      </div>
-
-      <span
-        className={`flex h-6 w-11 shrink-0 items-center rounded-full p-1 transition ${
-          value ? "bg-emerald-500" : "bg-zinc-200"
-        }`}
-      >
-        <span
-          className={`h-4 w-4 rounded-full bg-white shadow-sm transition ${
-            value ? "translate-x-5" : "translate-x-0"
-          }`}
-        />
-      </span>
-    </button>
-  );
-}
-
-/* =========================================================
-   STATUS BOX
-========================================================= */
-
-function StatusBox({ label, value }) {
-  return (
-    <div
-      className={`rounded-xl border p-4 ${
-        value
-          ? "border-emerald-200 bg-emerald-50"
-          : "border-zinc-200 bg-zinc-50"
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ring-inset ${
+        locked
+          ? "bg-amber-50 text-amber-800 ring-amber-200"
+          : "bg-sky-50 text-sky-700 ring-sky-200"
       }`}
     >
-      <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-        {label}
-      </div>
-
-      <div
-        className={`mt-2 flex items-center gap-2 text-sm font-semibold ${
-          value ? "text-emerald-700" : "text-zinc-500"
-        }`}
-      >
-        {value ? (
-          <CheckCircle2 className="h-4 w-4" />
-        ) : (
-          <span className="h-4 w-4 rounded-full border-2 border-zinc-300" />
-        )}
-
-        {value ? "Sudah" : "Belum"}
-      </div>
-    </div>
+      {locked ? (
+        <LockKeyhole className="h-3.5 w-3.5" />
+      ) : (
+        <Pencil className="h-3.5 w-3.5" />
+      )}
+      {locked ? "Dikunci Admin" : "Bisa diedit"}
+    </span>
   );
 }
 
-/* =========================================================
-   DETAIL ITEM
-========================================================= */
+function SummaryCard({ label, value, description, icon: Icon, tone }) {
+  const tones = {
+    blue: "from-blue-500 to-indigo-600",
+    rose: "from-rose-500 to-pink-600",
+    amber: "from-amber-400 to-orange-500",
+    emerald: "from-emerald-500 to-teal-600",
+  };
 
-function DetailItem({ label, value, mono = false, strong = false }) {
   return (
-    <div className="rounded-xl border border-zinc-100 bg-white p-3">
-      <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-400">
-        {label}
-      </div>
-
+    <article className="relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-5">
       <div
-        className={`mt-1.5 text-sm ${
-          strong ? "font-bold text-zinc-900" : "font-medium text-zinc-700"
-        } ${mono ? "font-mono" : ""}`}
-      >
-        {value}
+        className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${tones[tone] || tones.blue}`}
+      />
+      <div className="flex items-start justify-between gap-3 pt-1">
+        <div className="min-w-0">
+          <p className="text-xs font-semibold text-slate-500">{label}</p>
+          <p className="mt-2 text-2xl font-extrabold tracking-tight text-slate-900">
+            {value}
+          </p>
+          <p className="mt-1 text-[11px] leading-4 text-slate-400">
+            {description}
+          </p>
+        </div>
+        <div
+          className={`rounded-2xl bg-gradient-to-br p-3 text-white shadow-sm ${tones[tone] || tones.blue}`}
+        >
+          <Icon className="h-5 w-5" />
+        </div>
       </div>
-    </div>
+    </article>
   );
 }
 
-/* =========================================================
-   SECTION TITLE
-========================================================= */
-
-function SectionTitle({ title }) {
-  return (
-    <div className="mb-3 text-xs font-bold uppercase tracking-wider text-zinc-400">
-      {title}
-    </div>
-  );
-}
-
-/* =========================================================
-   INPUT
-========================================================= */
-
-function InputField({
+function Field({
   label,
   value,
   onChange,
+  placeholder,
   type = "text",
   required = false,
+  min,
+  step,
 }) {
   return (
-    <label className="block">
-      <div className="mb-1.5 text-xs font-semibold text-zinc-600">
+    <label className="block min-w-0">
+      <span className="mb-1.5 block text-sm font-semibold text-slate-700">
         {label}
-
-        {required && <span className="ml-1 text-red-500">*</span>}
-      </div>
-
+        {required && <span className="ml-1 text-rose-500">*</span>}
+      </span>
       <input
         type={type}
-        value={value}
+        value={value ?? ""}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100"
+        placeholder={placeholder}
+        required={required}
+        min={min}
+        step={step}
+        className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
       />
     </label>
   );
 }
 
-/* =========================================================
-   EMPTY STATE
-========================================================= */
-
-function EmptyState({ onAdd }) {
+function DetailItem({ label, value, mono = false }) {
   return (
-    <div className="px-5 py-12 text-center">
-      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-400">
-        <LockKeyhole className="h-6 w-6" />
-      </div>
-
-      <p className="mt-3 text-sm font-semibold text-zinc-700">
-        Belum ada data blokiran
+    <div className="min-w-0 rounded-xl border border-slate-100 bg-white p-3.5">
+      <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+        {label}
       </p>
-
-      <p className="mt-1 text-xs text-zinc-400">
-        Tambahkan data blokiran untuk unit aktif.
-      </p>
-
-      <button
-        type="button"
-        onClick={onAdd}
-        className="mt-4 inline-flex items-center gap-2 rounded-xl bg-zinc-900 px-4 py-2 text-xs font-semibold text-white"
+      <p
+        className={`mt-1.5 break-words text-sm font-semibold text-slate-800 ${mono ? "font-mono" : ""}`}
       >
-        <Plus className="h-3.5 w-3.5" />
-        Tambah Blokiran
+        {value === null || value === undefined || value === "" ? "-" : value}
+      </p>
+    </div>
+  );
+}
+
+function SectionHeading({ icon: Icon, title, subtitle }) {
+  return (
+    <div className="mb-3 flex items-start gap-3">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-700">
+        <Icon className="h-4.5 w-4.5" />
+      </div>
+      <div>
+        <h3 className="text-sm font-bold text-slate-900">{title}</h3>
+        {subtitle && (
+          <p className="mt-0.5 text-xs leading-5 text-slate-500">{subtitle}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Feedback({ type = "error", message, onClose }) {
+  if (!message) return null;
+  const success = type === "success";
+
+  return (
+    <div
+      className={`flex items-start gap-3 rounded-2xl border p-4 text-sm ${
+        success
+          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+          : "border-rose-200 bg-rose-50 text-rose-800"
+      }`}
+    >
+      {success ? (
+        <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
+      ) : (
+        <XCircle className="mt-0.5 h-5 w-5 shrink-0" />
+      )}
+      <p className="flex-1 leading-6">{message}</p>
+      <button type="button" onClick={onClose} aria-label="Tutup pesan">
+        <X className="h-4 w-4" />
       </button>
     </div>
   );
 }
 
-/* =========================================================
-   MODAL
-========================================================= */
-
-function Modal({ title, subtitle, children, onClose, wide = false }) {
+function ModalShell({ children, onClose, wide = false }) {
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4">
-      <div
-        className={`flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-3xl bg-white shadow-2xl sm:rounded-2xl ${
-          wide ? "max-w-3xl" : "max-w-lg"
-        }`}
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/55 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        className={`flex max-h-[95dvh] w-full flex-col overflow-hidden rounded-t-3xl border border-white/60 bg-slate-50 shadow-2xl sm:rounded-3xl ${wide ? "max-w-4xl" : "max-w-2xl"}`}
       >
-        {/* HEADER */}
+        {children}
+      </section>
+    </div>
+  );
+}
 
-        <div className="flex shrink-0 items-start justify-between border-b border-zinc-100 px-5 py-4">
-          <div className="min-w-0">
-            <h2 className="text-base font-bold text-zinc-900">{title}</h2>
+function DetailModal({ row, isAdmin, busy, onClose, onStatus, onLock }) {
+  if (!row) return null;
 
-            {subtitle && (
-              <p className="mt-0.5 truncate text-xs text-zinc-500">
-                {subtitle}
+  const locked = isLocked(row);
+
+  return (
+    <ModalShell onClose={onClose} wide>
+      <header className="relative shrink-0 overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 px-5 py-5 text-white sm:px-7">
+        <div className="pointer-events-none absolute -right-10 -top-16 h-56 w-56 rounded-full border border-white/10" />
+        <div className="relative flex items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/20">
+              <FileText className="h-5 w-5" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs text-indigo-200">
+                Detail pengajuan buka blokir
               </p>
-            )}
+              <h2 className="mt-1 break-words text-xl font-extrabold sm:text-2xl">
+                {row.nama_debitur || "-"}
+              </h2>
+              <p className="mt-1 text-xs text-slate-300">
+                {formatDate(row.tanggal)} ·{" "}
+                {row.nama_mks || row.pemohon_nama || "MKS"}
+              </p>
+            </div>
           </div>
-
           <button
             type="button"
             onClick={onClose}
-            className="ml-4 rounded-lg p-1.5 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+            className="rounded-xl bg-white/10 p-2 transition hover:bg-white/20"
+            aria-label="Tutup detail"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
+        <div className="relative mt-4 flex flex-wrap gap-2">
+          <LockBadge locked={locked} />
+          <StatusBadge value={row.status_dibuka} />
+          <StatusBadge value={row.status_pengembalian} />
+        </div>
+      </header>
 
-        {/* BODY */}
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
+        {locked && (
+          <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-amber-700" />
+            <div>
+              <p className="text-sm font-bold text-amber-900">
+                Pengajuan dikunci Admin
+              </p>
+              <p className="mt-1 text-xs leading-5 text-amber-800">
+                MKS tidak dapat mengubah data selama pengajuan terkunci.
+              </p>
+              {row.locked_at && (
+                <p className="mt-1 text-xs text-amber-800">
+                  Dikunci: {formatDateTime(row.locked_at)}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
 
-        <div className="overflow-y-auto p-5">{children}</div>
+        <section>
+          <SectionHeading
+            icon={FileText}
+            title="Informasi debitur"
+            subtitle="Data dasar pengajuan dan rekening."
+          />
+          <div className="grid gap-2.5 sm:grid-cols-2">
+            <DetailItem label="Nama debitur" value={row.nama_debitur} />
+            <DetailItem
+              label="Tanggal pengajuan"
+              value={formatDate(row.tanggal)}
+            />
+            <DetailItem
+              label="Rekening pinjaman"
+              value={row.nomor_rekening_pinjaman}
+              mono
+            />
+            <DetailItem
+              label="Rekening tabungan"
+              value={row.nomor_rekening_tabungan}
+              mono
+            />
+            <DetailItem
+              label="Pemohon"
+              value={row.pemohon_nama || row.nama_mks}
+            />
+            <DetailItem label="Unit" value={row.nama_unit || "-"} />
+          </div>
+        </section>
+
+        <section>
+          <SectionHeading
+            icon={Wallet}
+            title="Rincian nominal"
+            subtitle="Nilai dalam rupiah."
+          />
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="flex items-center gap-2 text-xs font-semibold text-slate-500">
+                <Wallet className="h-4 w-4" />
+                Blokiran awal
+              </p>
+              <p className="mt-3 break-words text-lg font-extrabold text-slate-900">
+                {formatRupiah(row.blokiran_awal)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-blue-100 bg-blue-50 p-4">
+              <p className="flex items-center gap-2 text-xs font-semibold text-blue-700">
+                <ArrowUpRight className="h-4 w-4" />
+                Blokiran dibuka
+              </p>
+              <p className="mt-3 break-words text-lg font-extrabold text-blue-900">
+                {formatRupiah(row.blokiran_dibuka)}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+              <p className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
+                <ArrowDownLeft className="h-4 w-4" />
+                Dikembalikan
+              </p>
+              <p className="mt-3 break-words text-lg font-extrabold text-emerald-900">
+                {formatRupiah(row.dikembalikan)}
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <SectionHeading icon={Landmark} title="Tujuan buka blokir" />
+          <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <p className="whitespace-pre-wrap break-words text-sm leading-7 text-slate-700">
+              {row.tujuan_bb || "-"}
+            </p>
+          </div>
+        </section>
+
+        <section>
+          <SectionHeading
+            icon={ShieldCheck}
+            title="Status proses"
+            subtitle="Status hanya dapat diubah oleh Admin."
+          />
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Pembukaan blokir
+              </p>
+              <div className="mt-3">
+                <StatusBadge value={row.status_dibuka} />
+              </div>
+              {row.status_dibuka_at && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Diperbarui: {formatDateTime(row.status_dibuka_at)}
+                </p>
+              )}
+              {isAdmin && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={busy || row.status_dibuka === "DONE"}
+                    onClick={() => onStatus(row, "status_dibuka", "DONE")}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Tandai DONE
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || row.status_dibuka !== "DONE"}
+                    onClick={() => onStatus(row, "status_dibuka", "BELUM")}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    Kembalikan BELUM
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
+                Pengembalian
+              </p>
+              <div className="mt-3">
+                <StatusBadge value={row.status_pengembalian} />
+              </div>
+              {row.status_pengembalian_at && (
+                <p className="mt-2 text-xs text-slate-500">
+                  Diperbarui: {formatDateTime(row.status_pengembalian_at)}
+                </p>
+              )}
+              {isAdmin && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    disabled={
+                      busy ||
+                      row.status_dibuka !== "DONE" ||
+                      row.status_pengembalian === "DONE"
+                    }
+                    onClick={() => onStatus(row, "status_pengembalian", "DONE")}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl bg-emerald-600 px-3 text-xs font-bold text-white hover:bg-emerald-700 disabled:opacity-40"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    Tandai DONE
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || row.status_pengembalian !== "DONE"}
+                    onClick={() =>
+                      onStatus(row, "status_pengembalian", "BELUM")
+                    }
+                    className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 px-3 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+                  >
+                    Kembalikan BELUM
+                  </button>
+                </div>
+              )}
+              {isAdmin && row.status_dibuka !== "DONE" && (
+                <p className="mt-2 text-xs leading-5 text-amber-700">
+                  Selesaikan pembukaan blokir terlebih dahulu.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {isAdmin && (
+          <div className="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-bold text-indigo-950">
+                  Penguncian pengajuan
+                </p>
+                <p className="mt-1 text-xs leading-5 text-indigo-800">
+                  Penguncian mencegah MKS mengedit data pengajuan ini.
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => onLock(row, locked ? "unlock" : "lock")}
+                className={`inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-sm font-bold transition disabled:opacity-50 ${
+                  locked
+                    ? "border border-indigo-200 bg-white text-indigo-800 hover:bg-indigo-100"
+                    : "bg-indigo-600 text-white hover:bg-indigo-700"
+                }`}
+              >
+                {locked ? (
+                  <UnlockKeyhole className="h-4 w-4" />
+                ) : (
+                  <LockKeyhole className="h-4 w-4" />
+                )}
+                {locked ? "Buka kunci" : "Kunci pengajuan"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-white p-3.5">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+          <p className="text-xs leading-5 text-slate-500">
+            Status pengembalian hanya dapat menjadi DONE setelah status
+            pembukaan blokir DONE. Jika status pembukaan dikembalikan ke BELUM,
+            status pengembalian otomatis ikut BELUM.
+          </p>
+        </div>
       </div>
-    </div>
+
+      <footer className="flex shrink-0 justify-end border-t border-slate-200 bg-white px-4 py-3.5 sm:px-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-10 items-center gap-2 rounded-xl bg-slate-900 px-5 text-sm font-bold text-white hover:bg-slate-800"
+        >
+          <Check className="h-4 w-4" />
+          Selesai
+        </button>
+      </footer>
+    </ModalShell>
+  );
+}
+
+function RequestFormModal({
+  form,
+  setForm,
+  editRow,
+  saving,
+  onClose,
+  onSubmit,
+}) {
+  const update = (field, value) =>
+    setForm((current) => ({ ...current, [field]: value }));
+
+  return (
+    <ModalShell onClose={() => !saving && onClose()} wide>
+      <header className="flex shrink-0 items-start justify-between border-b border-slate-100 bg-white px-5 py-4 sm:px-6">
+        <div className="flex items-start gap-3">
+          <div className="rounded-xl bg-blue-50 p-2.5 text-blue-700">
+            <FilePlus2 className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900">
+              {editRow ? "Edit pengajuan" : "Buat pengajuan baru"}
+            </h2>
+            <p className="mt-1 text-xs leading-5 text-slate-500">
+              Lengkapi data debitur, rekening, nominal, dan tujuan.
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          disabled={saving}
+          className="rounded-xl p-2 text-slate-400 hover:bg-slate-100 disabled:opacity-40"
+          aria-label="Tutup form"
+        >
+          <X className="h-5 w-5" />
+        </button>
+      </header>
+
+      <form
+        onSubmit={onSubmit}
+        className="min-h-0 space-y-6 overflow-y-auto p-5 sm:p-6"
+      >
+        <section>
+          <SectionHeading
+            icon={FileText}
+            title="Informasi debitur"
+            subtitle="Periksa tanggal dan nomor rekening sebelum menyimpan."
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Tanggal pengajuan"
+              type="date"
+              value={form.tanggal}
+              onChange={(v) => update("tanggal", v)}
+              required
+            />
+            <Field
+              label="Nama debitur"
+              value={form.nama_debitur}
+              onChange={(v) => update("nama_debitur", v)}
+              placeholder="Nama lengkap debitur"
+              required
+            />
+            <Field
+              label="Nomor rekening pinjaman"
+              value={form.nomor_rekening_pinjaman}
+              onChange={(v) => update("nomor_rekening_pinjaman", v)}
+              placeholder="Nomor rekening pinjaman"
+              required
+            />
+            <Field
+              label="Nomor rekening tabungan"
+              value={form.nomor_rekening_tabungan}
+              onChange={(v) => update("nomor_rekening_tabungan", v)}
+              placeholder="Nomor rekening tabungan"
+              required
+            />
+          </div>
+        </section>
+
+        <section>
+          <SectionHeading
+            icon={Wallet}
+            title="Informasi nominal"
+            subtitle="Nominal dalam rupiah. Kosong akan disimpan sebagai nol."
+          />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field
+              label="Blokiran awal (Rp)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.blokiran_awal}
+              onChange={(v) => update("blokiran_awal", v)}
+              placeholder="0"
+            />
+            <Field
+              label="Blokiran dibuka (Rp)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.blokiran_dibuka}
+              onChange={(v) => update("blokiran_dibuka", v)}
+              placeholder="0"
+            />
+            <Field
+              label="Dikembalikan (Rp)"
+              type="number"
+              min="0"
+              step="0.01"
+              value={form.dikembalikan}
+              onChange={(v) => update("dikembalikan", v)}
+              placeholder="0"
+            />
+          </div>
+        </section>
+
+        <section>
+          <SectionHeading
+            icon={Landmark}
+            title="Tujuan buka blokir"
+            subtitle="Tuliskan alasan atau kebutuhan pembukaan blokir."
+          />
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+              Tujuan BB <span className="text-rose-500">*</span>
+            </span>
+            <textarea
+              value={form.tujuan_bb}
+              onChange={(event) => update("tujuan_bb", event.target.value)}
+              rows={4}
+              maxLength={2000}
+              required
+              placeholder="Jelaskan tujuan pengajuan buka blokir..."
+              className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm leading-6 text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+            />
+            <span className="mt-1 block text-right text-xs text-slate-400">
+              {form.tujuan_bb.length}/2000 karakter
+            </span>
+          </label>
+        </section>
+
+        <div className="flex items-start gap-3 rounded-2xl border border-blue-100 bg-blue-50 p-4">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-blue-700" />
+          <div>
+            <p className="text-sm font-bold text-blue-950">
+              Status dan penguncian
+            </p>
+            <p className="mt-1 text-xs leading-5 text-blue-800">
+              Status proses dikelola Admin. Pengajuan yang sudah dikunci Admin
+              atau selesai diproses tidak dapat diedit oleh MKS.
+            </p>
+          </div>
+        </div>
+
+        <footer className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="h-11 rounded-xl border border-slate-200 px-5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+          >
+            Batal
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 text-sm font-bold text-white shadow-lg shadow-blue-600/15 hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? (
+              <LoaderCircle className="h-4 w-4 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            {saving
+              ? "Menyimpan..."
+              : editRow
+                ? "Simpan perubahan"
+                : "Simpan pengajuan"}
+          </button>
+        </footer>
+      </form>
+    </ModalShell>
+  );
+}
+
+export default function RequestBukaBlokirPage() {
+  const { activeUnit } = useUnit();
+  const unitKode = activeUnit?.code || "";
+
+  const [rows, setRows] = useState([]);
+  const [role, setRole] = useState("");
+  const [serverUnit, setServerUnit] = useState(null);
+  const [month, setMonth] = useState(getJakartaDate().slice(0, 7));
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [busyAction, setBusyAction] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editRow, setEditRow] = useState(null);
+  const [detailRow, setDetailRow] = useState(null);
+  const [form, setForm] = useState(emptyForm);
+
+  const isAdmin = role === "ADMIN";
+
+  const loadRows = useCallback(async () => {
+    if (!unitKode) {
+      setLoading(false);
+      setError(
+        "Unit aktif Topbar belum tersedia. Pastikan UnitProvider sudah aktif.",
+      );
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const params = new URLSearchParams({
+        bulan: month,
+        unit_kode: unitKode,
+      });
+
+      const response = await fetch(`/api/request-buka-blokir?${params}`, {
+        method: "GET",
+        cache: "no-store",
+      });
+
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || "Gagal memuat pengajuan.");
+
+      setRows(Array.isArray(result.rows) ? result.rows : []);
+      setRole(result.role || "");
+      setServerUnit(result.unit || null);
+
+      setDetailRow((current) => {
+        if (!current) return null;
+        return (
+          (result.rows || []).find((item) => item.id === current.id) || null
+        );
+      });
+    } catch (err) {
+      setError(err.message || "Terjadi kesalahan saat memuat data.");
+      setRows([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [month, unitKode]);
+
+  useEffect(() => {
+    loadRows();
+  }, [loadRows]);
+
+  const filteredRows = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
+    if (!keyword) return rows;
+
+    return rows.filter((row) =>
+      [
+        row.nama_debitur,
+        row.nomor_rekening_pinjaman,
+        row.nomor_rekening_tabungan,
+        row.tujuan_bb,
+        row.pemohon_nama,
+        row.nama_mks,
+      ].some((value) =>
+        String(value || "")
+          .toLowerCase()
+          .includes(keyword),
+      ),
+    );
+  }, [rows, search]);
+
+  const summary = useMemo(
+    () => ({
+      total: rows.length,
+      belumDibuka: rows.filter((row) => row.status_dibuka !== "DONE").length,
+      belumKembali: rows.filter((row) => row.status_pengembalian !== "DONE")
+        .length,
+      terkunci: rows.filter(isLocked).length,
+    }),
+    [rows],
+  );
+
+  function openCreate() {
+    setError("");
+    setSuccess("");
+    setEditRow(null);
+    setForm(emptyForm());
+    setShowForm(true);
+  }
+
+  function openEdit(row) {
+    if (isLocked(row)) {
+      setError("Pengajuan ini sudah dikunci Admin.");
+      return;
+    }
+
+    if (row.status_dibuka === "DONE" || row.status_pengembalian === "DONE") {
+      setError("Pengajuan yang sudah diproses tidak dapat diedit.");
+      return;
+    }
+
+    setError("");
+    setSuccess("");
+    setEditRow(row);
+    setForm({
+      tanggal: String(row.tanggal || "").slice(0, 10) || getJakartaDate(),
+      nama_debitur: row.nama_debitur || "",
+      nomor_rekening_pinjaman: row.nomor_rekening_pinjaman || "",
+      nomor_rekening_tabungan: row.nomor_rekening_tabungan || "",
+      blokiran_awal: String(row.blokiran_awal ?? 0),
+      blokiran_dibuka: String(row.blokiran_dibuka ?? 0),
+      dikembalikan: String(row.dikembalikan ?? 0),
+      tujuan_bb: row.tujuan_bb || "",
+    });
+    setShowForm(true);
+  }
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const payload = {
+        ...form,
+        blokiran_awal: form.blokiran_awal || 0,
+        blokiran_dibuka: form.blokiran_dibuka || 0,
+        dikembalikan: form.dikembalikan || 0,
+      };
+
+      if (editRow) payload.id = editRow.id;
+
+      const response = await fetch("/api/request-buka-blokir", {
+        method: editRow ? "PUT" : "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || "Pengajuan gagal disimpan.");
+
+      setShowForm(false);
+      setEditRow(null);
+      setSuccess(
+        editRow
+          ? "Perubahan pengajuan berhasil disimpan."
+          : "Pengajuan berhasil dibuat.",
+      );
+      await loadRows();
+    } catch (err) {
+      setError(err.message || "Terjadi kesalahan saat menyimpan.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function adminAction(payload, successMessage) {
+    if (!unitKode) {
+      setError("Unit aktif Topbar belum tersedia.");
+      return;
+    }
+
+    setBusyAction(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const response = await fetch("/api/request-buka-blokir", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...payload,
+          unit_kode: unitKode,
+        }),
+      });
+
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || "Aksi Admin gagal diproses.");
+
+      setSuccess(successMessage);
+      await loadRows();
+    } catch (err) {
+      setError(err.message || "Terjadi kesalahan saat memproses pengajuan.");
+    } finally {
+      setBusyAction(false);
+    }
+  }
+
+  async function changeStatus(row, field, value) {
+    await adminAction(
+      { id: row.id, field, value },
+      field === "status_dibuka"
+        ? `Status pembukaan blokir berhasil diubah menjadi ${value}.`
+        : `Status pengembalian berhasil diubah menjadi ${value}.`,
+    );
+  }
+
+  async function changeLock(row, action) {
+    await adminAction(
+      { id: row.id, action },
+      action === "lock"
+        ? "Pengajuan berhasil dikunci."
+        : "Kunci pengajuan berhasil dibuka.",
+    );
+  }
+
+  const monthLabel = (() => {
+    const [year, monthNumber] = month.split("-");
+    return `${MONTHS[Number(monthNumber) - 1] || ""} ${year || ""}`;
+  })();
+
+  return (
+    <main className="relative isolate min-h-full overflow-hidden bg-[#f5f7fc] px-3 py-5 sm:px-6 sm:py-7 lg:px-8">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-40"
+        style={{
+          backgroundImage:
+            "linear-gradient(to right, rgba(148,163,184,.13) 1px, transparent 1px), linear-gradient(to bottom, rgba(148,163,184,.13) 1px, transparent 1px)",
+          backgroundSize: "28px 28px",
+          maskImage: "linear-gradient(to bottom, black 0%, transparent 100%)",
+        }}
+      />
+      <div className="pointer-events-none absolute -right-24 -top-24 -z-10 h-80 w-80 rounded-full bg-blue-200/40 blur-3xl" />
+      <div className="pointer-events-none absolute -left-24 top-[28rem] -z-10 h-72 w-72 rounded-full bg-violet-200/30 blur-3xl" />
+
+      <div className="mx-auto w-full max-w-[1500px] space-y-5 sm:space-y-6">
+        <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-950 via-slate-900 to-indigo-950 p-5 text-white shadow-xl shadow-indigo-950/10 sm:p-7">
+          <div className="pointer-events-none absolute -right-10 -top-24 h-72 w-72 rounded-full border border-white/10" />
+          <div className="pointer-events-none absolute right-10 top-12 h-40 w-40 rounded-full bg-blue-500/10 blur-2xl" />
+
+          <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-start gap-3.5">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 ring-1 ring-white/15">
+                <Wallet className="h-6 w-6" />
+              </div>
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-extrabold tracking-tight sm:text-2xl">
+                    Request Buka Blokir
+                  </h1>
+                  <span className="rounded-full border border-indigo-300/25 bg-indigo-300/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-indigo-100">
+                    {isAdmin ? "Admin" : role || "Memuat akses"}
+                  </span>
+                </div>
+                <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
+                  {isAdmin
+                    ? "Tinjau pengajuan dari MKS, kelola status proses, dan kunci data sesuai kebutuhan."
+                    : "Buat dan pantau pengajuan buka blokir debitur serta tindak lanjutnya."}
+                </p>
+                <div className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-200">
+                  <Landmark className="h-4 w-4 text-sky-300" />
+                  <span>Unit aktif:</span>
+                  <strong className="text-white">
+                    {serverUnit?.nama_unit ||
+                      activeUnit?.label ||
+                      activeUnit?.name ||
+                      activeUnit?.value ||
+                      "Memuat unit..."}
+                  </strong>
+                  {unitKode && (
+                    <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-mono text-[10px]">
+                      {unitKode}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {!isAdmin && (
+              <button
+                type="button"
+                onClick={openCreate}
+                className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-white px-4 text-sm font-extrabold text-blue-800 shadow-lg transition hover:bg-blue-50 focus:outline-none focus:ring-4 focus:ring-white/20"
+              >
+                <FilePlus2 className="h-4 w-4" />
+                Buat pengajuan
+              </button>
+            )}
+          </div>
+        </header>
+
+        <Feedback message={error} onClose={() => setError("")} />
+        <Feedback
+          type="success"
+          message={success}
+          onClose={() => setSuccess("")}
+        />
+
+        <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+          <SummaryCard
+            label="Total pengajuan"
+            value={summary.total}
+            icon={FileText}
+            tone="blue"
+            description="Dalam periode terpilih"
+          />
+          <SummaryCard
+            label="Menunggu dibuka"
+            value={summary.belumDibuka}
+            icon={Clock3}
+            tone="rose"
+            description="Status pembukaan BELUM"
+          />
+          <SummaryCard
+            label="Menunggu pengembalian"
+            value={summary.belumKembali}
+            icon={RefreshCw}
+            tone="amber"
+            description="Status pengembalian BELUM"
+          />
+          <SummaryCard
+            label="Dikunci Admin"
+            value={summary.terkunci}
+            icon={LockKeyhole}
+            tone="emerald"
+            description="Tidak dapat diedit MKS"
+          />
+        </section>
+
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="text-sm font-extrabold text-slate-900">
+                Daftar pengajuan
+              </h2>
+              <p className="mt-1 text-xs leading-5 text-slate-500">
+                {isAdmin
+                  ? "Pengajuan MKS pada unit aktif di Topbar."
+                  : "Pengajuan yang dibuat dari akun MKS ini."}
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-[190px_minmax(240px,1fr)_auto]">
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-bold text-slate-600">
+                  Periode
+                </span>
+                <span className="relative block">
+                  <CalendarDays className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="month"
+                    value={month}
+                    onChange={(event) => setMonth(event.target.value)}
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                  />
+                </span>
+              </label>
+              <label className="block">
+                <span className="mb-1.5 block text-xs font-bold text-slate-600">
+                  Cari pengajuan
+                </span>
+                <span className="relative block">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Nama, rekening, pemohon..."
+                    className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-3 text-sm outline-none placeholder:text-slate-400 focus:border-blue-400 focus:ring-4 focus:ring-blue-50"
+                  />
+                </span>
+              </label>
+              <button
+                type="button"
+                onClick={loadRows}
+                disabled={loading}
+                className="inline-flex h-10 items-center justify-center gap-2 self-end rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`h-4 w-4 ${loading ? "animate-spin" : ""}`}
+                />
+                Muat ulang
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5">
+            <div>
+              <h2 className="text-sm font-extrabold text-slate-900">
+                {isAdmin ? "Pengajuan dari MKS" : "Pengajuan saya"}
+              </h2>
+              <p className="mt-1 text-xs text-slate-500">
+                {monthLabel} <span className="mx-1.5 text-slate-300">/</span>{" "}
+                {filteredRows.length} data
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+              <ShieldCheck className="h-4 w-4 text-indigo-500" />
+              {isAdmin
+                ? "Admin dapat memproses status"
+                : "Status dikelola Admin"}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex min-h-56 items-center justify-center gap-3 text-sm text-slate-500">
+              <LoaderCircle className="h-5 w-5 animate-spin text-blue-600" />
+              Memuat pengajuan...
+            </div>
+          ) : filteredRows.length === 0 ? (
+            <div className="flex min-h-64 flex-col items-center justify-center px-5 py-12 text-center">
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-600">
+                <FileText className="h-6 w-6" />
+              </div>
+              <h3 className="mt-4 text-sm font-extrabold text-slate-800">
+                Belum ada pengajuan
+              </h3>
+              <p className="mt-1 max-w-sm text-xs leading-5 text-slate-500">
+                Tidak ada data untuk periode atau pencarian ini. Coba ubah
+                filter.
+              </p>
+              {!isAdmin && (
+                <button
+                  type="button"
+                  onClick={openCreate}
+                  className="mt-4 inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-blue-700"
+                >
+                  <FilePlus2 className="h-4 w-4" />
+                  Buat pengajuan
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="border-b border-slate-100 bg-slate-50/80">
+                      <th className="px-5 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                        Debitur
+                      </th>
+                      {isAdmin && (
+                        <th className="px-4 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                          Pemohon MKS
+                        </th>
+                      )}
+                      <th className="px-4 py-3.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                        Rekening tabungan
+                      </th>
+                      <th className="px-4 py-3.5 text-right text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                        Blokiran awal
+                      </th>
+                      <th className="px-4 py-3.5 text-center text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                        Status
+                      </th>
+                      <th className="px-5 py-3.5 text-right text-[10px] font-extrabold uppercase tracking-wider text-slate-500">
+                        Aksi
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredRows.map((row) => {
+                      const locked = isLocked(row);
+                      const canEdit =
+                        !isAdmin &&
+                        !locked &&
+                        row.status_dibuka !== "DONE" &&
+                        row.status_pengembalian !== "DONE";
+
+                      return (
+                        <tr
+                          key={row.id}
+                          className="transition hover:bg-blue-50/40"
+                        >
+                          <td className="px-5 py-4">
+                            <div className="flex min-w-0 items-center gap-3">
+                              <div
+                                className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-sm font-extrabold ${locked ? "bg-amber-50 text-amber-700" : "bg-gradient-to-br from-blue-50 to-indigo-100 text-blue-700"}`}
+                              >
+                                {locked ? (
+                                  <LockKeyhole className="h-4 w-4" />
+                                ) : (
+                                  (row.nama_debitur || "?")
+                                    .trim()
+                                    .charAt(0)
+                                    .toUpperCase()
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="max-w-[240px] truncate text-sm font-extrabold text-slate-900">
+                                  {row.nama_debitur || "-"}
+                                </p>
+                                <p className="mt-1 text-xs text-slate-400">
+                                  {formatDate(row.tanggal)}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
+                          {isAdmin && (
+                            <td className="px-4 py-4">
+                              <p className="text-sm font-semibold text-slate-700">
+                                {row.pemohon_nama || row.nama_mks || "MKS"}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-400">
+                                {row.nama_mks || ""}
+                              </p>
+                            </td>
+                          )}
+                          <td className="px-4 py-4">
+                            <span className="font-mono text-xs font-medium text-slate-600">
+                              {row.nomor_rekening_tabungan || "-"}
+                            </span>
+                          </td>
+                          <td className="whitespace-nowrap px-4 py-4 text-right">
+                            <span className="text-sm font-extrabold tabular-nums text-slate-900">
+                              {formatRupiah(row.blokiran_awal)}
+                            </span>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex flex-col items-center gap-1.5">
+                              <StatusBadge value={row.status_dibuka} />
+                              <StatusBadge value={row.status_pengembalian} />
+                              <LockBadge locked={locked} />
+                            </div>
+                          </td>
+                          <td className="px-5 py-4">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setDetailRow(row)}
+                                className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-blue-100 bg-blue-50 px-3 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                              >
+                                <FileText className="h-3.5 w-3.5" />
+                                Detail
+                              </button>
+                              {canEdit && (
+                                <button
+                                  type="button"
+                                  onClick={() => openEdit(row)}
+                                  className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                  Edit
+                                </button>
+                              )}
+                              {!isAdmin && locked && (
+                                <span className="inline-flex h-9 items-center gap-1.5 rounded-lg bg-amber-50 px-3 text-xs font-bold text-amber-800">
+                                  <LockKeyhole className="h-3.5 w-3.5" />
+                                  Terkunci
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid gap-3 p-3 md:hidden">
+                {filteredRows.map((row) => {
+                  const locked = isLocked(row);
+                  const canEdit =
+                    !isAdmin &&
+                    !locked &&
+                    row.status_dibuka !== "DONE" &&
+                    row.status_pengembalian !== "DONE";
+
+                  return (
+                    <article
+                      key={row.id}
+                      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div
+                          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${locked ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700"}`}
+                        >
+                          {locked ? (
+                            <LockKeyhole className="h-4 w-4" />
+                          ) : (
+                            <FileText className="h-4 w-4" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h3 className="break-words text-sm font-extrabold text-slate-900">
+                            {row.nama_debitur || "-"}
+                          </h3>
+                          <p className="mt-1 text-xs text-slate-400">
+                            {formatDate(row.tanggal)}
+                          </p>
+                          <p className="mt-2 break-all font-mono text-xs text-slate-600">
+                            {row.nomor_rekening_tabungan || "-"}
+                          </p>
+                          {isAdmin && (
+                            <p className="mt-1 text-xs text-indigo-600">
+                              Pemohon:{" "}
+                              {row.pemohon_nama || row.nama_mks || "MKS"}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between gap-3">
+                        <span className="text-[11px] font-semibold text-slate-500">
+                          Blokiran awal
+                        </span>
+                        <span className="text-sm font-extrabold text-slate-900">
+                          {formatRupiah(row.blokiran_awal)}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <StatusBadge value={row.status_dibuka} />
+                        <StatusBadge value={row.status_pengembalian} />
+                        <LockBadge locked={locked} />
+                      </div>
+                      <div className="mt-4 grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setDetailRow(row)}
+                          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-blue-600 px-3 text-sm font-bold text-white hover:bg-blue-700"
+                        >
+                          <FileText className="h-4 w-4" />
+                          Detail
+                        </button>
+                        {canEdit ? (
+                          <button
+                            type="button"
+                            onClick={() => openEdit(row)}
+                            className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 text-sm font-bold text-slate-700 hover:bg-slate-50"
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </button>
+                        ) : (
+                          <div className="flex h-10 items-center justify-center gap-2 rounded-xl bg-slate-50 px-3 text-xs font-bold text-slate-500">
+                            {isAdmin
+                              ? "Proses via detail"
+                              : locked
+                                ? "Terkunci Admin"
+                                : "Tidak dapat diedit"}
+                          </div>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-5">
+            <p className="text-[11px] leading-5 text-slate-400">
+              {isAdmin
+                ? "Admin memproses status melalui Detail. Penguncian mencegah MKS mengedit data pengajuan."
+                : "Data yang dikunci Admin atau telah selesai diproses tidak dapat diedit oleh MKS."}
+            </p>
+          </div>
+        </section>
+      </div>
+
+      {detailRow && (
+        <DetailModal
+          row={detailRow}
+          isAdmin={isAdmin}
+          busy={busyAction}
+          onClose={() => setDetailRow(null)}
+          onStatus={changeStatus}
+          onLock={changeLock}
+        />
+      )}
+
+      {showForm && !isAdmin && (
+        <RequestFormModal
+          form={form}
+          setForm={setForm}
+          editRow={editRow}
+          saving={saving}
+          onClose={() => {
+            if (!saving) {
+              setShowForm(false);
+              setEditRow(null);
+            }
+          }}
+          onSubmit={handleSubmit}
+        />
+      )}
+    </main>
   );
 }
