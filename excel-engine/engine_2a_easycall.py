@@ -309,7 +309,7 @@ def process_excel(
             "Excel.Application"
         )
 
-        excel.Visible = True
+        excel.Visible = False
         excel.DisplayAlerts = False
         excel.EnableEvents = True
         excel.ScreenUpdating = True
@@ -753,7 +753,7 @@ def process_easy_call(
             "Excel.Application"
         )
 
-        excel.Visible = True
+        excel.Visible = False
         excel.DisplayAlerts = False
         excel.EnableEvents = True
         excel.ScreenUpdating = True

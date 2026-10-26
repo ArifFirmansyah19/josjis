@@ -400,6 +400,7 @@ export default function EasyCallModal({ open, onClose, file }) {
    * PROSES EASY CALL
    * ============================================================
    */
+
   async function handleProcess() {
     if (!file) {
       setError("File Excel belum tersedia.");
@@ -409,64 +410,58 @@ export default function EasyCallModal({ open, onClose, file }) {
     setLoading(true);
     setError("");
     setProcessed(false);
+    setRows([]);
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      const bytes = new Uint8Array(arrayBuffer);
+      const formData = new FormData();
+      formData.append("file", file, file.name);
 
-      let binary = "";
+      const baseUrl = EXCEL_ENGINE_URL.replace(/\/+$/, "");
 
-      const chunkSize = 0x8000;
-
-      for (let index = 0; index < bytes.length; index += chunkSize) {
-        const chunk = bytes.subarray(
-          index,
-          Math.min(index + chunkSize, bytes.length),
-        );
-
-        binary += String.fromCharCode(...chunk);
-      }
-
-      const base64 = btoa(binary);
-
-      const response = await fetch(`${EXCEL_ENGINE_URL}/raportmu/easy-call`, {
+      const response = await fetch(`${baseUrl}/run-josjis`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          fileName: file.name,
-          file: base64,
-        }),
+        body: formData,
       });
 
-      const result = await response.json();
+      const payload = await response.json().catch(() => null);
 
-      if (!response.ok || !result.success) {
-        throw new Error(result.error || "Proses Easy Call gagal.");
+      if (!response.ok) {
+        throw new Error(
+          payload?.detail ||
+            payload?.message ||
+            payload?.error ||
+            `Engine gagal memproses file (HTTP ${response.status}).`,
+        );
       }
 
-      const resultRows = Array.isArray(result.data) ? result.data : [];
+      // API Josjis Engine membungkus hasil dalam payload.result.
+      const result = payload?.result ?? payload;
+
+      if (payload?.status === "error" || result?.success === false) {
+        throw new Error(
+          result?.error ||
+            result?.message ||
+            payload?.message ||
+            "Proses Easy Call gagal.",
+        );
+      }
+
+      const resultRows = Array.isArray(result?.data) ? result.data : [];
+
+      if (resultRows.length === 0) {
+        throw new Error(
+          "Engine berhasil merespons, tetapi data Easy Call kosong.",
+        );
+      }
 
       console.log("========== EASY CALL RESULT ==========");
       console.log("Total rows dari engine:", resultRows.length);
       console.log("Header index:", result.headerRowIndex);
       console.log("Header Excel row:", result.headerExcelRow);
       console.log("Data row count engine:", result.dataRowCount);
+      console.log("JKK 1 dari engine:", result.jkk1Count);
+      console.log("JKK 2 dari engine:", result.jkk2Count);
       console.log("======================================");
-
-      /**
-       * DEBUG kolom D / MBU.
-       */
-      console.log("========== MBU KOLOM D ==========");
-
-      resultRows.forEach((row, index) => {
-        if (Array.isArray(row)) {
-          console.log(`Row ${index} - D:`, row[3]);
-        }
-      });
-
-      console.log("=================================");
 
       setRows(resultRows);
       setCreatedSheet(result.createdSheet || "");
@@ -476,7 +471,10 @@ export default function EasyCallModal({ open, onClose, file }) {
     } catch (processError) {
       console.error("Easy Call error:", processError);
 
-      setError(processError?.message || "Proses Easy Call gagal.");
+      setError(
+        processError?.message ||
+          "Proses Easy Call gagal. Periksa koneksi ke Josjis Engine.",
+      );
     } finally {
       setLoading(false);
     }
