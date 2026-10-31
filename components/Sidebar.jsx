@@ -61,6 +61,11 @@ const mainMenus = [
     href: "/admin/account",
     icon: KeyRound,
   },
+  {
+    label: "Assesoir PK",
+    href: "/admin/assesoir-pk",
+    icon: Files,
+  },
 ];
 
 const menuSections = [
