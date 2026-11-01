@@ -4,8 +4,17 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { Check, ChevronDown, Loader2, MessageCircle, X } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  Loader2,
+  MessageCircle,
+  Save,
+  RefreshCw,
+  X,
+} from "lucide-react";
 import { EXCEL_ENGINE_URL } from "@/lib/excel-engine";
+import { supabase } from "@/lib/supabase";
 import html2canvas from "html2canvas";
 
 const DISPLAY_COLUMNS = [
@@ -25,16 +34,31 @@ const DISPLAY_COLUMNS = [
 
 const SGP_COLUMN_INDEX = 30;
 const EASY_COLUMN_INDEX = 28;
-
-/**
- * Data mulai dari baris ke-4 Excel = index 3.
- */
 const DATA_START_ROW_INDEX = 3;
 
 function normalize(value) {
   return String(value ?? "")
     .trim()
     .toLowerCase();
+}
+
+function getUnitName(unit) {
+  return unit === "JKK 1" ? "Jambi Kuamang Kuning 1" : "Jambi Kuamang Kuning 2";
+}
+
+function getJakartaDate() {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const values = Object.fromEntries(
+    parts.map((part) => [part.type, part.value]),
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 function formatNumber(value) {
@@ -53,13 +77,6 @@ function formatNumber(value) {
   }).format(number);
 }
 
-/**
- * Khusus I:
- *
- * 125.53065167
- * menjadi
- * 125.53
- */
 function formatDecimalI(value) {
   if (value === null || value === undefined || value === "") {
     return "";
@@ -90,11 +107,6 @@ function formatRupiah(value) {
   }).format(number);
 }
 
-/**
- * Aturan khusus kolom Y belum diubah.
- * Untuk sementara hanya menampilkan nominal
- * dalam format Indonesia.
- */
 function formatY(value) {
   if (value === null || value === undefined || value === "") {
     return "";
@@ -116,12 +128,6 @@ function formatCell(column, value) {
     return "";
   }
 
-  /**
-   * F dan Z adalah nomor rekening.
-   *
-   * Jangan diformat menggunakan Intl.NumberFormat
-   * karena bisa mengubah tampilan nomor rekening.
-   */
   if (column.excel === "F" || column.excel === "Z") {
     return String(value);
   }
@@ -171,6 +177,22 @@ function getRowKey(row, index) {
   return `${index}-${JSON.stringify(values)}`;
 }
 
+function isValidDataRow(row) {
+  const account = String(row?.[5] ?? "").trim();
+  const name = String(row?.[6] ?? "").trim();
+
+  return Boolean(account || name);
+}
+
+function getSavedMksName(item) {
+  const firstRow = Array.isArray(item?.data) ? item.data[0] : null;
+
+  return (
+    String(firstRow?.[SGP_COLUMN_INDEX] ?? "").trim() ||
+    "Nama MKS tidak tersedia"
+  );
+}
+
 export default function TwoATagihanModal({ open, onClose, file }) {
   const captureRef = useRef(null);
 
@@ -180,9 +202,17 @@ export default function TwoATagihanModal({ open, onClose, file }) {
   const [createdSheet, setCreatedSheet] = useState("");
   const [targetCell, setTargetCell] = useState("");
   const [selectedSgp, setSelectedSgp] = useState("ALL");
+
   const [loading, setLoading] = useState(false);
   const [capturing, setCapturing] = useState(false);
+  const [saving, setSaving] = useState(false);
+
   const [error, setError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
+
+  const [savedRows, setSavedRows] = useState([]);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [savedError, setSavedError] = useState("");
 
   useEffect(() => {
     if (!open) {
@@ -195,7 +225,76 @@ export default function TwoATagihanModal({ open, onClose, file }) {
     setTargetCell("");
     setSelectedSgp("ALL");
     setError("");
+    setSaveMessage("");
   }, [open]);
+
+  /**
+   * Memuat data 2A yang sudah tersimpan untuk:
+   * - Unit yang sedang dipilih.
+   * - Tanggal WIB hari ini.
+   * - Jenis data DUA_A.
+   */
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadSavedData() {
+      setSavedLoading(true);
+      setSavedError("");
+
+      try {
+        const { data: unitData, error: unitError } = await supabase
+          .from("unit")
+          .select("id")
+          .eq("nama_unit", getUnitName(unit))
+          .single();
+
+        if (unitError) {
+          throw unitError;
+        }
+
+        const { data, error: queryError } = await supabase
+          .from("raportmu_hasil")
+          .select(
+            "id,mks_id,jenis_data,tanggal_data,nama_file,data,total_rows,updated_at",
+          )
+          .eq("unit_id", unitData.id)
+          .eq("jenis_data", "DUA_A")
+          .eq("tanggal_data", getJakartaDate())
+          .order("updated_at", { ascending: false });
+
+        if (queryError) {
+          throw queryError;
+        }
+
+        if (!cancelled) {
+          setSavedRows(data || []);
+        }
+      } catch (loadError) {
+        console.error("Gagal memuat data 2A tersimpan:", loadError);
+
+        if (!cancelled) {
+          setSavedRows([]);
+          setSavedError(
+            loadError?.message || "Data 2A tersimpan gagal dimuat.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setSavedLoading(false);
+        }
+      }
+    }
+
+    loadSavedData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, unit]);
 
   /**
    * Data sebenarnya dimulai dari baris ke-4.
@@ -207,6 +306,10 @@ export default function TwoATagihanModal({ open, onClose, file }) {
 
     return rows.slice(DATA_START_ROW_INDEX);
   }, [rows]);
+
+  const validDataRows = useMemo(() => {
+    return dataRows.filter(isValidDataRow);
+  }, [dataRows]);
 
   const sgpOptions = useMemo(() => {
     return getUniqueSgp(dataRows);
@@ -222,6 +325,10 @@ export default function TwoATagihanModal({ open, onClose, file }) {
     });
   }, [dataRows, selectedSgp]);
 
+  /**
+   * Proses Excel 2A.
+   * Logika pemrosesan lama tetap dipertahankan.
+   */
   async function handleProcess() {
     if (!file) {
       setError(
@@ -232,6 +339,7 @@ export default function TwoATagihanModal({ open, onClose, file }) {
 
     setLoading(true);
     setError("");
+    setSaveMessage("");
     setRows([]);
 
     try {
@@ -260,10 +368,7 @@ export default function TwoATagihanModal({ open, onClose, file }) {
         },
         body: JSON.stringify({
           fileName: file.name,
-          unit:
-            unit === "JKK 1"
-              ? "Jambi Kuamang Kuning 1"
-              : "Jambi Kuamang Kuning 2",
+          unit: getUnitName(unit),
           file: base64,
         }),
       });
@@ -297,6 +402,270 @@ export default function TwoATagihanModal({ open, onClose, file }) {
     }
   }
 
+  /**
+   * Simpan seluruh hasil 2A ke Supabase.
+   *
+   * Penting:
+   * - Tidak mengikuti filter SGP yang sedang dipilih.
+   * - Semua data dikelompokkan berdasarkan kolom AE.
+   * - Setiap MKS memiliki satu record DUA_A.
+   * - Jika MKS dan jenis data yang sama disimpan ulang,
+   *   record sebelumnya akan diperbarui melalui upsert.
+   */
+  async function handleSave() {
+    if (validDataRows.length === 0) {
+      setError("Tidak ada data 2A yang dapat disimpan.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSaveMessage("");
+
+    try {
+      const { data: authData, error: authError } =
+        await supabase.auth.getUser();
+
+      if (authError) {
+        throw authError;
+      }
+
+      if (!authData?.user?.id) {
+        throw new Error("Sesi login tidak ditemukan. Silakan login kembali.");
+      }
+
+      const { data: unitData, error: unitError } = await supabase
+        .from("unit")
+        .select("id,nama_unit")
+        .eq("nama_unit", getUnitName(unit))
+        .single();
+
+      if (unitError) {
+        throw unitError;
+      }
+
+      /**
+       * Ambil seluruh pegawai MKS aktif pada unit ini.
+       */
+      const { data: pegawaiData, error: pegawaiError } = await supabase
+        .from("pegawai")
+        .select("id,nama")
+        .eq("unit_id", unitData.id)
+        .eq("aktif", true)
+        .eq("jenis_pegawai", "MKS");
+
+      if (pegawaiError) {
+        throw pegawaiError;
+      }
+
+      if (!pegawaiData || pegawaiData.length === 0) {
+        throw new Error(
+          `Tidak ditemukan pegawai MKS aktif untuk ${unitData.nama_unit}.`,
+        );
+      }
+
+      const pegawaiIds = pegawaiData.map((pegawai) => pegawai.id);
+
+      /**
+       * Ambil relasi MKS berdasarkan pegawai.
+       */
+      const { data: mksData, error: mksError } = await supabase
+        .from("mks")
+        .select("id,pegawai_id")
+        .in("pegawai_id", pegawaiIds);
+
+      if (mksError) {
+        throw mksError;
+      }
+
+      if (!mksData || mksData.length === 0) {
+        throw new Error(
+          `Data relasi MKS untuk ${unitData.nama_unit} tidak ditemukan.`,
+        );
+      }
+
+      const pegawaiById = new Map(
+        pegawaiData.map((pegawai) => [pegawai.id, pegawai]),
+      );
+
+      const mksByName = new Map();
+
+      for (const mksItem of mksData) {
+        const pegawai = pegawaiById.get(mksItem.pegawai_id);
+
+        if (pegawai?.nama) {
+          mksByName.set(normalize(pegawai.nama), {
+            id: mksItem.id,
+            nama: pegawai.nama,
+          });
+        }
+      }
+
+      /**
+       * Kelompokkan semua baris berdasarkan nama MKS di AE.
+       */
+      const groupedRows = new Map();
+      const unmatchedNames = new Set();
+      let rowsWithoutMks = 0;
+
+      for (const row of validDataRows) {
+        const mksName = String(row?.[SGP_COLUMN_INDEX] ?? "").trim();
+
+        if (!mksName) {
+          rowsWithoutMks += 1;
+          continue;
+        }
+
+        const mksItem = mksByName.get(normalize(mksName));
+
+        if (!mksItem) {
+          unmatchedNames.add(mksName);
+          continue;
+        }
+
+        if (!groupedRows.has(mksItem.id)) {
+          groupedRows.set(mksItem.id, {
+            mks: mksItem,
+            rows: [],
+          });
+        }
+
+        groupedRows.get(mksItem.id).rows.push(row);
+      }
+
+      /**
+       * Jangan simpan sebagian data jika ada MKS
+       * yang tidak cocok dengan master pegawai.
+       */
+      if (unmatchedNames.size > 0 || rowsWithoutMks > 0) {
+        const details = [];
+
+        if (unmatchedNames.size > 0) {
+          details.push(
+            `Nama MKS tidak ditemukan di master unit: ${[
+              ...unmatchedNames,
+            ].join(", ")}`,
+          );
+        }
+
+        if (rowsWithoutMks > 0) {
+          details.push(
+            `${rowsWithoutMks} baris tidak memiliki nama MKS di kolom AE.`,
+          );
+        }
+
+        throw new Error(
+          `Data belum disimpan. Periksa data berikut:\n${details.join("\n")}`,
+        );
+      }
+
+      if (groupedRows.size === 0) {
+        throw new Error("Tidak ada kelompok data MKS yang dapat disimpan.");
+      }
+
+      const today = getJakartaDate();
+
+      const payload = [...groupedRows.values()].map((item) => ({
+        unit_id: unitData.id,
+        mks_id: item.mks.id,
+        jenis_data: "DUA_A",
+        tanggal_data: today,
+        nama_file: file?.name || "Nama file tidak tersedia",
+        data: item.rows,
+        total_rows: item.rows.length,
+        saved_by: authData.user.id,
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error: upsertError } = await supabase
+        .from("raportmu_hasil")
+        .upsert(payload, {
+          onConflict: "mks_id,jenis_data",
+        });
+
+      if (upsertError) {
+        throw upsertError;
+      }
+
+      /**
+       * Muat ulang data tersimpan setelah berhasil.
+       */
+      const { data: refreshedData, error: refreshError } = await supabase
+        .from("raportmu_hasil")
+        .select(
+          "id,mks_id,jenis_data,tanggal_data,nama_file,data,total_rows,updated_at",
+        )
+        .eq("unit_id", unitData.id)
+        .eq("jenis_data", "DUA_A")
+        .eq("tanggal_data", today)
+        .order("updated_at", { ascending: false });
+
+      if (refreshError) {
+        throw refreshError;
+      }
+
+      setSavedRows(refreshedData || []);
+
+      setSaveMessage(
+        `Berhasil menyimpan ${validDataRows.length} baris data untuk ${groupedRows.size} MKS.`,
+      );
+    } catch (saveError) {
+      console.error("Gagal menyimpan data 2A:", saveError);
+
+      setError(saveError?.message || "Data 2A gagal disimpan ke Supabase.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /**
+   * Muat ulang daftar data tersimpan secara manual.
+   */
+  async function handleReloadSaved() {
+    setSavedLoading(true);
+    setSavedError("");
+
+    try {
+      const { data: unitData, error: unitError } = await supabase
+        .from("unit")
+        .select("id")
+        .eq("nama_unit", getUnitName(unit))
+        .single();
+
+      if (unitError) {
+        throw unitError;
+      }
+
+      const { data, error: queryError } = await supabase
+        .from("raportmu_hasil")
+        .select(
+          "id,mks_id,jenis_data,tanggal_data,nama_file,data,total_rows,updated_at",
+        )
+        .eq("unit_id", unitData.id)
+        .eq("jenis_data", "DUA_A")
+        .eq("tanggal_data", getJakartaDate())
+        .order("updated_at", { ascending: false });
+
+      if (queryError) {
+        throw queryError;
+      }
+
+      setSavedRows(data || []);
+    } catch (reloadError) {
+      console.error("Gagal memuat ulang data 2A:", reloadError);
+
+      setSavedError(
+        reloadError?.message || "Gagal memuat ulang data tersimpan.",
+      );
+    } finally {
+      setSavedLoading(false);
+    }
+  }
+
+  /**
+   * Screenshot dan WhatsApp.
+   * Logika pengiriman lama tetap dipertahankan.
+   */
   async function handleWhatsApp() {
     if (!captureRef.current) {
       setError("Area laporan belum tersedia.");
@@ -312,19 +681,6 @@ export default function TwoATagihanModal({ open, onClose, file }) {
     setError("");
 
     try {
-      /**
-       * Capture hanya area laporan.
-       *
-       * Screenshot dibuat sederhana:
-       * - background putih
-       * - teks hitam
-       * - border abu-abu
-       * - tanpa warna kuning
-       * - tanpa shadow
-       * - tanpa filter
-       *
-       * Tampilan asli popup tidak berubah.
-       */
       const originalConsoleWarn = console.warn;
 
       console.warn = (...args) => {
@@ -356,12 +712,6 @@ export default function TwoATagihanModal({ open, onClose, file }) {
           imageTimeout: 15000,
 
           onclone: (clonedDocument) => {
-            /**
-             * Paksa seluruh hasil capture menjadi
-             * warna sederhana agar html2canvas
-             * tidak perlu menangani warna modern
-             * seperti lab().
-             */
             const style = clonedDocument.createElement("style");
 
             style.textContent = `
@@ -410,9 +760,6 @@ export default function TwoATagihanModal({ open, onClose, file }) {
         console.warn = originalConsoleWarn;
       }
 
-      /**
-       * Convert canvas menjadi PNG Blob.
-       */
       const blob = await new Promise((resolve, reject) => {
         canvas.toBlob(
           (result) => {
@@ -427,9 +774,6 @@ export default function TwoATagihanModal({ open, onClose, file }) {
         );
       });
 
-      /**
-       * Nama file aman untuk Android/iPhone.
-       */
       const safeSgp =
         selectedSgp === "ALL"
           ? "Semua-SGP"
@@ -440,35 +784,11 @@ export default function TwoATagihanModal({ open, onClose, file }) {
 
       const fileName = `2A-Tagihan-${safeSgp}.png`;
 
-      /**
-       * Buat File asli.
-       *
-       * Ini penting agar Web Share API mengenali
-       * screenshot sebagai attachment/file.
-       */
       const imageFile = new File([blob], fileName, {
         type: "image/png",
         lastModified: Date.now(),
       });
 
-      /**
-       * ======================================================
-       * PRIORITAS 1
-       * Native Web Share + File
-       * ======================================================
-       *
-       * Android/iPhone yang mendukung:
-       *
-       * JOSJIS
-       *   ↓
-       * Native Share
-       *   ↓
-       * WhatsApp
-       *   ↓
-       * Pilih kontak/grup
-       *   ↓
-       * Screenshot ikut sebagai attachment
-       */
       if (
         typeof navigator !== "undefined" &&
         typeof navigator.share === "function"
@@ -482,15 +802,6 @@ export default function TwoATagihanModal({ open, onClose, file }) {
             });
           } catch (canShareError) {
             console.warn("navigator.canShare gagal:", canShareError);
-
-            /**
-             * Jangan langsung fallback.
-             *
-             * Beberapa browser memiliki navigator.share()
-             * tetapi implementasi canShare() tidak sempurna.
-             *
-             * Tetap coba share.
-             */
             canShareFile = true;
           }
         }
@@ -507,16 +818,8 @@ export default function TwoATagihanModal({ open, onClose, file }) {
               files: [imageFile],
             });
 
-            /**
-             * Berhasil masuk ke Share Sheet.
-             * Tidak perlu membuka wa.me.
-             */
             return;
           } catch (shareError) {
-            /**
-             * User menutup Share Sheet.
-             * Ini bukan error.
-             */
             if (shareError?.name === "AbortError") {
               return;
             }
@@ -526,20 +829,6 @@ export default function TwoATagihanModal({ open, onClose, file }) {
         }
       }
 
-      /**
-       * ======================================================
-       * PRIORITAS 2
-       * Fallback seperti Laporan Booking lama.
-       * ======================================================
-       *
-       * Ini memungkinkan HP/laptop yang tidak mendukung
-       * file sharing tetap membuka WhatsApp melalui wa.me.
-       *
-       * Catatan:
-       * Screenshot tidak dapat dilampirkan melalui wa.me.
-       *
-       * Jadi fallback ini hanya mengirim pesan teks.
-       */
       const message = [
         "*2A / TAGIHAN*",
         "",
@@ -600,7 +889,91 @@ export default function TwoATagihanModal({ open, onClose, file }) {
           </button>
         </div>
 
-        {/* Control */}
+        {/* DATA 2A TERSIMPAN - BAGIAN PALING ATAS */}
+        <div className="shrink-0 border-b border-zinc-200 bg-white px-5 py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-zinc-900">
+                Data 2A Tersimpan Hari Ini
+              </h3>
+
+              <p className="mt-1 text-xs text-zinc-500">
+                {unit} · {getJakartaDate()}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleReloadSaved}
+              disabled={savedLoading}
+              className="flex h-9 items-center gap-2 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
+            >
+              {savedLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+              Muat Ulang
+            </button>
+          </div>
+
+          {savedError && (
+            <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              {savedError}
+            </div>
+          )}
+
+          {savedLoading ? (
+            <div className="mt-4 flex items-center gap-2 text-xs text-zinc-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Memuat data tersimpan...
+            </div>
+          ) : savedRows.length === 0 ? (
+            <div className="mt-3 rounded-xl border border-dashed border-zinc-200 bg-zinc-50 px-4 py-4 text-center text-xs text-zinc-500">
+              Belum ada data 2A tersimpan untuk unit dan tanggal ini.
+            </div>
+          ) : (
+            <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {savedRows.map((item) => (
+                <div
+                  key={item.id}
+                  className="rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-zinc-800">
+                        {getSavedMksName(item)}
+                      </p>
+
+                      <div className="mt-2 rounded-lg border border-blue-100 bg-blue-50 px-2.5 py-2">
+                        <p className="text-[10px] font-medium uppercase tracking-wide text-blue-600">
+                          Sumber File Excel
+                        </p>
+
+                        <p
+                          className="mt-1 break-all text-xs font-medium text-blue-900"
+                          title={item.nama_file || "Nama file tidak tersedia"}
+                        >
+                          {item.nama_file || "Nama file tidak tersedia"}
+                        </p>
+                      </div>
+
+                      <p className="mt-1 text-xs text-zinc-500">
+                        {formatNumber(item.total_rows)} baris data
+                      </p>
+                    </div>
+
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700">
+                      Tersimpan
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* CONTROL */}
         <div className="shrink-0 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="flex flex-wrap items-end gap-3">
@@ -612,14 +985,8 @@ export default function TwoATagihanModal({ open, onClose, file }) {
 
                 <div className="flex rounded-xl border border-zinc-200 bg-white p-1">
                   {[
-                    {
-                      value: "JKK 1",
-                      label: "JKK 1",
-                    },
-                    {
-                      value: "JKK 2",
-                      label: "JKK 2",
-                    },
+                    { value: "JKK 1", label: "JKK 1" },
+                    { value: "JKK 2", label: "JKK 2" },
                   ].map((item) => {
                     const active = unit === item.value;
 
@@ -627,7 +994,10 @@ export default function TwoATagihanModal({ open, onClose, file }) {
                       <button
                         key={item.value}
                         type="button"
-                        onClick={() => setUnit(item.value)}
+                        onClick={() => {
+                          setUnit(item.value);
+                          setSaveMessage("");
+                        }}
                         className={[
                           "rounded-lg px-4 py-2 text-sm font-medium transition",
                           active
@@ -661,6 +1031,28 @@ export default function TwoATagihanModal({ open, onClose, file }) {
                   </>
                 )}
               </button>
+
+              {/* Save */}
+              {dataRows.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving || loading || validDataRows.length === 0}
+                  className="flex h-11 items-center gap-2 rounded-xl border border-green-700 bg-green-600 px-5 text-sm font-bold text-white shadow-md shadow-green-200 transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {saving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Menyimpan...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      Simpan Data 2A
+                    </>
+                  )}
+                </button>
+              )}
             </div>
 
             {/* SGP + WhatsApp */}
@@ -713,8 +1105,14 @@ export default function TwoATagihanModal({ open, onClose, file }) {
           </div>
 
           {error && (
-            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+            <div className="mt-3 whitespace-pre-line rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {error}
+            </div>
+          )}
+
+          {saveMessage && (
+            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {saveMessage}
             </div>
           )}
 
@@ -746,7 +1144,7 @@ export default function TwoATagihanModal({ open, onClose, file }) {
           )}
         </div>
 
-        {/* Laporan yang dicapture */}
+        {/* LAPORAN YANG DICAPTURE */}
         <div className="min-h-0 flex-1 overflow-auto bg-white p-4 sm:p-5">
           {!loading && dataRows.length === 0 ? (
             <div className="flex min-h-[300px] items-center justify-center">
@@ -776,15 +1174,6 @@ export default function TwoATagihanModal({ open, onClose, file }) {
               Tidak ada data untuk Nama SGP yang dipilih.
             </div>
           ) : (
-            /**
-             * Area screenshot.
-             *
-             * Tidak ada kontrol popup,
-             * filter, tombol WhatsApp, dsb.
-             *
-             * Jadi hasil screenshot hanya
-             * laporan tabel.
-             */
             <div
               ref={captureRef}
               className="inline-block min-w-full bg-white p-3"
@@ -824,7 +1213,11 @@ export default function TwoATagihanModal({ open, onClose, file }) {
                     const easy = isEasyRow(row);
 
                     return (
-                      <tr key={getRowKey(row, rowIndex)} className="bg-white">
+                      <tr
+                        key={getRowKey(row, rowIndex)}
+                        className="bg-white"
+                        data-easy={easy ? "true" : "false"}
+                      >
                         {DISPLAY_COLUMNS.map((column) => (
                           <td
                             key={column.excel}
@@ -842,7 +1235,7 @@ export default function TwoATagihanModal({ open, onClose, file }) {
           )}
         </div>
 
-        {/* Footer popup */}
+        {/* FOOTER POPUP */}
         <div className="flex shrink-0 items-center justify-between border-t border-zinc-200 bg-white px-5 py-3">
           <p className="text-xs text-zinc-400">
             Nama SGP diambil dari kolom AE.

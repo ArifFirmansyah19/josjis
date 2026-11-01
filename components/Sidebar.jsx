@@ -30,6 +30,10 @@ import {
   Calculator,
   Settings,
   LogOut,
+  Phone,
+  CalendarDays,
+  House,
+  ShieldCheck,
   ChevronDown,
   ChevronRight,
   X,
@@ -62,9 +66,19 @@ const mainMenus = [
     icon: KeyRound,
   },
   {
+    label: "Advis",
+    href: "/admin/advis",
+    icon: FileText,
+  },
+  {
     label: "Assesoir PK",
     href: "/admin/assesoir-pk",
     icon: Files,
+  },
+  {
+    label: "Pelunasan Pinjaman",
+    href: "/admin/pelunasan-pinjaman",
+    icon: Wallet,
   },
 ];
 
@@ -132,11 +146,6 @@ const menuSections = [
         label: "BAST",
         href: "/admin/bast",
         icon: FileCheck,
-      },
-      {
-        label: "Pelunasan Pinjaman",
-        href: "/admin/pelunasan-pinjaman",
-        icon: Wallet,
       },
     ],
   },
@@ -207,6 +216,11 @@ const menuSections = [
       {
         label: "Notaris",
         href: "/admin/notaris",
+        icon: Landmark,
+      },
+      {
+        label: "Asuradur",
+        href: "/admin/asuradur",
         icon: Landmark,
       },
     ],

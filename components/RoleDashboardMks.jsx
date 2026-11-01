@@ -14,6 +14,7 @@ import {
   FileCheck2,
   FileSpreadsheet,
   Files,
+  FileText,
   FolderOpen,
   Gauge,
   History,
@@ -32,6 +33,12 @@ const mksMenus = [
     href: "/mks/my-work",
     icon: BriefcaseBusiness,
     color: "blue",
+  },
+  {
+    label: "Advis",
+    href: "/mks/advis",
+    icon: FileText,
+    color: "indigo",
   },
   {
     label: "Database PK",

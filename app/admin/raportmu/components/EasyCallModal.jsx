@@ -3,8 +3,17 @@
 "use client";
 
 import { EXCEL_ENGINE_URL } from "@/lib/excel-engine";
+import { supabase } from "@/lib/supabase";
 
-import { Download, Loader2, MessageCircle, X } from "lucide-react";
+import {
+  Download,
+  Loader2,
+  MessageCircle,
+  X,
+  Save,
+  CheckCircle2,
+} from "lucide-react";
+
 import { useEffect, useMemo, useState } from "react";
 import * as XLSX from "xlsx";
 import { useRouter } from "next/navigation";
@@ -13,42 +22,16 @@ const BRANCH_1 = "Jambi Kuamang Kuning 1";
 const BRANCH_2 = "Jambi Kuamang Kuning 2";
 
 const DISPLAY_COLUMNS = [
-  {
-    excel: "F",
-    index: 5,
-    header: "acctno",
-  },
-  {
-    excel: "Z",
-    index: 25,
-    header: "AGF1",
-  },
-  {
-    excel: "G",
-    index: 6,
-    header: "nama",
-  },
-  {
-    excel: "Y",
-    index: 24,
-    header: "total_tgg",
-  },
-  {
-    excel: "D",
-    index: 3,
-    header: "mbu",
-  },
-  {
-    excel: "AE",
-    index: 30,
-    header: "nama_mks",
-  },
+  { excel: "F", index: 5, header: "acctno" },
+  { excel: "Z", index: 25, header: "AGF1" },
+  { excel: "G", index: 6, header: "nama" },
+  { excel: "Y", index: 24, header: "total_tgg" },
+  { excel: "D", index: 3, header: "mbu" },
+  { excel: "AE", index: 30, header: "nama_mks" },
 ];
 
 function normalize(value) {
-  if (value === null || value === undefined) {
-    return "";
-  }
+  if (value === null || value === undefined) return "";
 
   return String(value)
     .replace(/\u00a0/g, " ")
@@ -65,15 +48,11 @@ function parseNumber(value) {
     return null;
   }
 
-  if (typeof value === "number") {
-    return value;
-  }
+  if (typeof value === "number") return value;
 
   let text = String(value).trim();
 
-  if (!text) {
-    return null;
-  }
+  if (!text) return null;
 
   text = text.replace(/\s/g, "");
 
@@ -91,9 +70,7 @@ function parseNumber(value) {
 function formatY(value) {
   const number = parseNumber(value);
 
-  if (number === null) {
-    return "";
-  }
+  if (number === null) return "";
 
   const rounded = Math.ceil(number / 1000) * 1000;
 
@@ -105,46 +82,29 @@ function formatY(value) {
 function getYNumber(value) {
   const number = parseNumber(value);
 
-  if (number === null) {
-    return "";
-  }
+  if (number === null) return "";
 
   return Math.ceil(number / 1000) * 1000;
 }
 
 function formatCell(value, excelColumn) {
-  if (value === null || value === undefined) {
-    return "";
-  }
+  if (value === null || value === undefined) return "";
 
-  if (excelColumn === "F") {
-    return String(value);
-  }
+  if (excelColumn === "F") return String(value);
 
-  if (excelColumn === "Y") {
-    return formatY(value);
-  }
+  if (excelColumn === "Y") return formatY(value);
 
   return String(value);
 }
 
-/**
- * MBU selalu berasal dari kolom D.
- */
 function getBranch(row) {
-  if (!Array.isArray(row)) {
-    return "";
-  }
+  if (!Array.isArray(row)) return "";
 
   const mbu = normalize(row[3]);
 
-  if (mbu === normalize(BRANCH_1)) {
-    return BRANCH_1;
-  }
+  if (mbu === normalize(BRANCH_1)) return BRANCH_1;
 
-  if (mbu === normalize(BRANCH_2)) {
-    return BRANCH_2;
-  }
+  if (mbu === normalize(BRANCH_2)) return BRANCH_2;
 
   return "";
 }
@@ -158,9 +118,7 @@ function isBranch2(row) {
 }
 
 function findHeaderRowIndex(rows) {
-  if (!Array.isArray(rows)) {
-    return -1;
-  }
+  if (!Array.isArray(rows)) return -1;
 
   const requiredHeaders = ["acctno", "nama", "total_tgg", "agf1"];
 
@@ -168,9 +126,7 @@ function findHeaderRowIndex(rows) {
   let bestScore = 0;
 
   rows.forEach((row, rowIndex) => {
-    if (!Array.isArray(row)) {
-      return;
-    }
+    if (!Array.isArray(row)) return;
 
     let score = 0;
 
@@ -201,70 +157,30 @@ function getFileName() {
   return `EasyColl_JKK_${day}${month}${year}.xlsx`;
 }
 
+function getJakartaDate() {
+  return new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Jakarta",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
+}
+
 /**
- * ============================================================
  * EXPORT EXCEL
- * ============================================================
- *
- * PENTING:
- *
- * Export TIDAK melakukan filter JKK 1 / JKK 2 lagi.
- *
- * Data yang diexport adalah filteredRows yang SAMA
- * dengan data yang ditampilkan di tabel web.
- *
- * Jadi:
- *
- * Web 8 data
- *      ↓
- * filteredRows = 8
- *      ↓
- * Excel = 8
- *
- * Tidak ada pemisahan ulang yang bisa membuang JKK 2.
  */
 function buildExcelFile(rows) {
   if (!Array.isArray(rows)) {
     throw new Error("Data Easy Call tidak valid.");
   }
 
-  console.log("========== EXPORT EASY CALL ==========");
-  console.log("Jumlah data yang akan diexport:", rows.length);
-
-  /**
-   * Cek jumlah masing-masing unit,
-   * tetapi TIDAK menghapus data apa pun.
-   */
-  const jkk1Rows = rows.filter(isBranch1);
-  const jkk2Rows = rows.filter(isBranch2);
-
-  console.log("JKK 1:", jkk1Rows.length);
-  console.log("JKK 2:", jkk2Rows.length);
-  console.log("TOTAL:", rows.length);
-
-  /**
-   * Convert SEMUA row yang tampil di web.
-   */
   const excelRows = rows.map((row, index) => [
-    // No.
     index + 1,
-
-    // F = acctno
     String(row?.[5] ?? ""),
-
-    // Z = AGF1
     String(row?.[25] ?? ""),
-
-    // G = nama
     String(row?.[6] ?? ""),
-
-    // Y = total_tgg
     getYNumber(row?.[24]),
-
-    // D = mbu
     String(row?.[3] ?? ""),
-
-    // AE = nama_mks
     String(row?.[30] ?? ""),
   ]);
 
@@ -280,12 +196,7 @@ function buildExcelFile(rows) {
     "nama_mks",
   ];
 
-  /**
-   * SATU SHEET berisi seluruh data.
-   */
-  const sheetData = [headers, ...excelRows];
-
-  const worksheet = XLSX.utils.aoa_to_sheet(sheetData);
+  const worksheet = XLSX.utils.aoa_to_sheet([headers, ...excelRows]);
 
   worksheet["!cols"] = [
     { wch: 6 },
@@ -299,9 +210,6 @@ function buildExcelFile(rows) {
 
   XLSX.utils.book_append_sheet(workbook, worksheet, "Easy Call");
 
-  console.log("Jumlah row Excel:", excelRows.length);
-  console.log("======================================");
-
   const arrayBuffer = XLSX.write(workbook, {
     bookType: "xlsx",
     type: "array",
@@ -314,6 +222,7 @@ function buildExcelFile(rows) {
 
 export default function EasyCallModal({ open, onClose, file }) {
   const router = useRouter();
+
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -321,9 +230,14 @@ export default function EasyCallModal({ open, onClose, file }) {
   const [targetCell, setTargetCell] = useState("");
   const [range, setRange] = useState("");
   const [processed, setProcessed] = useState(false);
+
   const [exporting, setExporting] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+
+  // STATE PENYIMPANAN SUPABASE
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
 
   useEffect(() => {
     function checkMobile() {
@@ -342,9 +256,7 @@ export default function EasyCallModal({ open, onClose, file }) {
   }, []);
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
+    if (!open) return;
 
     setRows([]);
     setLoading(false);
@@ -355,6 +267,8 @@ export default function EasyCallModal({ open, onClose, file }) {
     setProcessed(false);
     setExporting(false);
     setSharing(false);
+    setSaving(false);
+    setSaveMessage("");
   }, [open]);
 
   const headerRowIndex = useMemo(() => {
@@ -362,19 +276,11 @@ export default function EasyCallModal({ open, onClose, file }) {
   }, [rows]);
 
   const dataRows = useMemo(() => {
-    if (headerRowIndex < 0) {
-      return [];
-    }
+    if (headerRowIndex < 0) return [];
 
     return rows.slice(headerRowIndex + 1);
   }, [rows, headerRowIndex]);
 
-  /**
-   * Data yang tampil di web.
-   *
-   * Hanya mengambil JKK 1 dan JKK 2
-   * berdasarkan kolom D / MBU.
-   */
   const filteredRows = useMemo(() => {
     return dataRows.filter((row) => {
       const branch = getBranch(row);
@@ -396,11 +302,8 @@ export default function EasyCallModal({ open, onClose, file }) {
   const totalCount = filteredRows.length;
 
   /**
-   * ============================================================
    * PROSES EASY CALL
-   * ============================================================
    */
-
   async function handleProcess() {
     if (!file) {
       setError("File Excel belum tersedia.");
@@ -409,11 +312,13 @@ export default function EasyCallModal({ open, onClose, file }) {
 
     setLoading(true);
     setError("");
+    setSaveMessage("");
     setProcessed(false);
     setRows([]);
 
     try {
       const formData = new FormData();
+
       formData.append("file", file, file.name);
 
       const baseUrl = EXCEL_ENGINE_URL.replace(/\/+$/, "");
@@ -434,7 +339,6 @@ export default function EasyCallModal({ open, onClose, file }) {
         );
       }
 
-      // API Josjis Engine membungkus hasil dalam payload.result.
       const result = payload?.result ?? payload;
 
       if (payload?.status === "error" || result?.success === false) {
@@ -480,6 +384,181 @@ export default function EasyCallModal({ open, onClose, file }) {
     }
   }
 
+  /**
+   * SIMPAN EASY CALL KE SUPABASE
+   *
+   * Tabel: raportmu_hasil
+   * jenis_data: EASYCALL
+   * Pengelompokan: unit + MKS
+   */
+  async function handleSaveEasyCall() {
+    if (!processed || !filteredRows.length) {
+      setError("Tidak ada data Easy Call untuk disimpan.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setSaveMessage("");
+
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) throw authError;
+
+      if (!user) {
+        throw new Error("Sesi login tidak ditemukan. Silakan login kembali.");
+      }
+
+      // Ambil unit JKK 1 dan JKK 2.
+      const { data: units, error: unitError } = await supabase
+        .from("unit")
+        .select("id, nama_unit")
+        .in("nama_unit", [BRANCH_1, BRANCH_2]);
+
+      if (unitError) throw unitError;
+
+      const unitMap = new Map(
+        (units || []).map((unit) => [normalize(unit.nama_unit), unit]),
+      );
+
+      const unit1 = unitMap.get(normalize(BRANCH_1));
+      const unit2 = unitMap.get(normalize(BRANCH_2));
+
+      if (!unit1 || !unit2) {
+        throw new Error("Data unit JKK 1 atau JKK 2 tidak ditemukan.");
+      }
+
+      // Ambil pegawai aktif dari kedua unit.
+      const { data: pegawai, error: pegawaiError } = await supabase
+        .from("pegawai")
+        .select("id, nama, unit_id")
+        .eq("aktif", true)
+        .in("unit_id", [unit1.id, unit2.id]);
+
+      if (pegawaiError) throw pegawaiError;
+
+      const pegawaiIds = (pegawai || []).map((item) => item.id);
+
+      if (!pegawaiIds.length) {
+        throw new Error("Data pegawai aktif tidak ditemukan.");
+      }
+
+      // Ambil relasi MKS.
+      const { data: mksData, error: mksError } = await supabase
+        .from("mks")
+        .select("id, pegawai_id")
+        .in("pegawai_id", pegawaiIds);
+
+      if (mksError) throw mksError;
+
+      const pegawaiMap = new Map(
+        (pegawai || []).map((item) => [item.id, item]),
+      );
+
+      const mksMap = new Map();
+
+      (mksData || []).forEach((item) => {
+        const person = pegawaiMap.get(item.pegawai_id);
+
+        if (!person) return;
+
+        const key = `${person.unit_id}|${normalize(person.nama)}`;
+
+        mksMap.set(key, {
+          id: item.id,
+          unit_id: person.unit_id,
+          nama: person.nama,
+        });
+      });
+
+      // Kelompokkan data berdasarkan unit dan nama MKS.
+      const grouped = new Map();
+
+      filteredRows.forEach((row) => {
+        const branch = getBranch(row);
+
+        const unit =
+          branch === BRANCH_1 ? unit1 : branch === BRANCH_2 ? unit2 : null;
+
+        const namaMks = String(row?.[30] ?? "").trim();
+
+        if (!unit) {
+          throw new Error("Ada baris data dengan unit yang tidak dikenali.");
+        }
+
+        if (!namaMks) {
+          throw new Error(
+            "Ada data Easy Call yang tidak memiliki nama MKS pada kolom AE.",
+          );
+        }
+
+        const key = `${unit.id}|${normalize(namaMks)}`;
+        const mks = mksMap.get(key);
+
+        if (!mks) {
+          throw new Error(
+            `MKS "${namaMks}" tidak ditemukan pada unit ${branch}. Periksa kolom AE.`,
+          );
+        }
+
+        if (!grouped.has(mks.id)) {
+          grouped.set(mks.id, {
+            unit_id: unit.id,
+            mks_id: mks.id,
+            data: [],
+          });
+        }
+
+        grouped.get(mks.id).data.push(row);
+      });
+
+      if (!grouped.size) {
+        throw new Error("Tidak ada kelompok data Easy Call yang valid.");
+      }
+
+      const tanggalData = getJakartaDate();
+
+      const payload = Array.from(grouped.values()).map((item) => ({
+        unit_id: item.unit_id,
+        mks_id: item.mks_id,
+        jenis_data: "EASYCALL",
+        tanggal_data: tanggalData,
+        data: item.data,
+        total_rows: item.data.length,
+        saved_by: user.id,
+        updated_at: new Date().toISOString(),
+      }));
+
+      const { error: saveError } = await supabase
+        .from("raportmu_hasil")
+        .upsert(payload, {
+          onConflict: "mks_id,jenis_data",
+        });
+
+      if (saveError) throw saveError;
+
+      // Beri tahu halaman RaportMU untuk memuat ulang data.
+      window.dispatchEvent(new Event("raportmu-data-updated"));
+
+      setSaveMessage(
+        `Berhasil menyimpan ${filteredRows.length} data Easy Call dari ${grouped.size} MKS.`,
+      );
+    } catch (saveError) {
+      console.error("Simpan Easy Call gagal:", saveError);
+
+      setError(saveError?.message || "Data Easy Call gagal disimpan.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  /**
+   * PROSES ADVIS
+   */
   function handleProcessAdvis() {
     setError("");
 
@@ -494,36 +573,36 @@ export default function EasyCallModal({ open, onClose, file }) {
     }
 
     try {
-      // Hanya gunakan data yang memang ditampilkan pada tabel.
       const advisData = filteredRows
-        .filter((row) => {
-          const branch = getBranch(row);
-          return branch === BRANCH_1 || branch === BRANCH_2;
-        })
         .map((row, index) => ({
           id: `${String(row?.[5] ?? "").trim()}-${index}`,
           acctno: String(row?.[5] ?? "").trim(),
+          norekPinjaman: String(row?.[5] ?? "").trim(),
+          norekTabungan: String(row?.[25] ?? "").trim(),
           agf1: String(row?.[25] ?? "").trim(),
           nama: String(row?.[6] ?? "").trim(),
           total_tgg: getYNumber(row?.[24]),
           mbu: getBranch(row),
           nama_mks: String(row?.[30] ?? "").trim(),
         }))
-        .filter((row) => row.nama && row.acctno);
-
-      if (advisData.length === 0) {
-        setError(
-          "Tidak ada data Advis yang valid. Periksa nama dan nomor rekening pada tabel Easy Call.",
+        .filter(
+          (item) =>
+            item.nama &&
+            item.norekPinjaman &&
+            (item.mbu === BRANCH_1 || item.mbu === BRANCH_2),
         );
+
+      if (!advisData.length) {
+        setError("Tidak ada data Advis yang valid.");
         return;
       }
 
-      // Simpan data terbaru agar halaman Advis tidak memakai
-      // data lama dari proses Easy Call sebelumnya.
-      sessionStorage.removeItem("raportmu_advis_data");
-      sessionStorage.setItem("raportmu_advis_data", JSON.stringify(advisData));
+      sessionStorage.setItem(
+        "raportmu_advis_easycoll_source",
+        JSON.stringify(advisData),
+      );
 
-      router.push("/admin/cetak-advis");
+      router.push("/admin/advis/easycoll");
     } catch (processError) {
       console.error("Gagal menyiapkan data Advis:", processError);
 
@@ -533,6 +612,9 @@ export default function EasyCallModal({ open, onClose, file }) {
     }
   }
 
+  /**
+   * DOWNLOAD EXCEL
+   */
   function handleDownloadExcel() {
     if (!filteredRows.length) {
       setError("Tidak ada data Easy Call yang dapat diexport.");
@@ -543,23 +625,15 @@ export default function EasyCallModal({ open, onClose, file }) {
     setError("");
 
     try {
-      console.log("DOWNLOAD DATA:", filteredRows.length);
-      console.log("DOWNLOAD JKK 1:", filteredRows.filter(isBranch1).length);
-      console.log("DOWNLOAD JKK 2:", filteredRows.filter(isBranch2).length);
-
       const blob = buildExcelFile(filteredRows);
-
       const url = URL.createObjectURL(blob);
-
       const anchor = document.createElement("a");
 
       anchor.href = url;
       anchor.download = getFileName();
 
       document.body.appendChild(anchor);
-
       anchor.click();
-
       anchor.remove();
 
       URL.revokeObjectURL(url);
@@ -573,9 +647,7 @@ export default function EasyCallModal({ open, onClose, file }) {
   }
 
   /**
-   * ============================================================
    * SHARE WHATSAPP
-   * ============================================================
    */
   async function handleShareWhatsApp() {
     if (!filteredRows.length) {
@@ -588,7 +660,6 @@ export default function EasyCallModal({ open, onClose, file }) {
 
     try {
       const blob = buildExcelFile(filteredRows);
-
       const fileName = getFileName();
 
       const shareFile = new File([blob], fileName, {
@@ -618,9 +689,7 @@ export default function EasyCallModal({ open, onClose, file }) {
         text: `EasyColl JKK - ${fileName}`,
       });
     } catch (shareError) {
-      if (shareError?.name === "AbortError") {
-        return;
-      }
+      if (shareError?.name === "AbortError") return;
 
       console.error("Share WhatsApp error:", shareError);
 
@@ -630,9 +699,7 @@ export default function EasyCallModal({ open, onClose, file }) {
     }
   }
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
@@ -661,7 +728,7 @@ export default function EasyCallModal({ open, onClose, file }) {
           <button
             type="button"
             onClick={handleProcess}
-            disabled={loading}
+            disabled={loading || saving}
             className="inline-flex items-center gap-2 rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {loading ? (
@@ -678,8 +745,31 @@ export default function EasyCallModal({ open, onClose, file }) {
             <>
               <button
                 type="button"
+                onClick={handleSaveEasyCall}
+                disabled={
+                  saving || exporting || sharing || !filteredRows.length
+                }
+                className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {saving ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <Save className="h-4 w-4" />
+                    Simpan Data Easy Call
+                  </>
+                )}
+              </button>
+
+              <button
+                type="button"
                 onClick={handleDownloadExcel}
-                disabled={exporting || sharing || !filteredRows.length}
+                disabled={
+                  exporting || sharing || saving || !filteredRows.length
+                }
                 className="inline-flex items-center gap-2 rounded-lg border border-zinc-300 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {exporting ? (
@@ -693,7 +783,9 @@ export default function EasyCallModal({ open, onClose, file }) {
               <button
                 type="button"
                 onClick={handleProcessAdvis}
-                disabled={!filteredRows.length || exporting || sharing}
+                disabled={
+                  !filteredRows.length || exporting || sharing || saving
+                }
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-700 px-4 py-2 text-sm font-medium text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Proses Advis
@@ -703,7 +795,9 @@ export default function EasyCallModal({ open, onClose, file }) {
                 <button
                   type="button"
                   onClick={handleShareWhatsApp}
-                  disabled={exporting || sharing || !filteredRows.length}
+                  disabled={
+                    exporting || sharing || saving || !filteredRows.length
+                  }
                   className="inline-flex items-center gap-2 rounded-lg bg-[#25D366] px-4 py-2 text-sm font-medium text-white transition hover:bg-[#20bd5a] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {sharing ? (
@@ -736,6 +830,14 @@ export default function EasyCallModal({ open, onClose, file }) {
             </div>
           )}
         </div>
+
+        {/* PESAN SIMPAN BERHASIL */}
+        {saveMessage && (
+          <div className="mx-5 mt-4 flex items-start gap-2 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-700">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+            {saveMessage}
+          </div>
+        )}
 
         {/* INFO */}
         {processed && (
@@ -818,7 +920,6 @@ export default function EasyCallModal({ open, onClose, file }) {
               <div className="mb-4 grid gap-3 sm:grid-cols-4">
                 <div className="rounded-xl border border-zinc-200 bg-white p-4">
                   <div className="text-xs text-zinc-500">Header</div>
-
                   <div className="mt-1 text-xl font-semibold text-zinc-900">
                     1
                   </div>
@@ -826,7 +927,6 @@ export default function EasyCallModal({ open, onClose, file }) {
 
                 <div className="rounded-xl border border-zinc-200 bg-white p-4">
                   <div className="text-xs text-zinc-500">JKK 1</div>
-
                   <div className="mt-1 text-xl font-semibold text-zinc-900">
                     {branch1Count}
                   </div>
@@ -834,7 +934,6 @@ export default function EasyCallModal({ open, onClose, file }) {
 
                 <div className="rounded-xl border border-zinc-200 bg-white p-4">
                   <div className="text-xs text-zinc-500">JKK 2</div>
-
                   <div className="mt-1 text-xl font-semibold text-zinc-900">
                     {branch2Count}
                   </div>
@@ -842,7 +941,6 @@ export default function EasyCallModal({ open, onClose, file }) {
 
                 <div className="rounded-xl border border-zinc-200 bg-white p-4">
                   <div className="text-xs text-zinc-500">Total Data</div>
-
                   <div className="mt-1 text-xl font-semibold text-zinc-900">
                     {totalCount}
                   </div>
@@ -912,8 +1010,10 @@ export default function EasyCallModal({ open, onClose, file }) {
         <div className="flex items-center justify-between border-t border-zinc-200 bg-zinc-50 px-5 py-3">
           <div className="text-xs text-zinc-500">
             Header: 1 | Data ditemukan:{" "}
-            <strong className="text-zinc-800">{totalCount}</strong> | JKK 1:{" "}
-            <strong className="text-zinc-800">{branch1Count}</strong> | JKK 2:{" "}
+            <strong className="text-zinc-800">{totalCount}</strong>
+            {" | "}JKK 1:{" "}
+            <strong className="text-zinc-800">{branch1Count}</strong>
+            {" | "}JKK 2:{" "}
             <strong className="text-zinc-800">{branch2Count}</strong>
           </div>
 
