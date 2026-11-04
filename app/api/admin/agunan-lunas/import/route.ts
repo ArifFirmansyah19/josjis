@@ -86,30 +86,39 @@ export async function POST(request: NextRequest) {
         });
         continue;
       }
-      let unitId = unitCache.get(code);
-      if (!unitId) {
+
+      // Selalu tetapkan unitId sebagai string yang sudah tervalidasi.
+      let unitId: string;
+      const cachedUnitId = unitCache.get(code);
+      if (cachedUnitId) {
+        unitId = cachedUnitId;
+      } else {
         const { data: unit, error } = await supabaseAdmin
           .from("unit")
           .select("id,kode_unit")
           .eq("kode_unit", code)
           .maybeSingle();
-        if (error || !unit) {
+        const resolvedUnitId = unit?.id;
+        if (error || typeof resolvedUnitId !== "string" || !resolvedUnitId) {
           errors.push({
             baris: index + 1,
             pesan: `Unit ${code} tidak ditemukan di database.`,
           });
           continue;
         }
-        if (!canAccessSerahTerimaUnit(auth, unit.id)) {
-          errors.push({
-            baris: index + 1,
-            pesan: `Akun tidak memiliki akses ke unit ${code}.`,
-          });
-          continue;
-        }
-        unitId = unit.id;
-        unitCache.set(code, unitId);
+        unitId = resolvedUnitId;
+        unitCache.set(code, resolvedUnitId);
       }
+
+      // Periksa juga akses untuk unit yang berasal dari cache.
+      if (!canAccessSerahTerimaUnit(auth, unitId)) {
+        errors.push({
+          baris: index + 1,
+          pesan: `Akun tidak memiliki akses ke unit ${code}.`,
+        });
+        continue;
+      }
+
       valid.push({
         unit_id: unitId,
         unit_excel: code,
