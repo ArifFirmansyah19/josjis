@@ -36,6 +36,7 @@ import {
   ShieldCheck,
   ChevronDown,
   ChevronRight,
+  FileSignature,
   X,
 } from "lucide-react";
 
@@ -109,6 +110,11 @@ const menuSections = [
         label: "Agunan Lunas",
         href: "/admin/agunan-lunas",
         icon: Archive,
+      },
+      {
+        label: "BAST Agunan Lunas",
+        href: "/admin/bast-agunan-lunas",
+        icon: FileSignature,
       },
       {
         label: "Serah Terima Agunan Lunas",
