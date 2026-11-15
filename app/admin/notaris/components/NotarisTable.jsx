@@ -11,9 +11,7 @@ function maskRekening(value) {
 
   const text = String(value);
 
-  if (text.length <= 4) {
-    return text;
-  }
+  if (text.length <= 4) return text;
 
   return `${"*".repeat(Math.max(0, text.length - 4))}${text.slice(-4)}`;
 }
@@ -29,29 +27,30 @@ export default function NotarisTable({
     <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm">
       {/* DESKTOP */}
       <div className="hidden overflow-x-auto sm:block">
-        <table className="w-full min-w-[800px] border-collapse">
+        <table className="w-full min-w-[1050px] border-collapse">
           <thead>
             <tr className="border-b border-zinc-200 bg-zinc-50">
               <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-zinc-500">
-                Nama Notaris
+                Nama Notaris/PPAT
               </th>
-
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-zinc-500">
+                NIK
+              </th>
+              <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-zinc-500">
+                Jabatan
+              </th>
               <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-zinc-500">
                 Provinsi
               </th>
-
               <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-zinc-500">
                 Kabupaten
               </th>
-
               <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wide text-zinc-500">
                 Nomor Rekening
               </th>
-
-              <th className="w-[110px] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wide text-zinc-500">
+              <th className="w-[100px] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wide text-zinc-500">
                 Rekanan
               </th>
-
               <th className="w-[110px] px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wide text-zinc-500">
                 Aksi
               </th>
@@ -62,7 +61,7 @@ export default function NotarisTable({
             {loading ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={8}
                   className="px-4 py-12 text-center text-sm text-zinc-500"
                 >
                   Memuat data notaris...
@@ -70,11 +69,10 @@ export default function NotarisTable({
               </tr>
             ) : records.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-4 py-12 text-center">
+                <td colSpan={8} className="px-4 py-12 text-center">
                   <p className="text-sm font-semibold text-zinc-700">
                     Belum ada data notaris
                   </p>
-
                   <p className="mt-1 text-xs text-zinc-400">
                     Silakan tambahkan notaris baru.
                   </p>
@@ -85,27 +83,28 @@ export default function NotarisTable({
                 <tr
                   key={record.id}
                   onClick={() => onView?.(record)}
-                  className="
-                    cursor-pointer
-                    border-b
-                    border-zinc-100
-                    transition
-                    hover:bg-zinc-50
-                    active:bg-zinc-100
-                  "
+                  className="cursor-pointer border-b border-zinc-100 transition hover:bg-zinc-50 active:bg-zinc-100"
                 >
                   <td className="px-4 py-3">
                     <p className="text-sm font-semibold text-zinc-800">
-                      {record.nama_notaris}
+                      {record.nama_notaris || "-"}
                     </p>
                   </td>
 
-                  <td className="px-4 py-3 text-sm text-zinc-600">
-                    {record.provinsi}
+                  <td className="px-4 py-3 font-mono text-sm text-zinc-600">
+                    {record.nik || "-"}
                   </td>
 
                   <td className="px-4 py-3 text-sm text-zinc-600">
-                    {record.kabupaten}
+                    {record.jabatan || "Notaris/PPAT"}
+                  </td>
+
+                  <td className="px-4 py-3 text-sm text-zinc-600">
+                    {record.provinsi || "-"}
+                  </td>
+
+                  <td className="px-4 py-3 text-sm text-zinc-600">
+                    {record.kabupaten || "-"}
                   </td>
 
                   <td className="px-4 py-3 font-mono text-sm text-zinc-600">
@@ -131,10 +130,7 @@ export default function NotarisTable({
                     >
                       <button
                         type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onEdit?.(record);
-                        }}
+                        onClick={() => onEdit?.(record)}
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
                         title="Edit"
                       >
@@ -143,10 +139,7 @@ export default function NotarisTable({
 
                       <button
                         type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          onDelete?.(record.id);
-                        }}
+                        onClick={() => onDelete?.(record.id)}
                         className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400 hover:bg-red-50 hover:text-red-600"
                         title="Hapus"
                       >
@@ -172,7 +165,6 @@ export default function NotarisTable({
             <p className="text-sm font-semibold text-zinc-700">
               Belum ada data notaris
             </p>
-
             <p className="mt-1 text-xs text-zinc-400">
               Silakan tambahkan notaris baru.
             </p>
@@ -183,24 +175,24 @@ export default function NotarisTable({
               <div
                 key={record.id}
                 onClick={() => onView?.(record)}
-                className="
-                  cursor-pointer
-                  border-b
-                  border-zinc-100
-                  px-4
-                  py-3.5
-                  transition
-                  active:bg-zinc-100
-                "
+                className="cursor-pointer border-b border-zinc-100 px-4 py-3.5 transition active:bg-zinc-100"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-zinc-800">
-                      {record.nama_notaris}
+                      {record.nama_notaris || "-"}
+                    </p>
+
+                    <p className="mt-1 text-[11px] font-medium text-zinc-600">
+                      {record.jabatan || "Notaris/PPAT"}
+                    </p>
+
+                    <p className="mt-1 font-mono text-[11px] text-zinc-500">
+                      NIK: {record.nik || "-"}
                     </p>
 
                     <p className="mt-1 text-[11px] text-zinc-500">
-                      {record.kabupaten}, {record.provinsi}
+                      {record.kabupaten || "-"}, {record.provinsi || "-"}
                     </p>
 
                     <p className="mt-1 font-mono text-[11px] text-zinc-500">
@@ -226,22 +218,18 @@ export default function NotarisTable({
                   >
                     <button
                       type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onEdit?.(record);
-                      }}
+                      onClick={() => onEdit?.(record)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-500"
+                      title="Edit"
                     >
                       <Edit3 size={15} />
                     </button>
 
                     <button
                       type="button"
-                      onClick={(event) => {
-                        event.stopPropagation();
-                        onDelete?.(record.id);
-                      }}
+                      onClick={() => onDelete?.(record.id)}
                       className="flex h-8 w-8 items-center justify-center rounded-lg text-zinc-400"
+                      title="Hapus"
                     >
                       <Trash2 size={15} />
                     </button>

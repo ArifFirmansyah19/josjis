@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import {
   Archive,
   ArrowRightLeft,
+  Building2,
   CheckCircle2,
   ChevronDown,
   Edit3,
@@ -25,18 +26,9 @@ const STATUS = {
 };
 
 const STATUS_OPTIONS = [
-  {
-    value: STATUS.AKTIF,
-    label: "Aktif",
-  },
-  {
-    value: STATUS.NONAKTIF,
-    label: "Nonaktif",
-  },
-  {
-    value: STATUS.ARSIP,
-    label: "Arsip",
-  },
+  { value: STATUS.AKTIF, label: "Aktif" },
+  { value: STATUS.NONAKTIF, label: "Nonaktif" },
+  { value: STATUS.ARSIP, label: "Arsip" },
 ];
 
 const emptyForm = {
@@ -60,6 +52,9 @@ const emptyDeleteState = {
   step: 1,
 };
 
+const inputClass =
+  "w-full min-w-0 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-base text-zinc-800 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400 focus:bg-white focus:ring-2 focus:ring-zinc-100 sm:text-sm";
+
 function normalize(value) {
   return String(value || "")
     .trim()
@@ -74,14 +69,14 @@ function statusLabel(status) {
 
 function statusClass(status) {
   if (status === STATUS.NONAKTIF) {
-    return "bg-amber-50 text-amber-700 border-amber-200";
+    return "border-amber-200 bg-amber-50 text-amber-700";
   }
 
   if (status === STATUS.ARSIP) {
-    return "bg-slate-100 text-slate-600 border-slate-200";
+    return "border-slate-200 bg-slate-100 text-slate-600";
   }
 
-  return "bg-emerald-50 text-emerald-700 border-emerald-200";
+  return "border-emerald-200 bg-emerald-50 text-emerald-700";
 }
 
 export default function MasterUnitPage() {
@@ -97,6 +92,7 @@ export default function MasterUnitPage() {
 
   const [showForm, setShowForm] = useState(false);
   const [editingUnit, setEditingUnit] = useState(null);
+  const [selectedUnit, setSelectedUnit] = useState(null);
   const [form, setForm] = useState(emptyForm);
 
   const [showMove, setShowMove] = useState(false);
@@ -106,83 +102,85 @@ export default function MasterUnitPage() {
 
   const [deleteState, setDeleteState] = useState(emptyDeleteState);
 
-  useEffect(() => {
-    loadAll();
-  }, []);
-
   async function loadAll() {
     setLoading(true);
     setError("");
 
-    const [unitResult, cabangResult] = await Promise.all([
-      supabase
-        .from("unit")
-        .select(
-          "id, nama_unit, kode_unit, kode_legacy, kode_kawasan, cabang_id, status, archived_at",
-        )
-        .order("nama_unit", { ascending: true }),
+    try {
+      const [unitResult, cabangResult] = await Promise.all([
+        supabase
+          .from("unit")
+          .select(
+            "id, nama_unit, kode_unit, kode_legacy, kode_kawasan, cabang_id, status, archived_at",
+          )
+          .order("nama_unit", { ascending: true }),
 
-      supabase
-        .from("cabang")
-        .select("id, nama_cabang, kode_cabang")
-        .order("nama_cabang", { ascending: true }),
-    ]);
+        supabase
+          .from("cabang")
+          .select("id, nama_cabang, kode_cabang")
+          .order("nama_cabang", { ascending: true }),
+      ]);
 
-    if (unitResult.error) {
-      setError(unitResult.error.message);
-    } else {
+      if (unitResult.error) throw unitResult.error;
+      if (cabangResult.error) throw cabangResult.error;
+
       setUnits(unitResult.data || []);
-    }
-
-    if (cabangResult.error) {
-      setError((current) => {
-        if (current) return current;
-        return cabangResult.error.message;
-      });
-    } else {
       setCabangs(cabangResult.data || []);
+    } catch (err) {
+      console.error(err);
+      setError(err?.message || "Gagal memuat data unit.");
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
+  useEffect(() => {
+    loadAll();
+  }, []);
+
   const cabangMap = useMemo(() => {
-    const map = {};
-
-    for (const cabang of cabangs) {
-      map[cabang.id] = cabang;
-    }
-
-    return map;
+    return Object.fromEntries(cabangs.map((cabang) => [cabang.id, cabang]));
   }, [cabangs]);
 
   const filteredUnits = useMemo(() => {
     const keyword = normalize(search);
 
-    return units.filter((unit) => {
-      const matchesSearch =
-        !keyword ||
-        normalize(unit.nama_unit).includes(keyword) ||
-        normalize(unit.kode_unit).includes(keyword) ||
-        normalize(unit.kode_legacy).includes(keyword) ||
-        normalize(unit.kode_kawasan).includes(keyword) ||
-        normalize(cabangMap[unit.cabang_id]?.nama_cabang).includes(keyword);
+    return units
+      .filter((unit) => {
+        const matchesSearch =
+          !keyword ||
+          [
+            unit.nama_unit,
+            unit.kode_unit,
+            unit.kode_legacy,
+            unit.kode_kawasan,
+            cabangMap[unit.cabang_id]?.nama_cabang,
+            cabangMap[unit.cabang_id]?.kode_cabang,
+          ].some((value) => normalize(value).includes(keyword));
 
-      const matchesStatus =
-        statusFilter === "SEMUA" || unit.status === statusFilter;
+        const matchesStatus =
+          statusFilter === "SEMUA" || unit.status === statusFilter;
 
-      return matchesSearch && matchesStatus;
-    });
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) =>
+        String(a.nama_unit || "").localeCompare(
+          String(b.nama_unit || ""),
+          "id",
+          { sensitivity: "base" },
+        ),
+      );
   }, [units, search, statusFilter, cabangMap]);
 
-  const summary = useMemo(() => {
-    return {
+  const summary = useMemo(
+    () => ({
       total: units.length,
       aktif: units.filter((item) => item.status === STATUS.AKTIF).length,
       nonaktif: units.filter((item) => item.status === STATUS.NONAKTIF).length,
       arsip: units.filter((item) => item.status === STATUS.ARSIP).length,
-    };
-  }, [units]);
+    }),
+    [units],
+  );
 
   function resetForm() {
     setForm({
@@ -202,7 +200,6 @@ export default function MasterUnitPage() {
   function openEdit(unit) {
     setSuccess("");
     setError("");
-
     setEditingUnit(unit);
 
     setForm({
@@ -214,12 +211,12 @@ export default function MasterUnitPage() {
       status: unit.status || STATUS.AKTIF,
     });
 
+    setSelectedUnit(null);
     setShowForm(true);
   }
 
   function closeForm() {
     if (saving) return;
-
     setShowForm(false);
     setEditingUnit(null);
     setForm(emptyForm);
@@ -227,14 +224,11 @@ export default function MasterUnitPage() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-
     setError("");
     setSuccess("");
 
     const namaUnit = form.nama_unit.trim();
     const kodeUnit = form.kode_unit.trim();
-    const kodeKawasan = form.kode_kawasan.trim();
-    const kodeLegacy = form.kode_legacy.trim();
 
     if (!namaUnit) {
       setError("Nama Unit wajib diisi.");
@@ -262,18 +256,15 @@ export default function MasterUnitPage() {
       const payload = {
         nama_unit: namaUnit,
         kode_unit: kodeUnit,
-        kode_kawasan: kodeKawasan || null,
-        kode_legacy: kodeLegacy || null,
+        kode_kawasan: form.kode_kawasan.trim() || null,
+        kode_legacy: form.kode_legacy.trim() || null,
         cabang_id: form.cabang_id,
         status: form.status,
+        archived_at:
+          form.status === STATUS.ARSIP
+            ? editingUnit?.archived_at || new Date().toISOString()
+            : null,
       };
-
-      if (form.status === STATUS.ARSIP) {
-        payload.archived_at =
-          editingUnit?.archived_at || new Date().toISOString();
-      } else {
-        payload.archived_at = null;
-      }
 
       if (editingUnit) {
         const { error: updateError } = await supabase
@@ -282,7 +273,6 @@ export default function MasterUnitPage() {
           .eq("id", editingUnit.id);
 
         if (updateError) throw updateError;
-
         setSuccess("Data unit berhasil diperbarui.");
       } else {
         const { error: insertError } = await supabase
@@ -290,16 +280,15 @@ export default function MasterUnitPage() {
           .insert(payload);
 
         if (insertError) throw insertError;
-
         setSuccess("Unit baru berhasil ditambahkan.");
       }
 
       setShowForm(false);
       setEditingUnit(null);
       setForm(emptyForm);
-
       await loadAll();
     } catch (err) {
+      console.error(err);
       setError(err?.message || "Terjadi kesalahan saat menyimpan unit.");
     } finally {
       setSaving(false);
@@ -319,31 +308,35 @@ export default function MasterUnitPage() {
 
     if (!window.confirm(confirmation)) return;
 
-    const payload = {
-      status: nextStatus,
-      archived_at:
-        nextStatus === STATUS.ARSIP ? new Date().toISOString() : null,
-    };
+    setSaving(true);
 
-    const { error: updateError } = await supabase
-      .from("unit")
-      .update(payload)
-      .eq("id", unit.id);
+    try {
+      const { error: updateError } = await supabase
+        .from("unit")
+        .update({
+          status: nextStatus,
+          archived_at:
+            nextStatus === STATUS.ARSIP ? new Date().toISOString() : null,
+        })
+        .eq("id", unit.id);
 
-    if (updateError) {
-      setError(updateError.message);
-      return;
+      if (updateError) throw updateError;
+
+      setSuccess(
+        nextStatus === STATUS.NONAKTIF
+          ? "Unit berhasil dinonaktifkan."
+          : nextStatus === STATUS.ARSIP
+            ? "Unit berhasil diarsipkan."
+            : "Unit berhasil diaktifkan kembali.",
+      );
+
+      await loadAll();
+    } catch (err) {
+      console.error(err);
+      setError(err?.message || "Gagal mengubah status unit.");
+    } finally {
+      setSaving(false);
     }
-
-    setSuccess(
-      nextStatus === STATUS.NONAKTIF
-        ? "Unit berhasil dinonaktifkan."
-        : nextStatus === STATUS.ARSIP
-          ? "Unit berhasil diarsipkan."
-          : "Unit berhasil diaktifkan kembali.",
-    );
-
-    await loadAll();
   }
 
   function openMove(unit) {
@@ -360,6 +353,7 @@ export default function MasterUnitPage() {
     setMoveSource(unit);
     setMoveTarget(availableTargets[0]?.id || "");
     setMoveMode("SELURUH");
+    setSelectedUnit(null);
     setShowMove(true);
   }
 
@@ -370,9 +364,8 @@ export default function MasterUnitPage() {
     setMoveMode("SELURUH");
   }
 
-  async function executeMovePreview(event) {
+  function executeMovePreview(event) {
     event.preventDefault();
-
     setError("");
     setSuccess("");
 
@@ -406,22 +399,17 @@ export default function MasterUnitPage() {
   function openPermanentDelete(unit) {
     setError("");
     setSuccess("");
-
-    setDeleteState({
-      ...emptyDeleteState,
-      unit,
-    });
+    setSelectedUnit(null);
+    setDeleteState({ ...emptyDeleteState, unit });
   }
 
   function closePermanentDelete() {
     if (deleteState.checking) return;
-
     setDeleteState(emptyDeleteState);
   }
 
   async function checkUnitRelatedData() {
     const unit = deleteState.unit;
-
     if (!unit) return;
 
     setDeleteState((current) => ({
@@ -433,26 +421,13 @@ export default function MasterUnitPage() {
     }));
 
     try {
-      /*
-       * Pemeriksaan awal.
-       *
-       * Saat tabel operasional sudah tersedia, tambahkan pengecekan
-       * masing-masing tabel di sini.
-       *
-       * Untuk sekarang kita hanya memastikan unit masih ada.
-       * Sistem TIDAK melakukan DELETE otomatis.
-       */
-
       const { data: currentUnit, error: unitError } = await supabase
         .from("unit")
         .select("id, nama_unit")
         .eq("id", unit.id)
         .maybeSingle();
 
-      if (unitError) {
-        throw unitError;
-      }
-
+      if (unitError) throw unitError;
       if (!currentUnit) {
         throw new Error("Unit tidak ditemukan atau sudah dihapus.");
       }
@@ -485,13 +460,10 @@ export default function MasterUnitPage() {
   }
 
   function canContinueDelete() {
-    const unit = deleteState.unit;
-
-    if (!unit) return false;
-
     return (
       deleteState.checked &&
-      normalize(deleteState.typingName) === normalize(unit.nama_unit)
+      normalize(deleteState.typingName) ===
+        normalize(deleteState.unit?.nama_unit)
     );
   }
 
@@ -509,7 +481,7 @@ export default function MasterUnitPage() {
     setDeleteState((current) => ({
       ...current,
       error: "",
-      step: 3,
+      step: 4,
     }));
   }
 
@@ -527,7 +499,7 @@ export default function MasterUnitPage() {
     setDeleteState((current) => ({
       ...current,
       error: "",
-      step: 4,
+      step: 5,
     }));
   }
 
@@ -545,1061 +517,861 @@ export default function MasterUnitPage() {
     setDeleteState((current) => ({
       ...current,
       error: "",
-      step: 5,
+      step: 6,
     }));
   }
 
-  async function executePermanentDelete() {
-    const unit = deleteState.unit;
-
-    if (!unit) return;
-
-    /*
-     * PENTING:
-     * Jangan melakukan DELETE permanen dari browser dengan anon key.
-     *
-     * Eksekusi final nantinya harus dipindahkan ke backend / Edge Function
-     * yang memverifikasi:
-     * - Admin
-     * - password
-     * - OTP
-     * - unit benar-benar kosong
-     * - audit log
-     * - histori unit
-     *
-     * Untuk saat ini tombol final sengaja belum menjalankan DELETE.
-     */
-
+  function executePermanentDelete() {
     setDeleteState((current) => ({
       ...current,
       error:
-        "Penghapusan permanen belum diaktifkan. Tahap ini harus diproses melalui backend aman agar password, OTP, audit log, histori unit, dan DELETE tidak dieksekusi menggunakan anon key.",
+        "Penghapusan permanen belum diaktifkan. Proses ini harus melalui backend aman yang memverifikasi Admin, password, OTP, relasi data, audit log, dan histori unit.",
     }));
   }
 
+  const selectedCabang = selectedUnit
+    ? cabangMap[selectedUnit.cabang_id]
+    : null;
+
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-sm font-medium text-zinc-500">Master Data</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
-            Master Unit
-          </h1>
-          <p className="mt-1 text-sm text-zinc-500">
-            Kelola unit kerja, status unit, perpindahan data, dan histori.
-          </p>
+    <main className="mx-auto w-full max-w-[960px] min-w-0 space-y-5 px-3 pb-8 sm:space-y-6 sm:px-5 lg:px-6">
+      <header>
+        <div className="mb-2 flex items-center gap-2 text-zinc-400">
+          <Landmark size={16} />
+          <span className="text-[11px] font-semibold uppercase tracking-wider">
+            Data Master
+          </span>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-xl font-semibold tracking-tight text-zinc-900 sm:text-2xl">
+              Master Unit
+            </h1>
+            <p className="mt-1 text-sm leading-relaxed text-zinc-500">
+              Kelola unit kerja, status, perpindahan data, dan histori.
+            </p>
+          </div>
+
           <button
             type="button"
             onClick={loadAll}
-            disabled={loading}
-            className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-60"
+            disabled={loading || saving}
+            title="Refresh data"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 disabled:opacity-50 sm:w-auto sm:px-3"
           >
-            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </button>
-
-          <button
-            type="button"
-            onClick={openAdd}
-            className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white transition hover:bg-zinc-800"
-          >
-            <Plus className="h-4 w-4" />
-            Tambah Unit
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            <span className="ml-2 hidden text-sm font-medium sm:inline">
+              Refresh
+            </span>
           </button>
         </div>
-      </div>
+      </header>
 
       {error && (
-        <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          <XCircle className="mt-0.5 h-5 w-5 shrink-0" />
-          <div>{error}</div>
-        </div>
+        <Notice message={error} type="error" onClose={() => setError("")} />
       )}
 
       {success && (
-        <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
-          <div>{success}</div>
-        </div>
+        <Notice
+          message={success}
+          type="success"
+          onClose={() => setSuccess("")}
+        />
       )}
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard label="Total Unit" value={summary.total} icon={Landmark} />
-
         <SummaryCard
           label="Unit Aktif"
           value={summary.aktif}
           icon={CheckCircle2}
         />
-
         <SummaryCard label="Nonaktif" value={summary.nonaktif} icon={XCircle} />
-
         <SummaryCard label="Arsip" value={summary.arsip} icon={Archive} />
-      </div>
+      </section>
 
-      <div className="rounded-2xl border border-zinc-200 bg-white">
-        <div className="border-b border-zinc-200 p-4">
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-            <div className="relative min-w-0 flex-1 lg:max-w-xl">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-zinc-200 bg-white">
+        <div className="space-y-3 border-b border-zinc-100 p-3 sm:p-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                size={17}
+                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400"
+              />
               <input
-                type="text"
+                type="search"
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Cari nama unit, kode, legacy, kawasan..."
-                className="h-10 w-full rounded-lg border border-zinc-200 bg-white pl-9 pr-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-400"
+                placeholder="Cari nama unit, kode, cabang..."
+                className={`${inputClass} h-11 pl-10`}
               />
             </div>
 
-            <div className="relative">
-              <select
-                value={statusFilter}
-                onChange={(event) => setStatusFilter(event.target.value)}
-                className="h-10 min-w-[150px] appearance-none rounded-lg border border-zinc-200 bg-white pl-3 pr-9 text-sm text-zinc-700 outline-none focus:border-zinc-400"
-              >
-                <option value="SEMUA">Semua Status</option>
-                {STATUS_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-
-              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-            </div>
+            <button
+              type="button"
+              onClick={openAdd}
+              className="flex h-11 w-full shrink-0 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-5 text-sm font-medium text-white transition hover:bg-zinc-700 sm:w-auto"
+            >
+              <Plus size={17} />
+              Tambah Unit
+            </button>
           </div>
+
+          <select
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className={`${inputClass} h-10 sm:max-w-[220px]`}
+          >
+            <option value="SEMUA">Semua Status</option>
+            {STATUS_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center justify-between gap-3 border-b border-zinc-100 px-4 py-3 sm:px-5">
+          <div className="flex items-center gap-2">
+            <Building2 size={17} className="text-zinc-500" />
+            <h2 className="text-sm font-semibold text-zinc-900">Daftar Unit</h2>
+          </div>
+
+          {!loading && (
+            <span className="text-xs text-zinc-400">
+              {filteredUnits.length} dari {units.length} data
+            </span>
+          )}
         </div>
 
         {loading ? (
-          <div className="flex items-center justify-center px-6 py-16 text-sm text-zinc-500">
-            <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
-            Memuat data unit...
+          <div className="px-4 py-16 text-center">
+            <RefreshCw
+              size={24}
+              className="mx-auto animate-spin text-zinc-400"
+            />
+            <p className="mt-3 text-sm text-zinc-500">Memuat data unit...</p>
           </div>
         ) : filteredUnits.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
-            <Landmark className="h-10 w-10 text-zinc-300" />
-            <p className="mt-3 text-sm font-medium text-zinc-700">
-              Tidak ada unit ditemukan
+          <div className="px-4 py-16 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-zinc-100">
+              <Landmark size={22} className="text-zinc-400" />
+            </div>
+            <p className="mt-4 text-sm font-semibold text-zinc-800">
+              {search || statusFilter !== "SEMUA"
+                ? "Data tidak ditemukan"
+                : "Belum ada data unit"}
             </p>
-            <p className="mt-1 text-sm text-zinc-500">
-              Coba ubah kata pencarian atau filter status.
+            <p className="mt-1 text-xs text-zinc-400">
+              {search || statusFilter !== "SEMUA"
+                ? "Coba ubah kata kunci atau filter."
+                : "Tambahkan unit baru untuk memulai."}
             </p>
           </div>
         ) : (
-          <>
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[1050px] text-sm">
-                <thead>
-                  <tr className="border-b border-zinc-200 bg-zinc-50/70 text-left text-xs font-semibold uppercase tracking-wide text-zinc-500">
-                    <th className="px-5 py-3">Unit</th>
-                    <th className="px-5 py-3">Kode Unit</th>
-                    <th className="px-5 py-3">Cabang</th>
-                    <th className="px-5 py-3">Kawasan</th>
-                    <th className="px-5 py-3">Legacy</th>
-                    <th className="px-5 py-3">Status</th>
-                    <th className="px-5 py-3 text-right">Aksi</th>
-                  </tr>
-                </thead>
+          <div className="grid grid-cols-1 gap-3 p-3 sm:grid-cols-2 sm:gap-4 sm:p-5">
+            {filteredUnits.map((unit) => {
+              const cabang = cabangMap[unit.cabang_id];
 
-                <tbody className="divide-y divide-zinc-100">
-                  {filteredUnits.map((unit) => {
-                    const cabang = cabangMap[unit.cabang_id];
+              return (
+                <article
+                  key={unit.id}
+                  className="min-w-0 rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-zinc-300 hover:shadow-sm sm:p-5"
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedUnit(unit)}
+                    className="block w-full min-w-0 rounded-lg text-left outline-none focus-visible:ring-2 focus-visible:ring-zinc-400 focus-visible:ring-offset-2"
+                    aria-label={`Lihat detail ${unit.nama_unit}`}
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600">
+                        <Landmark size={20} />
+                      </div>
 
-                    return (
-                      <tr
-                        key={unit.id}
-                        className="transition hover:bg-zinc-50/60"
-                      >
-                        <td className="px-5 py-4">
-                          <div className="font-medium text-zinc-900">
-                            {unit.nama_unit}
-                          </div>
-                          <div className="mt-0.5 text-xs text-zinc-400">
-                            ID: {unit.id}
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4 font-medium text-zinc-700">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="break-words text-sm font-semibold leading-5 text-zinc-900 sm:text-base">
+                          {unit.nama_unit || "-"}
+                        </h3>
+                        <p className="mt-1 text-sm text-zinc-500">
                           {unit.kode_unit || "-"}
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <div className="text-zinc-700">
-                            {cabang?.nama_cabang || "-"}
-                          </div>
-                          <div className="text-xs text-zinc-400">
-                            {cabang?.kode_cabang || ""}
-                          </div>
-                        </td>
-
-                        <td className="px-5 py-4 text-zinc-600">
-                          {unit.kode_kawasan || "-"}
-                        </td>
-
-                        <td className="px-5 py-4 text-zinc-600">
-                          {unit.kode_legacy || "-"}
-                        </td>
-
-                        <td className="px-5 py-4">
+                        </p>
+                        <div className="mt-2 flex flex-wrap items-center gap-2">
                           <span
-                            className={`inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass(
+                            className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold ${statusClass(
                               unit.status,
                             )}`}
                           >
                             {statusLabel(unit.status)}
                           </span>
-                        </td>
-
-                        <td className="px-5 py-4">
-                          <div className="flex justify-end gap-1">
-                            <ActionButton
-                              icon={Edit3}
-                              label="Edit"
-                              onClick={() => openEdit(unit)}
-                            />
-
-                            <ActionButton
-                              icon={ArrowRightLeft}
-                              label="Pindahkan Data"
-                              onClick={() => openMove(unit)}
-                            />
-
-                            {unit.status === STATUS.AKTIF ? (
-                              <ActionButton
-                                icon={XCircle}
-                                label="Nonaktifkan"
-                                onClick={() =>
-                                  updateStatus(unit, STATUS.NONAKTIF)
-                                }
-                              />
-                            ) : unit.status === STATUS.NONAKTIF ? (
-                              <ActionButton
-                                icon={CheckCircle2}
-                                label="Aktifkan"
-                                onClick={() => updateStatus(unit, STATUS.AKTIF)}
-                              />
-                            ) : null}
-
-                            {unit.status !== STATUS.ARSIP && (
-                              <ActionButton
-                                icon={Archive}
-                                label="Arsipkan"
-                                onClick={() => updateStatus(unit, STATUS.ARSIP)}
-                              />
-                            )}
-
-                            <ActionButton
-                              icon={Trash2}
-                              label="Hapus Permanen"
-                              danger
-                              onClick={() => openPermanentDelete(unit)}
-                            />
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="divide-y divide-zinc-100 lg:hidden">
-              {filteredUnits.map((unit) => {
-                const cabang = cabangMap[unit.cabang_id];
-
-                return (
-                  <div key={unit.id} className="space-y-4 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="font-semibold text-zinc-900">
-                          {unit.nama_unit}
-                        </div>
-
-                        <div className="mt-1 text-sm text-zinc-500">
-                          {unit.kode_unit || "-"}
                         </div>
                       </div>
-
-                      <span
-                        className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-medium ${statusClass(
-                          unit.status,
-                        )}`}
-                      >
-                        {statusLabel(unit.status)}
-                      </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 rounded-xl bg-zinc-50 p-3 text-sm">
+                    <div className="mt-5 grid grid-cols-2 gap-3 rounded-xl bg-zinc-50 p-3 sm:p-4">
                       <InfoItem
                         label="Cabang"
                         value={cabang?.nama_cabang || "-"}
                       />
                       <InfoItem
-                        label="Legacy"
-                        value={unit.kode_legacy || "-"}
+                        label="Kode Cabang"
+                        value={cabang?.kode_cabang || "-"}
                       />
                       <InfoItem
-                        label="Kawasan"
+                        label="Kode Kawasan"
                         value={unit.kode_kawasan || "-"}
                       />
-                      <InfoItem label="Kode" value={unit.kode_unit || "-"} />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <MobileAction
-                        icon={Edit3}
-                        label="Edit"
-                        onClick={() => openEdit(unit)}
-                      />
-
-                      <MobileAction
-                        icon={ArrowRightLeft}
-                        label="Pindahkan"
-                        onClick={() => openMove(unit)}
-                      />
-
-                      {unit.status === STATUS.AKTIF ? (
-                        <MobileAction
-                          icon={XCircle}
-                          label="Nonaktifkan"
-                          onClick={() => updateStatus(unit, STATUS.NONAKTIF)}
-                        />
-                      ) : unit.status === STATUS.NONAKTIF ? (
-                        <MobileAction
-                          icon={CheckCircle2}
-                          label="Aktifkan"
-                          onClick={() => updateStatus(unit, STATUS.AKTIF)}
-                        />
-                      ) : null}
-
-                      {unit.status !== STATUS.ARSIP && (
-                        <MobileAction
-                          icon={Archive}
-                          label="Arsipkan"
-                          onClick={() => updateStatus(unit, STATUS.ARSIP)}
-                        />
-                      )}
-
-                      <MobileAction
-                        icon={Trash2}
-                        label="Hapus Permanen"
-                        danger
-                        onClick={() => openPermanentDelete(unit)}
+                      <InfoItem
+                        label="Kode Legacy"
+                        value={unit.kode_legacy || "-"}
                       />
                     </div>
+
+                    <p className="mt-3 text-center text-xs font-medium text-zinc-400">
+                      Klik untuk melihat detail
+                    </p>
+                  </button>
+
+                  <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-zinc-100 pt-3">
+                    <ActionButton
+                      icon={Edit3}
+                      label="Edit"
+                      onClick={() => openEdit(unit)}
+                    />
+                    <ActionButton
+                      icon={ArrowRightLeft}
+                      label="Pindahkan Data"
+                      onClick={() => openMove(unit)}
+                    />
+                    {unit.status === STATUS.AKTIF ? (
+                      <ActionButton
+                        icon={XCircle}
+                        label="Nonaktifkan"
+                        onClick={() => updateStatus(unit, STATUS.NONAKTIF)}
+                      />
+                    ) : unit.status === STATUS.NONAKTIF ? (
+                      <ActionButton
+                        icon={CheckCircle2}
+                        label="Aktifkan"
+                        onClick={() => updateStatus(unit, STATUS.AKTIF)}
+                      />
+                    ) : null}
+                    {unit.status !== STATUS.ARSIP && (
+                      <ActionButton
+                        icon={Archive}
+                        label="Arsipkan"
+                        onClick={() => updateStatus(unit, STATUS.ARSIP)}
+                      />
+                    )}
+                    <ActionButton
+                      icon={Trash2}
+                      label="Hapus Permanen"
+                      danger
+                      onClick={() => openPermanentDelete(unit)}
+                    />
                   </div>
-                );
-              })}
-            </div>
-          </>
+                </article>
+              );
+            })}
+          </div>
         )}
 
-        <div className="border-t border-zinc-200 px-5 py-3 text-xs text-zinc-400">
-          Menampilkan {filteredUnits.length} dari {units.length} unit.
-        </div>
-      </div>
+        {!loading && (
+          <div className="border-t border-zinc-100 px-4 py-3 sm:px-5">
+            <p className="text-xs text-zinc-400">
+              Menampilkan {filteredUnits.length} dari {units.length} unit.
+            </p>
+          </div>
+        )}
+      </section>
 
-      {showForm && (
-        <ModalOverlay>
-          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-zinc-900">
-                  {editingUnit ? "Edit Unit" : "Tambah Unit"}
-                </h2>
-
-                <p className="mt-0.5 text-sm text-zinc-500">
-                  {editingUnit
-                    ? "Perbarui informasi unit kerja."
-                    : "Tambahkan unit kerja baru ke JOSJIS."}
-                </p>
+      {selectedUnit && (
+        <Modal title="Detail Unit" onClose={() => setSelectedUnit(null)}>
+          <div className="space-y-5">
+            <div className="flex min-w-0 items-start gap-3">
+              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-600">
+                <Landmark size={26} />
               </div>
-
-              <button
-                type="button"
-                onClick={closeForm}
-                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="min-w-0 flex-1">
+                <h3 className="break-words text-base font-semibold text-zinc-900">
+                  {selectedUnit.nama_unit}
+                </h3>
+                <p className="mt-1 text-sm text-zinc-500">
+                  {selectedUnit.kode_unit || "-"}
+                </p>
+                <span
+                  className={`mt-2 inline-flex rounded-lg border px-2.5 py-1 text-xs font-semibold ${statusClass(
+                    selectedUnit.status,
+                  )}`}
+                >
+                  {statusLabel(selectedUnit.status)}
+                </span>
+              </div>
             </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="space-y-5 p-5">
-                <div className="grid gap-5 md:grid-cols-2">
-                  <FormField label="Nama Unit" required>
-                    <input
-                      type="text"
-                      value={form.nama_unit}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          nama_unit: event.target.value,
-                        }))
-                      }
-                      placeholder="Contoh: Jambi Kuamang Kuning 3"
-                      className="form-input"
-                    />
-                  </FormField>
-
-                  <FormField label="Kode Unit" required>
-                    <input
-                      type="text"
-                      value={form.kode_unit}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          kode_unit: event.target.value,
-                        }))
-                      }
-                      placeholder="Contoh: JKK 3"
-                      className="form-input"
-                    />
-                  </FormField>
-
-                  <FormField label="Kode Legacy">
-                    <input
-                      type="text"
-                      value={form.kode_legacy}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          kode_legacy: event.target.value,
-                        }))
-                      }
-                      placeholder="Contoh: 11081A"
-                      className="form-input"
-                    />
-                  </FormField>
-
-                  <FormField label="Kode Kawasan">
-                    <input
-                      type="text"
-                      value={form.kode_kawasan}
-                      onChange={(event) =>
-                        setForm((current) => ({
-                          ...current,
-                          kode_kawasan: event.target.value,
-                        }))
-                      }
-                      placeholder="Contoh: K04110"
-                      className="form-input"
-                    />
-                  </FormField>
-
-                  <FormField label="Cabang" required>
-                    <div className="relative">
-                      <select
-                        value={form.cabang_id}
-                        onChange={(event) =>
-                          setForm((current) => ({
-                            ...current,
-                            cabang_id: event.target.value,
-                          }))
-                        }
-                        className="form-input appearance-none pr-9"
-                      >
-                        <option value="">Pilih Cabang</option>
-
-                        {cabangs.map((cabang) => (
-                          <option key={cabang.id} value={cabang.id}>
-                            {cabang.nama_cabang}
-                            {cabang.kode_cabang
-                              ? ` — ${cabang.kode_cabang}`
-                              : ""}
-                          </option>
-                        ))}
-                      </select>
-
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                    </div>
-                  </FormField>
-
-                  <FormField label="Status" required>
-                    <div className="relative">
-                      <select
-                        value={form.status}
-                        onChange={(event) =>
-                          setForm((current) => ({
-                            ...current,
-                            status: event.target.value,
-                          }))
-                        }
-                        className="form-input appearance-none pr-9"
-                      >
-                        {STATUS_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value}>
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-
-                      <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                    </div>
-                  </FormField>
-                </div>
-
-                <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-                  <div className="font-medium">Catatan</div>
-                  <div className="mt-1 text-blue-600">
-                    Nonaktif dan Arsip tidak menghapus data unit. Penghapusan
-                    permanen memiliki proses keamanan tersendiri.
-                  </div>
-                </div>
+            <div className="rounded-xl border border-zinc-200 p-4">
+              <h4 className="mb-4 text-xs font-semibold uppercase tracking-wider text-zinc-400">
+                Informasi Unit
+              </h4>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <InfoItem label="Nama Unit" value={selectedUnit.nama_unit} />
+                <InfoItem label="Kode Unit" value={selectedUnit.kode_unit} />
+                <InfoItem
+                  label="Cabang"
+                  value={selectedCabang?.nama_cabang || "-"}
+                />
+                <InfoItem
+                  label="Kode Cabang"
+                  value={selectedCabang?.kode_cabang || "-"}
+                />
+                <InfoItem
+                  label="Kode Kawasan"
+                  value={selectedUnit.kode_kawasan}
+                />
+                <InfoItem
+                  label="Kode Legacy"
+                  value={selectedUnit.kode_legacy}
+                />
+                <InfoItem
+                  label="Status"
+                  value={statusLabel(selectedUnit.status)}
+                />
+                <InfoItem
+                  label="Tanggal Arsip"
+                  value={
+                    selectedUnit.archived_at
+                      ? new Date(selectedUnit.archived_at).toLocaleDateString(
+                          "id-ID",
+                        )
+                      : "-"
+                  }
+                />
               </div>
+            </div>
 
-              <div className="flex justify-end gap-2 border-t border-zinc-200 bg-zinc-50 px-5 py-4">
-                <button
-                  type="button"
-                  onClick={closeForm}
-                  disabled={saving}
-                  className="h-10 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50"
-                >
-                  Batal
-                </button>
-
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {saving && <RefreshCw className="h-4 w-4 animate-spin" />}
-                  {editingUnit ? "Simpan Perubahan" : "Tambah Unit"}
-                </button>
-              </div>
-            </form>
+            <div className="flex flex-col-reverse gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setSelectedUnit(null)}
+                className="h-11 rounded-xl border border-zinc-200 px-5 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
+              >
+                Tutup
+              </button>
+              <button
+                type="button"
+                onClick={() => openEdit(selectedUnit)}
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-5 text-sm font-medium text-white hover:bg-zinc-700"
+              >
+                <Edit3 size={15} />
+                Edit Unit
+              </button>
+            </div>
           </div>
-        </ModalOverlay>
+        </Modal>
+      )}
+
+      {showForm && (
+        <Modal
+          title={editingUnit ? "Edit Unit" : "Tambah Unit"}
+          subtitle={
+            editingUnit
+              ? "Perbarui informasi unit kerja."
+              : "Tambahkan unit kerja baru ke JOSJIS."
+          }
+          onClose={closeForm}
+          maxWidth="max-w-2xl"
+        >
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Field label="Nama Unit" required>
+                <input
+                  value={form.nama_unit}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      nama_unit: event.target.value,
+                    }))
+                  }
+                  placeholder="Contoh: Jambi Kuamang Kuning 3"
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Kode Unit" required>
+                <input
+                  value={form.kode_unit}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      kode_unit: event.target.value,
+                    }))
+                  }
+                  placeholder="Contoh: JKK 3"
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Kode Legacy">
+                <input
+                  value={form.kode_legacy}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      kode_legacy: event.target.value,
+                    }))
+                  }
+                  placeholder="Contoh: 11081A"
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Kode Kawasan">
+                <input
+                  value={form.kode_kawasan}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      kode_kawasan: event.target.value,
+                    }))
+                  }
+                  placeholder="Contoh: K04110"
+                  className={inputClass}
+                />
+              </Field>
+
+              <Field label="Cabang" required>
+                <select
+                  value={form.cabang_id}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      cabang_id: event.target.value,
+                    }))
+                  }
+                  className={inputClass}
+                >
+                  <option value="">Pilih Cabang</option>
+                  {cabangs.map((cabang) => (
+                    <option key={cabang.id} value={cabang.id}>
+                      {cabang.nama_cabang}
+                      {cabang.kode_cabang ? ` — ${cabang.kode_cabang}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+
+              <Field label="Status" required>
+                <select
+                  value={form.status}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      status: event.target.value,
+                    }))
+                  }
+                  className={inputClass}
+                >
+                  {STATUS_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </Field>
+            </div>
+
+            <div className="rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+              <div className="font-medium">Catatan</div>
+              <p className="mt-1 text-blue-600">
+                Nonaktif dan Arsip tidak menghapus data unit. Penghapusan
+                permanen memiliki proses keamanan tersendiri.
+              </p>
+            </div>
+
+            {error && <InlineError>{error}</InlineError>}
+
+            <ModalActions
+              onCancel={closeForm}
+              saving={saving}
+              submitLabel={editingUnit ? "Simpan Perubahan" : "Tambah Unit"}
+            />
+          </form>
+        </Modal>
       )}
 
       {showMove && moveSource && (
-        <ModalOverlay>
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-              <div>
-                <h2 className="text-lg font-semibold text-zinc-900">
-                  Pindahkan Data Unit
-                </h2>
+        <Modal
+          title="Pindahkan Data Unit"
+          subtitle={moveSource.nama_unit}
+          onClose={closeMove}
+          maxWidth="max-w-xl"
+        >
+          <form onSubmit={executeMovePreview} className="space-y-5">
+            <Field label="Unit Tujuan" required>
+              <select
+                value={moveTarget}
+                onChange={(event) => setMoveTarget(event.target.value)}
+                className={inputClass}
+              >
+                <option value="">Pilih Unit Tujuan</option>
+                {units
+                  .filter(
+                    (item) =>
+                      item.id !== moveSource.id &&
+                      item.cabang_id === moveSource.cabang_id &&
+                      item.status !== STATUS.ARSIP,
+                  )
+                  .map((unit) => (
+                    <option key={unit.id} value={unit.id}>
+                      {unit.nama_unit} — {unit.kode_unit}
+                    </option>
+                  ))}
+              </select>
+            </Field>
 
-                <p className="mt-0.5 text-sm text-zinc-500">
-                  {moveSource.nama_unit}
-                </p>
+            <div>
+              <div className="mb-2 text-xs font-semibold text-zinc-600">
+                Jenis Pemindahan
               </div>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                {[
+                  {
+                    value: "SELURUH",
+                    label: "Seluruh Data",
+                    description: "Memindahkan seluruh data terkait unit.",
+                  },
+                  {
+                    value: "SELEKTIF",
+                    label: "Selektif",
+                    description: "Memilih data tertentu untuk dipindahkan.",
+                  },
+                ].map((option) => (
+                  <label
+                    key={option.value}
+                    className={`cursor-pointer rounded-xl border p-4 transition ${
+                      moveMode === option.value
+                        ? "border-zinc-900 bg-zinc-50"
+                        : "border-zinc-200 hover:bg-zinc-50"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="moveMode"
+                      value={option.value}
+                      checked={moveMode === option.value}
+                      onChange={(event) => setMoveMode(event.target.value)}
+                      className="sr-only"
+                    />
+                    <div className="text-sm font-semibold text-zinc-900">
+                      {option.label}
+                    </div>
+                    <p className="mt-1 text-xs text-zinc-500">
+                      {option.description}
+                    </p>
+                  </label>
+                ))}
+              </div>
+            </div>
 
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+              <div className="font-medium">Preview migrasi</div>
+              <p className="mt-1">
+                Eksekusi pemindahan belum diaktifkan sampai seluruh tabel
+                operasional dan histori unit terhubung.
+              </p>
+            </div>
+
+            {error && <InlineError>{error}</InlineError>}
+
+            <div className="flex flex-col-reverse gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
               <button
                 type="button"
                 onClick={closeMove}
-                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+                className="h-11 rounded-xl border border-zinc-200 px-5 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
               >
-                <X className="h-5 w-5" />
+                Tutup
+              </button>
+              <button
+                type="submit"
+                className="flex h-11 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-5 text-sm font-medium text-white hover:bg-zinc-700"
+              >
+                <ArrowRightLeft size={15} />
+                Preview Pemindahan
               </button>
             </div>
-
-            <form onSubmit={executeMovePreview}>
-              <div className="space-y-5 p-5">
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-zinc-700">
-                    Unit Tujuan
-                  </label>
-
-                  <div className="relative">
-                    <select
-                      value={moveTarget}
-                      onChange={(event) => setMoveTarget(event.target.value)}
-                      className="form-input appearance-none pr-9"
-                    >
-                      <option value="">Pilih Unit Tujuan</option>
-
-                      {units
-                        .filter(
-                          (item) =>
-                            item.id !== moveSource.id &&
-                            item.cabang_id === moveSource.cabang_id &&
-                            item.status !== STATUS.ARSIP,
-                        )
-                        .map((unit) => (
-                          <option key={unit.id} value={unit.id}>
-                            {unit.nama_unit} — {unit.kode_unit}
-                          </option>
-                        ))}
-                    </select>
-
-                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-400" />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="mb-2 block text-sm font-medium text-zinc-700">
-                    Jenis Pemindahan
-                  </label>
-
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <label
-                      className={`cursor-pointer rounded-xl border p-4 transition ${
-                        moveMode === "SELURUH"
-                          ? "border-zinc-900 bg-zinc-50"
-                          : "border-zinc-200 hover:bg-zinc-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="moveMode"
-                        value="SELURUH"
-                        checked={moveMode === "SELURUH"}
-                        onChange={(event) => setMoveMode(event.target.value)}
-                        className="sr-only"
-                      />
-
-                      <div className="font-medium text-zinc-900">
-                        Seluruh Data
-                      </div>
-                      <div className="mt-1 text-xs text-zinc-500">
-                        Memindahkan seluruh data yang terkait unit.
-                      </div>
-                    </label>
-
-                    <label
-                      className={`cursor-pointer rounded-xl border p-4 transition ${
-                        moveMode === "SELEKTIF"
-                          ? "border-zinc-900 bg-zinc-50"
-                          : "border-zinc-200 hover:bg-zinc-50"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="moveMode"
-                        value="SELEKTIF"
-                        checked={moveMode === "SELEKTIF"}
-                        onChange={(event) => setMoveMode(event.target.value)}
-                        className="sr-only"
-                      />
-
-                      <div className="font-medium text-zinc-900">Selektif</div>
-                      <div className="mt-1 text-xs text-zinc-500">
-                        Memilih data tertentu untuk dipindahkan.
-                      </div>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                  <div className="font-medium">Preview migrasi</div>
-                  <div className="mt-1">
-                    Eksekusi pemindahan akan diaktifkan setelah seluruh tabel
-                    operasional dan histori unit terhubung.
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 border-t border-zinc-200 bg-zinc-50 px-5 py-4">
-                <button
-                  type="button"
-                  onClick={closeMove}
-                  className="h-10 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                >
-                  Tutup
-                </button>
-
-                <button
-                  type="submit"
-                  className="inline-flex h-10 items-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800"
-                >
-                  <ArrowRightLeft className="h-4 w-4" />
-                  Preview Pemindahan
-                </button>
-              </div>
-            </form>
-          </div>
-        </ModalOverlay>
+          </form>
+        </Modal>
       )}
 
       {deleteState.unit && (
-        <ModalOverlay>
-          <div className="w-full max-w-xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-zinc-200 px-5 py-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-50 text-red-600">
-                    <ShieldCheck className="h-5 w-5" />
-                  </div>
-
-                  <div>
-                    <h2 className="text-lg font-semibold text-zinc-900">
-                      Hapus Permanen
-                    </h2>
-
-                    <p className="text-sm text-zinc-500">
-                      {deleteState.unit.nama_unit}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={closePermanentDelete}
-                disabled={deleteState.checking}
-                className="rounded-lg p-2 text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700 disabled:opacity-50"
-              >
-                <X className="h-5 w-5" />
-              </button>
+        <Modal
+          title="Hapus Permanen"
+          subtitle={deleteState.unit.nama_unit}
+          onClose={closePermanentDelete}
+          maxWidth="max-w-xl"
+        >
+          <div className="space-y-5">
+            <div className="flex items-center gap-2">
+              {[1, 2, 3, 4, 5, 6].map((step) => (
+                <div
+                  key={step}
+                  className={`h-1.5 flex-1 rounded-full ${
+                    deleteState.step >= step ? "bg-red-500" : "bg-zinc-200"
+                  }`}
+                />
+              ))}
             </div>
 
-            <div className="p-5">
-              <div className="mb-5 flex items-center gap-2">
-                {[1, 2, 3, 4, 5].map((step) => (
-                  <div
-                    key={step}
-                    className={`h-1.5 flex-1 rounded-full ${
-                      deleteState.step >= step ? "bg-red-500" : "bg-zinc-200"
-                    }`}
-                  />
-                ))}
+            {deleteState.error && (
+              <InlineError>{deleteState.error}</InlineError>
+            )}
+
+            {deleteState.step === 1 && (
+              <div className="space-y-5">
+                <DangerNotice
+                  title="Penghapusan permanen"
+                  text="Unit hanya boleh dihapus apabila seluruh data terkait sudah dipindahkan atau tidak memiliki relasi aktif."
+                />
+                <p className="text-sm text-zinc-600">
+                  Sistem akan melakukan pemeriksaan awal sebelum proses
+                  penghapusan dilanjutkan.
+                </p>
+                <button
+                  type="button"
+                  onClick={checkUnitRelatedData}
+                  disabled={deleteState.checking}
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+                >
+                  {deleteState.checking ? (
+                    <RefreshCw size={16} className="animate-spin" />
+                  ) : (
+                    <ShieldCheck size={16} />
+                  )}
+                  {deleteState.checking
+                    ? "Memeriksa Data..."
+                    : "Periksa Data Unit"}
+                </button>
               </div>
+            )}
 
-              {deleteState.error && (
-                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                  {deleteState.error}
+            {deleteState.step === 2 && (
+              <div className="space-y-5">
+                <div>
+                  <h3 className="font-semibold text-zinc-900">
+                    Hasil Pemeriksaan
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Pemeriksaan awal berhasil. Jumlah relasi operasional belum
+                    diperiksa.
+                  </p>
                 </div>
-              )}
 
-              {deleteState.step === 1 && (
-                <div className="space-y-5">
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                    <div className="flex gap-3">
-                      <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
-
-                      <div>
-                        <div className="font-semibold text-red-800">
-                          Penghapusan permanen
-                        </div>
-
-                        <div className="mt-1 text-sm leading-6 text-red-700">
-                          Unit hanya boleh dihapus apabila seluruh data terkait
-                          sudah dipindahkan atau sudah tidak memiliki relasi
-                          aktif.
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="text-sm text-zinc-600">
-                    Sistem akan melakukan pemeriksaan data sebelum proses
-                    penghapusan dilanjutkan.
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={checkUnitRelatedData}
-                    disabled={deleteState.checking}
-                    className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {deleteState.checking ? (
-                      <>
-                        <RefreshCw className="h-4 w-4 animate-spin" />
-                        Memeriksa Data...
-                      </>
-                    ) : (
-                      <>
-                        <ShieldCheck className="h-4 w-4" />
-                        Periksa Data Unit
-                      </>
-                    )}
-                  </button>
+                <div className="overflow-hidden rounded-xl border border-zinc-200">
+                  {[
+                    ["Pegawai", deleteState.counts.pegawai],
+                    ["PK", deleteState.counts.pk],
+                    ["Agunan", deleteState.counts.agunan],
+                    ["Order Agunan", deleteState.counts.orderAgunan],
+                    ["Migrasi", deleteState.counts.migrasi],
+                    ["Notaris", deleteState.counts.notaris],
+                    ["BAST", deleteState.counts.bast],
+                  ].map(([label, value], index, array) => (
+                    <DeleteCheckRow
+                      key={label}
+                      label={label}
+                      value={value}
+                      last={index === array.length - 1}
+                    />
+                  ))}
                 </div>
-              )}
 
-              {deleteState.step === 2 && (
-                <div className="space-y-5">
-                  <div>
-                    <h3 className="font-semibold text-zinc-900">
-                      Hasil Pemeriksaan
-                    </h3>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                  Pemeriksaan detail seluruh tabel operasional belum
+                  diimplementasikan.
+                </div>
 
-                    <p className="mt-1 text-sm text-zinc-500">
-                      Pemeriksaan awal berhasil dilakukan.
-                    </p>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setDeleteState((current) => ({
+                      ...current,
+                      step: 3,
+                      error: "",
+                    }))
+                  }
+                  className="h-11 w-full rounded-xl bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700"
+                >
+                  Lanjutkan
+                </button>
+              </div>
+            )}
+
+            {deleteState.step === 3 && (
+              <form onSubmit={goDeleteStep3} className="space-y-5">
+                <div>
+                  <h3 className="font-semibold text-zinc-900">
+                    Konfirmasi Nama Unit
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Ketik nama unit persis untuk memastikan unit yang benar.
+                  </p>
+                </div>
+                <div className="rounded-xl bg-zinc-50 p-4 text-sm">
+                  <div className="text-zinc-500">Nama unit</div>
+                  <div className="mt-1 font-semibold text-zinc-900">
+                    {deleteState.unit.nama_unit}
                   </div>
+                </div>
+                <input
+                  value={deleteState.typingName}
+                  onChange={(event) =>
+                    setDeleteState((current) => ({
+                      ...current,
+                      typingName: event.target.value,
+                      error: "",
+                    }))
+                  }
+                  placeholder="Ketik nama unit di sini"
+                  className={inputClass}
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  disabled={!deleteState.typingName.trim()}
+                  className="h-11 w-full rounded-xl bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+                >
+                  Lanjutkan
+                </button>
+              </form>
+            )}
 
-                  <div className="rounded-xl border border-zinc-200">
-                    <DeleteCheckRow
-                      label="Pegawai"
-                      value={deleteState.counts.pegawai}
-                    />
-                    <DeleteCheckRow label="PK" value={deleteState.counts.pk} />
-                    <DeleteCheckRow
-                      label="Agunan"
-                      value={deleteState.counts.agunan}
-                    />
-                    <DeleteCheckRow
-                      label="Order Agunan"
-                      value={deleteState.counts.orderAgunan}
-                    />
-                    <DeleteCheckRow
-                      label="Migrasi"
-                      value={deleteState.counts.migrasi}
-                    />
-                    <DeleteCheckRow
-                      label="Notaris"
-                      value={deleteState.counts.notaris}
-                    />
-                    <DeleteCheckRow
-                      label="BAST"
-                      value={deleteState.counts.bast}
-                      last
-                    />
-                  </div>
+            {deleteState.step === 4 && (
+              <form onSubmit={goDeleteStep4} className="space-y-5">
+                <div>
+                  <h3 className="font-semibold text-zinc-900">
+                    Verifikasi Admin
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Masukkan password Admin untuk melanjutkan.
+                  </p>
+                </div>
+                <input
+                  type="password"
+                  value={deleteState.adminPassword}
+                  onChange={(event) =>
+                    setDeleteState((current) => ({
+                      ...current,
+                      adminPassword: event.target.value,
+                      error: "",
+                    }))
+                  }
+                  placeholder="Masukkan password Admin"
+                  className={inputClass}
+                  autoFocus
+                />
+                <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                  Password tidak disimpan di database atau audit log. Tahap ini
+                  belum melakukan verifikasi ke backend.
+                </div>
+                <button
+                  type="submit"
+                  disabled={!deleteState.adminPassword.trim()}
+                  className="h-11 w-full rounded-xl bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+                >
+                  Lanjutkan
+                </button>
+              </form>
+            )}
 
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    Pemeriksaan detail seluruh tabel operasional akan diaktifkan
-                    bersamaan dengan modul migrasi dan histori.
-                  </div>
+            {deleteState.step === 5 && (
+              <form onSubmit={verifyOtp} className="space-y-5">
+                <div>
+                  <h3 className="font-semibold text-zinc-900">
+                    Verifikasi OTP
+                  </h3>
+                  <p className="mt-1 text-sm text-zinc-500">
+                    Masukkan OTP untuk melanjutkan.
+                  </p>
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={8}
+                  value={deleteState.otp}
+                  onChange={(event) =>
+                    setDeleteState((current) => ({
+                      ...current,
+                      otp: event.target.value.replace(/\D/g, ""),
+                      error: "",
+                    }))
+                  }
+                  placeholder="Masukkan OTP"
+                  className={`${inputClass} text-center text-lg tracking-[0.3em]`}
+                  autoFocus
+                />
+                <DangerNotice
+                  title="Konfirmasi terakhir"
+                  text="Penghapusan permanen tidak dapat dibatalkan melalui tombol Undo."
+                />
+                <button
+                  type="submit"
+                  disabled={!deleteState.otp.trim()}
+                  className="h-11 w-full rounded-xl bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+                >
+                  Verifikasi OTP
+                </button>
+              </form>
+            )}
 
+            {deleteState.step === 6 && (
+              <div className="space-y-5">
+                <DangerNotice
+                  title="Penghapusan belum diaktifkan"
+                  text={`Unit ${deleteState.unit.nama_unit} belum dapat dihapus. Tahap verifikasi password dan OTP di atas hanya simulasi tampilan; backend aman belum terhubung.`}
+                />
+                <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                   <button
                     type="button"
                     onClick={() =>
                       setDeleteState((current) => ({
                         ...current,
-                        step: 3,
                         error: "",
+                        step: 5,
                       }))
                     }
-                    className="h-10 w-full rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800"
+                    className="h-11 rounded-xl border border-zinc-200 px-5 text-sm font-medium text-zinc-600 hover:bg-zinc-50"
                   >
-                    Lanjutkan
+                    Kembali
                   </button>
-                </div>
-              )}
-
-              {deleteState.step === 3 && (
-                <form onSubmit={goDeleteStep3} className="space-y-5">
-                  <div>
-                    <h3 className="font-semibold text-zinc-900">
-                      Konfirmasi Nama Unit
-                    </h3>
-
-                    <p className="mt-1 text-sm leading-6 text-zinc-500">
-                      Ketik nama unit persis untuk memastikan Anda menghapus
-                      unit yang benar.
-                    </p>
-                  </div>
-
-                  <div className="rounded-xl bg-zinc-50 p-4 text-sm">
-                    <div className="text-zinc-500">Nama unit</div>
-                    <div className="mt-1 font-semibold text-zinc-900">
-                      {deleteState.unit.nama_unit}
-                    </div>
-                  </div>
-
-                  <input
-                    type="text"
-                    value={deleteState.typingName}
-                    onChange={(event) =>
-                      setDeleteState((current) => ({
-                        ...current,
-                        typingName: event.target.value,
-                        error: "",
-                      }))
-                    }
-                    placeholder="Ketik nama unit di sini"
-                    className="form-input"
-                    autoFocus
-                  />
-
                   <button
-                    type="submit"
-                    disabled={!deleteState.typingName.trim()}
-                    className="h-10 w-full rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
+                    type="button"
+                    onClick={executePermanentDelete}
+                    className="h-11 rounded-xl bg-red-600 px-5 text-sm font-medium text-white hover:bg-red-700"
                   >
-                    Lanjutkan
+                    Hapus Permanen
                   </button>
-                </form>
-              )}
-
-              {deleteState.step === 4 && (
-                <form onSubmit={goDeleteStep4} className="space-y-5">
-                  <div>
-                    <h3 className="font-semibold text-zinc-900">
-                      Verifikasi Admin
-                    </h3>
-
-                    <p className="mt-1 text-sm leading-6 text-zinc-500">
-                      Masukkan password Admin untuk melanjutkan.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-zinc-700">
-                      Password Admin
-                    </label>
-
-                    <input
-                      type="password"
-                      value={deleteState.adminPassword}
-                      onChange={(event) =>
-                        setDeleteState((current) => ({
-                          ...current,
-                          adminPassword: event.target.value,
-                          error: "",
-                        }))
-                      }
-                      placeholder="Masukkan password Admin"
-                      className="form-input"
-                      autoFocus
-                    />
-                  </div>
-
-                  <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                    Password tidak akan disimpan di database atau audit log.
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={!deleteState.adminPassword.trim()}
-                    className="h-10 w-full rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    Verifikasi Password
-                  </button>
-                </form>
-              )}
-
-              {deleteState.step === 5 && (
-                <div className="space-y-5">
-                  <div>
-                    <h3 className="font-semibold text-zinc-900">
-                      Verifikasi OTP
-                    </h3>
-
-                    <p className="mt-1 text-sm leading-6 text-zinc-500">
-                      OTP akan dikirim melalui mekanisme keamanan Admin.
-                    </p>
-                  </div>
-
-                  <div>
-                    <label className="mb-2 block text-sm font-medium text-zinc-700">
-                      OTP
-                    </label>
-
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={8}
-                      value={deleteState.otp}
-                      onChange={(event) =>
-                        setDeleteState((current) => ({
-                          ...current,
-                          otp: event.target.value.replace(/\D/g, ""),
-                          error: "",
-                        }))
-                      }
-                      placeholder="Masukkan OTP"
-                      className="form-input text-center text-lg tracking-[0.3em]"
-                      autoFocus
-                    />
-                  </div>
-
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-4">
-                    <div className="font-semibold text-red-800">
-                      Konfirmasi terakhir
-                    </div>
-
-                    <div className="mt-1 text-sm leading-6 text-red-700">
-                      Setelah penghapusan permanen dijalankan, unit tidak dapat
-                      dikembalikan melalui tombol Undo.
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDeleteState((current) => ({
-                          ...current,
-                          error: "",
-                          step: 4,
-                        }))
-                      }
-                      className="h-10 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                    >
-                      Kembali
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={verifyOtp}
-                      disabled={!deleteState.otp.trim()}
-                      className="h-10 rounded-lg bg-zinc-900 px-4 text-sm font-medium text-white hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      Verifikasi OTP
-                    </button>
-                  </div>
                 </div>
-              )}
-
-              {deleteState.step === 6 && (
-                <div className="space-y-5">
-                  <div className="rounded-xl border border-red-200 bg-red-50 p-5 text-center">
-                    <Trash2 className="mx-auto h-10 w-10 text-red-600" />
-
-                    <h3 className="mt-3 font-semibold text-red-900">
-                      Hapus Unit Secara Permanen?
-                    </h3>
-
-                    <p className="mt-2 text-sm leading-6 text-red-700">
-                      Unit <strong>{deleteState.unit.nama_unit}</strong> akan
-                      dihapus permanen setelah seluruh pemeriksaan keamanan
-                      berhasil.
-                    </p>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setDeleteState((current) => ({
-                          ...current,
-                          error: "",
-                          step: 5,
-                        }))
-                      }
-                      className="h-10 rounded-lg border border-zinc-200 bg-white px-4 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-                    >
-                      Batal
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={executePermanentDelete}
-                      className="h-10 rounded-lg bg-red-600 px-4 text-sm font-medium text-white hover:bg-red-700"
-                    >
-                      Hapus Permanen
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
-        </ModalOverlay>
+        </Modal>
       )}
-    </div>
+    </main>
   );
 }
 
 function SummaryCard({ label, value, icon: Icon }) {
   return (
-    <div className="rounded-2xl border border-zinc-200 bg-white p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <div className="text-sm text-zinc-500">{label}</div>
-          <div className="mt-1 text-2xl font-semibold text-zinc-900">
+    <div className="rounded-2xl border border-zinc-200 bg-white p-3 sm:p-4">
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-xs text-zinc-500 sm:text-sm">{label}</div>
+          <div className="mt-1 text-xl font-semibold text-zinc-900 sm:text-2xl">
             {value}
           </div>
         </div>
-
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600">
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-600 sm:h-10 sm:w-10">
           <Icon className="h-5 w-5" />
         </div>
       </div>
@@ -1613,53 +1385,142 @@ function ActionButton({ icon: Icon, label, onClick, danger = false }) {
       type="button"
       onClick={onClick}
       title={label}
-      className={`rounded-lg p-2 transition ${
+      aria-label={label}
+      className={`inline-flex h-10 items-center justify-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition ${
         danger
-          ? "text-red-500 hover:bg-red-50 hover:text-red-700"
-          : "text-zinc-400 hover:bg-zinc-100 hover:text-zinc-700"
+          ? "border-red-200 text-red-600 hover:bg-red-50"
+          : "border-zinc-200 text-zinc-600 hover:bg-zinc-50 hover:text-zinc-900"
       }`}
     >
-      <Icon className="h-4 w-4" />
-    </button>
-  );
-}
-
-function MobileAction({ icon: Icon, label, onClick, danger = false }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border px-3 text-xs font-medium transition ${
-        danger
-          ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-          : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-      }`}
-    >
-      <Icon className="h-4 w-4" />
-      {label}
+      <Icon size={14} />
+      <span className="hidden sm:inline">{label}</span>
     </button>
   );
 }
 
 function InfoItem({ label, value }) {
   return (
-    <div>
-      <div className="text-xs text-zinc-400">{label}</div>
-      <div className="mt-0.5 truncate text-sm font-medium text-zinc-700">
-        {value}
+    <div className="min-w-0">
+      <div className="text-[11px] font-medium uppercase tracking-wide text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-1.5 break-words text-sm font-medium text-zinc-800">
+        {value === null || value === undefined || value === "" ? "-" : value}
       </div>
     </div>
   );
 }
 
-function FormField({ label, required, children }) {
+function Field({ label, required = false, children }) {
   return (
-    <div>
-      <label className="mb-2 block text-sm font-medium text-zinc-700">
+    <label className="block min-w-0">
+      <span className="mb-1.5 block text-xs font-semibold text-zinc-600">
         {label}
         {required && <span className="ml-1 text-red-500">*</span>}
-      </label>
+      </span>
       {children}
+    </label>
+  );
+}
+
+function Modal({ title, subtitle, onClose, children, maxWidth = "max-w-xl" }) {
+  return (
+    <div
+      className="fixed inset-0 z-[100] flex items-end justify-center bg-black/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-4"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className={`max-h-[92dvh] w-full ${maxWidth} overflow-y-auto rounded-t-2xl bg-white p-4 shadow-2xl sm:rounded-2xl sm:p-5`}
+      >
+        <div className="mb-4 flex items-start justify-between gap-3 border-b border-zinc-100 pb-3">
+          <div className="min-w-0">
+            <h2 className="text-base font-semibold text-zinc-900">{title}</h2>
+            {subtitle && (
+              <p className="mt-1 text-sm text-zinc-500">{subtitle}</p>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-900"
+            aria-label="Tutup"
+          >
+            <X size={18} />
+          </button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function ModalActions({ onCancel, saving, submitLabel }) {
+  return (
+    <div className="flex flex-col-reverse gap-2 border-t border-zinc-100 pt-4 sm:flex-row sm:justify-end">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={saving}
+        className="h-11 rounded-xl border border-zinc-200 px-5 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-50"
+      >
+        Batal
+      </button>
+      <button
+        type="submit"
+        disabled={saving}
+        className="flex h-11 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-5 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50"
+      >
+        {saving && <RefreshCw size={15} className="animate-spin" />}
+        {saving ? "Menyimpan..." : submitLabel}
+      </button>
+    </div>
+  );
+}
+
+function Notice({ message, type, onClose }) {
+  const isError = type === "error";
+
+  return (
+    <div
+      className={`flex items-start justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${
+        isError
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-emerald-200 bg-emerald-50 text-emerald-700"
+      }`}
+    >
+      <span className="break-words">{message}</span>
+      <button
+        type="button"
+        onClick={onClose}
+        className="shrink-0 rounded-md p-0.5 opacity-70 hover:opacity-100"
+        aria-label="Tutup pemberitahuan"
+      >
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
+
+function InlineError({ children }) {
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2.5 text-sm text-red-700">
+      {children}
+    </div>
+  );
+}
+
+function DangerNotice({ title, text }) {
+  return (
+    <div className="rounded-xl border border-red-200 bg-red-50 p-4">
+      <div className="flex gap-3">
+        <Trash2 className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
+        <div>
+          <div className="font-semibold text-red-800">{title}</div>
+          <p className="mt-1 text-sm leading-6 text-red-700">{text}</p>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1672,7 +1533,6 @@ function DeleteCheckRow({ label, value, last = false }) {
       }`}
     >
       <span className="text-sm text-zinc-600">{label}</span>
-
       {value === null ? (
         <span className="text-xs font-medium text-amber-600">
           Belum terhubung
@@ -1686,14 +1546,6 @@ function DeleteCheckRow({ label, value, last = false }) {
           {value}
         </span>
       )}
-    </div>
-  );
-}
-
-function ModalOverlay({ children }) {
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/40 p-4 backdrop-blur-[2px]">
-      {children}
     </div>
   );
 }

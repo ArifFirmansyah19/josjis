@@ -1,20 +1,22 @@
 import { supabase } from "@/lib/supabase";
 
+const NOTARIS_COLUMNS = `
+  id,
+  nama_notaris,
+  nik,
+  jabatan,
+  provinsi,
+  kabupaten,
+  nomor_rekening,
+  jenis_rekanan,
+  created_at,
+  updated_at
+`;
+
 export async function getNotarisData() {
   const { data, error } = await supabase
     .from("notaris")
-    .select(
-      `
-      id,
-      nama_notaris,
-      provinsi,
-      kabupaten,
-      nomor_rekening,
-      jenis_rekanan,
-      created_at,
-      updated_at
-    `,
-    )
+    .select(NOTARIS_COLUMNS)
     .order("nama_notaris", { ascending: true });
 
   if (error) {
@@ -26,6 +28,8 @@ export async function getNotarisData() {
 
 export async function createNotaris({
   namaNotaris,
+  nik,
+  jabatan,
   provinsi,
   kabupaten,
   nomorRekening,
@@ -35,23 +39,14 @@ export async function createNotaris({
     .from("notaris")
     .insert({
       nama_notaris: namaNotaris.trim(),
+      nik: nik?.trim() || null,
+      jabatan: "Notaris/PPAT",
       provinsi: provinsi.trim(),
       kabupaten: kabupaten.trim(),
       nomor_rekening: nomorRekening?.trim() || null,
       jenis_rekanan: Boolean(jenisRekanan),
     })
-    .select(
-      `
-      id,
-      nama_notaris,
-      provinsi,
-      kabupaten,
-      nomor_rekening,
-      jenis_rekanan,
-      created_at,
-      updated_at
-    `,
-    )
+    .select(NOTARIS_COLUMNS)
     .single();
 
   if (error) {
@@ -64,6 +59,8 @@ export async function createNotaris({
 export async function updateNotaris({
   id,
   namaNotaris,
+  nik,
+  jabatan,
   provinsi,
   kabupaten,
   nomorRekening,
@@ -73,6 +70,8 @@ export async function updateNotaris({
     .from("notaris")
     .update({
       nama_notaris: namaNotaris.trim(),
+      nik: nik?.trim() || null,
+      jabatan: "Notaris/PPAT",
       provinsi: provinsi.trim(),
       kabupaten: kabupaten.trim(),
       nomor_rekening: nomorRekening?.trim() || null,
@@ -80,18 +79,7 @@ export async function updateNotaris({
       updated_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .select(
-      `
-      id,
-      nama_notaris,
-      provinsi,
-      kabupaten,
-      nomor_rekening,
-      jenis_rekanan,
-      created_at,
-      updated_at
-    `,
-    )
+    .select(NOTARIS_COLUMNS)
     .single();
 
   if (error) {

@@ -86,11 +86,6 @@ const menuSections = [
         icon: Archive,
       },
       {
-        label: "BAST Agunan Lunas",
-        href: "/admin/bast-agunan-lunas",
-        icon: FileSignature,
-      },
-      {
         label: "Serah Terima Agunan Lunas",
         href: "/admin/penyerahan-agunan-lunas",
         icon: PackageCheck,
@@ -122,11 +117,6 @@ const menuSections = [
         href: "/admin/pending-notaris",
         icon: FileClock,
       },
-      {
-        label: "BAST",
-        href: "/admin/bast",
-        icon: FileCheck,
-      },
     ],
   },
 
@@ -135,7 +125,7 @@ const menuSections = [
   // ====================================================
   {
     id: "surat",
-    label: "Surat",
+    label: "Surat & BAST",
     icon: FileSignature,
     items: [
       {
@@ -147,6 +137,11 @@ const menuSections = [
         label: "BAST Notaris",
         href: "/admin/surat/bast-notaris",
         icon: Files,
+      },
+      {
+        label: "BAST Agunan Lunas",
+        href: "/admin/bast-agunan-lunas",
+        icon: FileCheck,
       },
     ],
   },
@@ -187,11 +182,6 @@ const menuSections = [
         label: "Kelola PDF",
         href: "/admin/kelola-pdf",
         icon: Files,
-      },
-      {
-        label: "Cetak Advis",
-        href: "/admin/cetak-advis",
-        icon: FileSpreadsheet,
       },
       {
         label: "Pengajuan Lembur",

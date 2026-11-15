@@ -9,6 +9,7 @@ import {
   Trash2,
   Loader2,
   FileText,
+  Copy,
 } from "lucide-react";
 
 const today = () => {
@@ -33,14 +34,19 @@ const buatDebitur = () => ({
   agunan: [buatAgunan()],
 });
 
+const toTitleCase = (value) =>
+  String(value ?? "")
+    .toLocaleLowerCase("id-ID")
+    .replace(
+      /(^|[\s'-])(\p{L})/gu,
+      (_, separator, letter) => separator + letter.toLocaleUpperCase("id-ID"),
+    );
+
 const formatTanggal = (value) => {
   if (!value) return "";
 
-  return new Date(`${value}T00:00:00`).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "long",
-    year: "numeric",
-  });
+  const [tahun, bulan, hari] = value.split("-");
+  return `${hari}/${bulan}/${tahun}`;
 };
 
 const hariTanggal = (value) => {
@@ -61,11 +67,11 @@ const hariTanggal = (value) => {
 const buatUraianAgunan = (agunan = []) =>
   agunan
     .map((a) => {
-      const jenis = (a.jenis || "").trim();
+      const jenis = (a.jenis || "").trim().toUpperCase();
       const nomor = (a.nomor || "").trim();
-      const pemilik = (a.namaPemilik || "").trim();
+      const pemilik = toTitleCase(a.namaPemilik || "").trim();
 
-      return `${jenis} NO ${nomor} AN ${pemilik}`;
+      return `${jenis} No. ${nomor} An. ${pemilik}`;
     })
     .join("\n");
 
@@ -92,19 +98,27 @@ export default function BastNotarisPage() {
 
   const [unitId, setUnitId] = useState("");
   const [tanggal, setTanggal] = useState(today());
-  const [nomor, setNomor] = useState("683");
-  const [tahun, setTahun] = useState(String(new Date().getFullYear()));
 
+  // Nomor surat
+  const [nomorMode, setNomorMode] = useState("template");
+  const [nomor, setNomor] = useState("500");
+  const [tahun, setTahun] = useState(String(new Date().getFullYear()));
+  const [nomorManual, setNomorManual] = useState("");
+
+  // MKA
   const [mkaId, setMkaId] = useState("");
 
+  // Notaris
   const [notarisId, setNotarisId] = useState("");
   const [namaNotaris, setNamaNotaris] = useState("");
   const [ktpNotaris, setKtpNotaris] = useState("");
   const [jabatanNotaris, setJabatanNotaris] = useState("Notaris/PPAT");
   const [alamatNotaris, setAlamatNotaris] = useState("");
 
+  // Debitur dan agunan
   const [debitur, setDebitur] = useState([buatDebitur()]);
 
+  // Memuat master data
   useEffect(() => {
     let active = true;
 
@@ -127,7 +141,7 @@ export default function BastNotarisPage() {
 
         supabase
           .from("notaris")
-          .select("id,nama_notaris,kabupaten,provinsi")
+          .select("id,nama_notaris,nik,jabatan,kabupaten,provinsi")
           .order("nama_notaris"),
       ]);
 
@@ -169,6 +183,9 @@ export default function BastNotarisPage() {
 
   const namaPihakKedua = notaris?.nama_notaris || namaNotaris;
 
+  const jabatanPihakKedua =
+    notaris?.jabatan || jabatanNotaris || "Notaris/PPAT";
+
   const { hari, tanggal: tanggalPanjang } = hariTanggal(tanggal);
 
   const lokasiUnit =
@@ -176,8 +193,17 @@ export default function BastNotarisPage() {
       ? "Jambi Kuamang Kuning 2"
       : "Jambi Kuamang Kuning 1";
 
-  const nomorSurat = `CSB.R02.JBI.JKK/${nomor || "___"}/${tahun || "____"}`;
+  const namaUnitTandaTangan =
+    unit?.kode_unit === "JKK2"
+      ? "MKA KUAMANG KUNING 2"
+      : "MKA KUAMANG KUNING 1";
 
+  const nomorSurat =
+    nomorMode === "manual"
+      ? nomorManual.trim()
+      : `CSB.R02.JBI.JKK/${nomor || "___"}/${tahun || "____"}`;
+
+  // Otomatis memilih MKA berdasarkan unit aktif
   useEffect(() => {
     if (!mkaList.length) {
       setMkaId("");
@@ -189,10 +215,13 @@ export default function BastNotarisPage() {
     }
   }, [unitId, pegawai, mkaId]);
 
+  // Mengisi data Notaris dari master
   useEffect(() => {
     if (!notaris) return;
 
     setNamaNotaris(notaris.nama_notaris || "");
+    setKtpNotaris(notaris.nik || "");
+    setJabatanNotaris(notaris.jabatan || "Notaris/PPAT");
     setAlamatNotaris(
       [notaris.kabupaten, notaris.provinsi].filter(Boolean).join(", "),
     );
@@ -254,8 +283,11 @@ export default function BastNotarisPage() {
 
   const resetForm = () => {
     setTanggal(today());
-    setNomor("683");
+
+    setNomorMode("template");
+    setNomor("500");
     setTahun(String(new Date().getFullYear()));
+    setNomorManual("");
 
     setMkaId(mkaList[0]?.id || "");
 
@@ -269,6 +301,7 @@ export default function BastNotarisPage() {
     setError("");
   };
 
+  // Membuat PDF
   const downloadPDF = async () => {
     if (!paperRef.current) {
       setError("Dokumen belum siap dibuat.");
@@ -277,6 +310,16 @@ export default function BastNotarisPage() {
 
     if (!unitId || !tanggal) {
       setError("Unit dan tanggal serah terima harus diisi.");
+      return;
+    }
+
+    if (!nomorSurat.trim()) {
+      setError("Nomor surat harus diisi.");
+      return;
+    }
+
+    if (nomorMode === "template" && (!nomor.trim() || !tahun.trim())) {
+      setError("Nomor urut dan tahun surat harus diisi.");
       return;
     }
 
@@ -349,7 +392,7 @@ export default function BastNotarisPage() {
           orientation: "portrait",
         },
         html2canvas: {
-          scale: 2,
+          scale: 3,
           useCORS: true,
           allowTaint: false,
           backgroundColor: "#ffffff",
@@ -391,7 +434,8 @@ export default function BastNotarisPage() {
   }
 
   return (
-    <div className="space-y-4 p-3 sm:space-y-5 sm:p-5 lg:p-6">
+    <div className="mx-auto w-full max-w-5xl space-y-4 p-3 sm:space-y-5 sm:p-5 lg:p-6">
+      {/* HEADER HALAMAN */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl font-bold text-gray-900">BAST Notaris</h1>
@@ -467,22 +511,6 @@ export default function BastNotarisPage() {
             </select>
           </Field>
 
-          <Field label="Nomor urut">
-            <input
-              className={inputClass}
-              value={nomor}
-              onChange={(e) => setNomor(e.target.value)}
-            />
-          </Field>
-
-          <Field label="Tahun">
-            <input
-              className={inputClass}
-              value={tahun}
-              onChange={(e) => setTahun(e.target.value)}
-            />
-          </Field>
-
           <Field label="Tanggal serah terima">
             <input
               type="date"
@@ -507,11 +535,90 @@ export default function BastNotarisPage() {
           </Field>
         </div>
 
-        <div className="mt-4 rounded-xl bg-gray-50 p-3">
-          <p className="text-xs text-gray-500">Nomor surat</p>
-          <p className="mt-1 break-all font-semibold text-gray-800">
-            {nomorSurat}
+        {/* NOMOR SURAT */}
+        <div className="mt-5 border-t border-gray-200 pt-4">
+          <p className="mb-3 text-sm font-semibold text-gray-800">
+            Nomor Surat
           </p>
+
+          <div className="mb-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setNomorMode("template")}
+              className={`min-h-10 rounded-lg border px-4 text-sm font-medium ${
+                nomorMode === "template"
+                  ? "border-blue-700 bg-blue-50 text-blue-700"
+                  : "border-gray-300 bg-white text-gray-600"
+              }`}
+            >
+              Gunakan Template
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setNomorMode("manual")}
+              className={`min-h-10 rounded-lg border px-4 text-sm font-medium ${
+                nomorMode === "manual"
+                  ? "border-blue-700 bg-blue-50 text-blue-700"
+                  : "border-gray-300 bg-white text-gray-600"
+              }`}
+            >
+              Input Manual
+            </button>
+          </div>
+
+          {nomorMode === "template" ? (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <Field label="Nomor urut">
+                  <input
+                    className={inputClass}
+                    value={nomor}
+                    onChange={(e) => setNomor(e.target.value)}
+                    placeholder="Contoh: 500"
+                  />
+                </Field>
+
+                <Field label="Tahun">
+                  <input
+                    className={inputClass}
+                    value={tahun}
+                    onChange={(e) => setTahun(e.target.value)}
+                    placeholder="Contoh: 2026"
+                  />
+                </Field>
+              </div>
+
+              <div className="mt-3 rounded-xl bg-gray-50 p-3">
+                <p className="text-xs text-gray-500">
+                  Nomor surat yang digunakan
+                </p>
+                <p className="mt-1 break-all font-semibold text-gray-800">
+                  {nomorSurat}
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <Field label="Nomor surat lengkap">
+                <input
+                  className={inputClass}
+                  value={nomorManual}
+                  onChange={(e) => setNomorManual(e.target.value)}
+                  placeholder="Ketik nomor surat lengkap sesuai format terbaru"
+                />
+              </Field>
+
+              <div className="mt-3 rounded-xl bg-gray-50 p-3">
+                <p className="text-xs text-gray-500">
+                  Nomor surat yang digunakan
+                </p>
+                <p className="mt-1 break-all font-semibold text-gray-800">
+                  {nomorSurat || "Belum diisi"}
+                </p>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
@@ -552,12 +659,12 @@ export default function BastNotarisPage() {
             />
           </Field>
 
-          <Field label="Nomor KTP">
+          <Field label="NIK / Nomor KTP">
             <input
               className={inputClass}
               value={ktpNotaris}
               onChange={(e) => setKtpNotaris(e.target.value)}
-              placeholder="Nomor KTP"
+              placeholder="Nomor NIK"
             />
           </Field>
 
@@ -638,7 +745,11 @@ export default function BastNotarisPage() {
                     className={inputClass}
                     value={item.nama}
                     onChange={(e) =>
-                      updateDebitur(item.id, "nama", e.target.value)
+                      updateDebitur(
+                        item.id,
+                        "nama",
+                        toTitleCase(e.target.value),
+                      )
                     }
                     placeholder="Nama lengkap debitur"
                   />
@@ -681,6 +792,7 @@ export default function BastNotarisPage() {
                 </div>
               </div>
 
+              {/* AGUNAN */}
               <div className="border-t pt-4">
                 <div className="mb-3 flex items-center justify-between gap-2">
                   <div>
@@ -767,24 +879,43 @@ export default function BastNotarisPage() {
                                 e.target.value,
                               )
                             }
-                            placeholder="Contoh: 658"
+                            placeholder="Contoh: 112"
                           />
                         </Field>
 
                         <Field label="Atas nama">
-                          <input
-                            className={inputClass}
-                            value={a.namaPemilik}
-                            onChange={(e) =>
-                              updateAgunan(
-                                item.id,
-                                a.id,
-                                "namaPemilik",
-                                e.target.value,
-                              )
-                            }
-                            placeholder="Nama pada sertifikat"
-                          />
+                          <div className="space-y-2">
+                            <input
+                              className={inputClass}
+                              value={a.namaPemilik}
+                              onChange={(e) =>
+                                updateAgunan(
+                                  item.id,
+                                  a.id,
+                                  "namaPemilik",
+                                  toTitleCase(e.target.value),
+                                )
+                              }
+                              placeholder="Nama pada sertifikat"
+                            />
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                updateAgunan(
+                                  item.id,
+                                  a.id,
+                                  "namaPemilik",
+                                  item.nama,
+                                )
+                              }
+                              disabled={!item.nama.trim()}
+                              className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-700 hover:bg-blue-100 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                              <Copy size={13} />
+                              Samakan dengan Nama Debitur
+                            </button>
+                          </div>
                         </Field>
                       </div>
                     </div>
@@ -798,14 +929,14 @@ export default function BastNotarisPage() {
 
       {/* DOKUMEN CETAK */}
       <div ref={paperRef} className="bast-paper">
-        {/* KOP SURAT */}
+        {/* JUDUL DAN LOGO */}
         <div className="bast-header">
           <div className="bast-title-area">
             <div className="bast-title">BERITA ACARA</div>
             <div className="bast-title bast-title-bold">
               SERAH TERIMA DOKUMEN
             </div>
-            <div className="bast-nomor">Nomor : {nomorSurat}</div>
+            <div className="bast-nomor">Nomor: {nomorSurat}</div>
           </div>
 
           <div className="bast-company">
@@ -815,6 +946,7 @@ export default function BastNotarisPage() {
               crossOrigin="anonymous"
               className="bast-logo"
             />
+
             <div className="bast-company-name">
               PT BANK MANDIRI (Persero) Tbk.
             </div>
@@ -830,14 +962,13 @@ export default function BastNotarisPage() {
         {/* PEMBUKAAN */}
         <p className="bast-paragraph bast-opening">
           Pada hari ini {hari} tanggal {tanggalPanjang} bertempat di PT Bank
-          Mandiri (Persero) Tbk. Kantor Cabang Mikro / Mandiri Mitra Usaha{" "}
-          {lokasiUnit} beralamat di PT BANK MANDIRI (Persero) Tbk. Kantor Cabang
-          Mikro / Mandiri Mitra Usaha {lokasiUnit}, Jl. Batanghari RT.06/02 Ds.
-          Purwasari Kec. Pelepat Ilir Bungo - Jambi, telah dilakukan serah
-          terima dokumen antara:
+          Mandiri (Persero) Tbk. Kantor Cabang Mikro / Mandiri Mitra Usaha Jambi
+          Kuamang Kuning beralamat di Jalan Batang Hari RT/TW 006/002, Desa
+          Purwasari, Kec. Pelepat Ilir, Kab. Bungo - Jambi, telah dilakukan
+          serah terima dokumen antara:
         </p>
 
-        {/* IDENTITAS PIHAK PERTAMA */}
+        {/* PIHAK PERTAMA */}
         <div className="bast-identity bast-party-one">
           <div className="bast-identity-row">
             <span>I.</span>
@@ -845,24 +976,27 @@ export default function BastNotarisPage() {
             <span>:</span>
             <span>{mka?.nama || "................................"}</span>
           </div>
+
           <div className="bast-identity-row">
             <span></span>
             <span>NIP</span>
             <span>:</span>
             <span>{mka?.nip || "................................"}</span>
           </div>
+
           <div className="bast-identity-row">
             <span></span>
             <span>Unit Kerja</span>
             <span>:</span>
             <span>{unit?.nama_unit || "................................"}</span>
           </div>
+
           <div className="bast-identity-closing">
-            Selanjutnya disebut; “PIHAK PERTAMA”
+            Selanjutnya disebut “PIHAK PERTAMA”
           </div>
         </div>
 
-        {/* IDENTITAS PIHAK KEDUA */}
+        {/* PIHAK KEDUA */}
         <div className="bast-identity bast-party-two">
           <div className="bast-identity-row">
             <span>II.</span>
@@ -870,31 +1004,35 @@ export default function BastNotarisPage() {
             <span>:</span>
             <span>{namaPihakKedua || "................................"}</span>
           </div>
+
           <div className="bast-identity-row">
             <span></span>
             <span>KTP</span>
             <span>:</span>
             <span>{ktpNotaris || "................................"}</span>
           </div>
+
           <div className="bast-identity-row">
             <span></span>
             <span>Jabatan</span>
             <span>:</span>
-            <span>{jabatanNotaris}</span>
+            <span>{jabatanPihakKedua}</span>
           </div>
+
           <div className="bast-identity-row">
             <span></span>
             <span>Alamat</span>
             <span>:</span>
             <span>{alamatNotaris || "................................"}</span>
           </div>
+
           <div className="bast-identity-closing">
             Selanjutnya disebut “PIHAK KEDUA”
           </div>
         </div>
 
         <div className="bast-intro-table">
-          Atas Dokumen dengan Keterangan sebagai berikut :
+          Atas Dokumen dengan Keterangan sebagai berikut:
         </div>
 
         {/* KETENTUAN */}
@@ -951,7 +1089,7 @@ export default function BastNotarisPage() {
             {debitur.map((item, index) => (
               <tr key={item.id}>
                 <td className="bast-center">{index + 1}</td>
-                <td>{item.nama}</td>
+                <td className="bast-center">{item.nama}</td>
                 <td className="bast-center">
                   {formatTanggal(item.tanggalOrder)}
                 </td>
@@ -968,35 +1106,27 @@ export default function BastNotarisPage() {
           dan ditandatangani di tempat pada hari dan tanggal tersebut di atas.
         </p>
 
-        {/* TANDA TANGAN DUA PIHAK */}
+        {/* TANDA TANGAN */}
         <div className="bast-signatures">
           <div className="bast-signature-party">
             <div className="bast-signature-heading">PIHAK PERTAMA</div>
-            <div className="bast-signature-subtitle">
-              PT BANK MANDIRI (Persero) Tbk.
-            </div>
-            <div className="bast-signature-unit">KCM Kuamang Kuning</div>
 
             <div className="bast-signature-space" />
 
             <div className="bast-signature-name">{mka?.nama || ""}</div>
-            <div>{mka?.jabatan || "MKA"}</div>
+
+            <div className="bast-signature-unit">{namaUnitTandaTangan}</div>
           </div>
 
-          <div className="bast-signature-party">
+          <div className="bast-signature-party bast-signature-second">
             <div className="bast-signature-heading">PIHAK KEDUA</div>
-            <div className="bast-signature-subtitle">{jabatanNotaris}</div>
 
             <div className="bast-signature-space" />
-
-            <div className="bast-signature-name">{namaPihakKedua || ""}</div>
-            <div>Notaris/PPAT</div>
           </div>
         </div>
       </div>
 
       <style jsx global>{`
-        /* HALAMAN A4 */
         .bast-paper {
           position: fixed;
           top: 0;
@@ -1004,7 +1134,7 @@ export default function BastNotarisPage() {
           display: block;
           width: 210mm;
           min-height: 297mm;
-          padding: 12mm 12mm 12mm;
+          padding: 12mm 13mm 12mm;
           box-sizing: border-box;
           background: #ffffff;
           color: #000000;
@@ -1018,25 +1148,24 @@ export default function BastNotarisPage() {
           box-sizing: border-box;
         }
 
-        /* KOP SURAT DAN JUDUL */
+        /* HEADER */
         .bast-header {
-          display: grid;
-          grid-template-columns: 68% 32%;
-          column-gap: 0;
-          align-items: start;
+          position: relative;
           width: 100%;
-          height: 38mm;
-          min-height: 38mm;
+          min-height: 43mm;
+          margin-bottom: 2mm;
+          padding-top: 0;
         }
 
+        /* JUDUL DITURUNKAN, TETAP DI TENGAH */
         .bast-title-area {
-          height: 100%;
+          width: 100%;
           display: flex;
           flex-direction: column;
           align-items: center;
-          justify-content: center;
-          padding: 7mm 4mm 0 0;
+          justify-content: flex-start;
           text-align: center;
+          padding-top: 14mm;
         }
 
         .bast-title {
@@ -1060,45 +1189,50 @@ export default function BastNotarisPage() {
           line-height: 1.3;
         }
 
+        /* LOGO MANDIRI DIPERBESAR */
         .bast-company {
-          width: 100%;
+          position: absolute;
+          top: -8mm;
+          right: 0;
+          width: 65mm;
           text-align: right;
-          font-size: 8pt;
-          line-height: 1.35;
+          font-size: 6.5pt;
+          line-height: 1.22;
           font-weight: bold;
+          z-index: 10;
         }
 
         .bast-logo {
           display: block;
-          width: 48mm;
-          height: 15mm;
+          width: 65mm;
+          height: 25mm;
           object-fit: contain;
           object-position: right center;
-          margin: 0 0 1.5mm auto;
+          margin: 0 -20mm 1mm auto;
         }
 
         .bast-company-name {
           font-weight: bold;
-          font-size: 8pt;
+          font-size: 6.5pt;
         }
 
         /* PEMBUKAAN */
         .bast-paragraph {
           text-align: justify;
-          line-height: 1.35;
+          line-height: 1.4;
           margin: 0;
           font-size: 10.5pt;
         }
 
         .bast-opening {
-          margin-top: 2mm;
-          margin-bottom: 3mm;
+          margin-top: 0;
+          margin-bottom: 4mm;
         }
 
-        /* IDENTITAS PARA PIHAK */
+        /* IDENTITAS PIHAK */
         .bast-identity {
           font-size: 10.5pt;
-          line-height: 1.3;
+          line-height: 1.35;
         }
 
         .bast-party-one {
@@ -1106,7 +1240,7 @@ export default function BastNotarisPage() {
         }
 
         .bast-party-two {
-          margin-top: 2mm;
+          margin-top: 3mm;
         }
 
         .bast-identity-row {
@@ -1125,18 +1259,18 @@ export default function BastNotarisPage() {
         }
 
         .bast-intro-table {
-          margin-top: 3mm;
+          margin-top: 4mm;
           margin-bottom: 2mm;
           font-size: 10.5pt;
         }
 
-        /* KLAUSUL */
+        /* KETENTUAN */
         .bast-clauses {
           margin-top: 1mm;
           margin-bottom: 3mm;
           font-size: 10.5pt;
           text-align: justify;
-          line-height: 1.3;
+          line-height: 1.35;
         }
 
         .bast-clause {
@@ -1154,7 +1288,7 @@ export default function BastNotarisPage() {
           text-align: justify;
         }
 
-        /* TABEL DOKUMEN */
+        /* TABEL */
         .bast-table {
           width: 100%;
           border-collapse: collapse;
@@ -1163,11 +1297,12 @@ export default function BastNotarisPage() {
           font-size: 9pt;
           margin-top: 3mm;
           color: #000000;
+          border: 0.35px solid #777777;
         }
 
         .bast-table th,
         .bast-table td {
-          border: 0.5px solid #000000;
+          border: 0.35px solid #777777;
           padding: 1.8mm 1.3mm;
           vertical-align: top;
           overflow-wrap: anywhere;
@@ -1225,7 +1360,7 @@ export default function BastNotarisPage() {
           margin-bottom: 0;
           font-size: 10.5pt;
           text-align: justify;
-          line-height: 1.35;
+          line-height: 1.4;
         }
 
         /* TANDA TANGAN */
@@ -1251,9 +1386,9 @@ export default function BastNotarisPage() {
           margin-bottom: 1mm;
         }
 
-        .bast-signature-subtitle,
         .bast-signature-unit {
           font-size: 9pt;
+          font-weight: normal;
         }
 
         .bast-signature-space {

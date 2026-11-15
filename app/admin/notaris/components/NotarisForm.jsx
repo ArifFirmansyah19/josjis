@@ -5,6 +5,8 @@ import { X } from "lucide-react";
 
 const EMPTY_FORM = {
   namaNotaris: "",
+  nik: "",
+  jabatan: "Notaris/PPAT",
   provinsi: "",
   kabupaten: "",
   nomorRekening: "",
@@ -22,13 +24,15 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
     if (editingRecord) {
       setForm({
         namaNotaris: editingRecord.nama_notaris || "",
+        nik: editingRecord.nik || "",
+        jabatan: editingRecord.jabatan || "Notaris",
         provinsi: editingRecord.provinsi || "",
         kabupaten: editingRecord.kabupaten || "",
         nomorRekening: editingRecord.nomor_rekening || "",
         jenisRekanan: Boolean(editingRecord.jenis_rekanan),
       });
     } else {
-      setForm(EMPTY_FORM);
+      setForm({ ...EMPTY_FORM });
     }
 
     setError("");
@@ -51,6 +55,16 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
       return;
     }
 
+    if (form.nik && !/^\d{16}$/.test(form.nik)) {
+      setError("NIK harus terdiri dari 16 digit angka.");
+      return;
+    }
+
+    if (!form.jabatan) {
+      setError("Jabatan wajib dipilih.");
+      return;
+    }
+
     if (!form.provinsi.trim()) {
       setError("Provinsi wajib diisi.");
       return;
@@ -65,15 +79,27 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
       setSaving(true);
       setError("");
 
-      await onSave(form);
+      await onSave({
+        ...form,
+        namaNotaris: form.namaNotaris.trim(),
+        nik: form.nik.trim(),
+        jabatan: form.jabatan,
+        provinsi: form.provinsi.trim(),
+        kabupaten: form.kabupaten.trim(),
+        nomorRekening: form.nomorRekening.trim(),
+      });
     } catch (err) {
       console.error(err);
-
       setError(err?.message || "Gagal menyimpan data notaris.");
     } finally {
       setSaving(false);
     }
   }
+
+  const inputClass =
+    "mt-1.5 h-10 w-full rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100";
+
+  const labelClass = "text-xs font-semibold text-zinc-700";
 
   return (
     <div
@@ -98,7 +124,8 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
           <button
             type="button"
             onClick={onClose}
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100"
+            disabled={saving}
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-zinc-500 hover:bg-zinc-100 disabled:opacity-50"
           >
             <X size={19} />
           </button>
@@ -113,9 +140,7 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
             )}
 
             <div>
-              <label className="text-xs font-semibold text-zinc-700">
-                Nama Notaris
-              </label>
+              <label className={labelClass}>Nama Notaris / PPAT</label>
 
               <input
                 type="text"
@@ -123,16 +148,51 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
                 onChange={(event) =>
                   handleChange("namaNotaris", event.target.value)
                 }
-                placeholder="Nama lengkap notaris"
-                className="mt-1.5 h-10 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+                placeholder="Nama lengkap Notaris / PPAT"
+                className={inputClass}
+                required
               />
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
-                <label className="text-xs font-semibold text-zinc-700">
-                  Provinsi
-                </label>
+                <label className={labelClass}>NIK</label>
+
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={16}
+                  value={form.nik}
+                  onChange={(event) =>
+                    handleChange(
+                      "nik",
+                      event.target.value.replace(/\D/g, "").slice(0, 16),
+                    )
+                  }
+                  placeholder="16 digit NIK"
+                  className={`${inputClass} font-mono`}
+                />
+
+                <p className="mt-1 text-[10px] text-zinc-400">
+                  Masukkan 16 digit NIK.
+                </p>
+              </div>
+
+              <div>
+                <label className={labelClass}>Jabatan</label>
+
+                <input
+                  type="text"
+                  value="Notaris/PPAT"
+                  readOnly
+                  className={`${inputClass} bg-zinc-50 font-semibold text-zinc-700`}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label className={labelClass}>Provinsi</label>
 
                 <input
                   type="text"
@@ -141,14 +201,13 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
                     handleChange("provinsi", event.target.value)
                   }
                   placeholder="Provinsi"
-                  className="mt-1.5 h-10 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+                  className={inputClass}
+                  required
                 />
               </div>
 
               <div>
-                <label className="text-xs font-semibold text-zinc-700">
-                  Kabupaten
-                </label>
+                <label className={labelClass}>Kabupaten</label>
 
                 <input
                   type="text"
@@ -157,15 +216,14 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
                     handleChange("kabupaten", event.target.value)
                   }
                   placeholder="Kabupaten"
-                  className="mt-1.5 h-10 w-full rounded-xl border border-zinc-200 px-3 text-sm outline-none focus:border-zinc-400"
+                  className={inputClass}
+                  required
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-zinc-700">
-                Nomor Rekening
-              </label>
+              <label className={labelClass}>Nomor Rekening</label>
 
               <input
                 type="text"
@@ -175,7 +233,7 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
                   handleChange("nomorRekening", event.target.value)
                 }
                 placeholder="Nomor rekening"
-                className="mt-1.5 h-10 w-full rounded-xl border border-zinc-200 px-3 font-mono text-sm outline-none focus:border-zinc-400"
+                className={`${inputClass} font-mono`}
               />
 
               <p className="mt-1 text-[10px] text-zinc-400">
@@ -184,9 +242,7 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
             </div>
 
             <div>
-              <label className="text-xs font-semibold text-zinc-700">
-                Jenis Rekanan
-              </label>
+              <label className={labelClass}>Jenis Rekanan</label>
 
               <div className="mt-2 grid grid-cols-2 gap-2">
                 <button
@@ -221,7 +277,7 @@ export default function NotarisForm({ open, editingRecord, onClose, onSave }) {
               type="button"
               onClick={onClose}
               disabled={saving}
-              className="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-100"
+              className="flex-1 rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700 hover:bg-zinc-100 disabled:opacity-50"
             >
               Batal
             </button>
