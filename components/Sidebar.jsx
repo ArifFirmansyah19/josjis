@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabase";
+import { usePathname } from "next/navigation";
 import {
   Home,
   BriefcaseBusiness,
@@ -30,10 +29,6 @@ import {
   Calculator,
   Settings,
   LogOut,
-  Phone,
-  CalendarDays,
-  House,
-  ShieldCheck,
   ChevronDown,
   ChevronRight,
   FileSignature,
@@ -41,47 +36,26 @@ import {
 } from "lucide-react";
 
 // ======================================================
-// KONFIGURASI MENU SIDEBAR
-// URL dipertahankan agar sesuai dengan halaman yang ada.
+// MENU UTAMA
 // ======================================================
 
 const mainMenus = [
-  {
-    label: "Dashboard",
-    href: "/admin/dashboard",
-    icon: Home,
-  },
-  {
-    label: "My Work",
-    href: "/admin/my-work",
-    icon: BriefcaseBusiness,
-  },
-  {
-    label: "Request Buka Blokir",
-    href: "/admin/blokiran",
-    icon: LockKeyhole,
-  },
-  {
-    label: "Account",
-    href: "/admin/account",
-    icon: KeyRound,
-  },
-  {
-    label: "Advis",
-    href: "/admin/advis",
-    icon: FileText,
-  },
-  {
-    label: "Assesoir PK",
-    href: "/admin/assesoir-pk",
-    icon: Files,
-  },
+  { label: "Dashboard", href: "/admin/dashboard", icon: Home },
+  { label: "My Work", href: "/admin/my-work", icon: BriefcaseBusiness },
+  { label: "Request Buka Blokir", href: "/admin/blokiran", icon: LockKeyhole },
+  { label: "Account", href: "/admin/account", icon: KeyRound },
+  { label: "Advis", href: "/admin/advis", icon: FileText },
+  { label: "Assesoir PK", href: "/admin/assesoir-pk", icon: Files },
   {
     label: "Pelunasan Pinjaman",
     href: "/admin/pelunasan-pinjaman",
     icon: Wallet,
   },
 ];
+
+// ======================================================
+// GRUP MENU
+// ======================================================
 
 const menuSections = [
   {
@@ -155,6 +129,28 @@ const menuSections = [
       },
     ],
   },
+
+  // ====================================================
+  // MENU BARU: SURAT
+  // ====================================================
+  {
+    id: "surat",
+    label: "Surat",
+    icon: FileSignature,
+    items: [
+      {
+        label: "Pengantar Roya",
+        href: "/admin/surat/pengantar-roya",
+        icon: FileText,
+      },
+      {
+        label: "BAST Notaris",
+        href: "/admin/surat/bast-notaris",
+        icon: Files,
+      },
+    ],
+  },
+
   {
     id: "laporan",
     label: "Laporan",
@@ -293,7 +289,6 @@ const menuSections = [
 
 function isPathActive(pathname, href) {
   if (!pathname || !href) return false;
-
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -307,7 +302,6 @@ function sectionHasActiveItem(pathname, section) {
 
 export default function Sidebar({ open = false, onClose }) {
   const pathname = usePathname();
-  const router = useRouter();
 
   const [expandedSections, setExpandedSections] = useState(() => {
     const initial = {};
@@ -319,7 +313,6 @@ export default function Sidebar({ open = false, onClose }) {
     return initial;
   });
 
-  // Otomatis buka grup menu aktif dan tutup grup lainnya.
   useEffect(() => {
     const activeSection = menuSections.find(
       (section) =>
@@ -337,18 +330,14 @@ export default function Sidebar({ open = false, onClose }) {
     });
   }, [pathname]);
 
-  // Kunci scroll halaman saat sidebar mobile dibuka.
   useEffect(() => {
     if (!open) return;
 
     const previousOverflow = document.body.style.overflow;
-
     document.body.style.overflow = "hidden";
 
     const handleEscape = (event) => {
-      if (event.key === "Escape") {
-        onClose?.();
-      }
+      if (event.key === "Escape") onClose?.();
     };
 
     window.addEventListener("keydown", handleEscape);
@@ -362,7 +351,6 @@ export default function Sidebar({ open = false, onClose }) {
   const toggleSection = (sectionId) => {
     setExpandedSections((previous) => {
       const isCurrentlyOpen = previous[sectionId];
-
       const next = {};
 
       menuSections.forEach((section) => {
@@ -402,7 +390,7 @@ export default function Sidebar({ open = false, onClose }) {
 
   return (
     <>
-      {/* Overlay khusus layar kecil */}
+      {/* Overlay mobile */}
       <button
         type="button"
         aria-label="Tutup menu"
@@ -454,7 +442,6 @@ export default function Sidebar({ open = false, onClose }) {
 
         {/* Navigasi */}
         <nav className="min-h-0 flex-1 overflow-y-auto px-3 py-4">
-          {/* Menu utama */}
           <div className="space-y-1">
             {mainMenus.map((item) => (
               <SidebarLink
@@ -466,15 +453,11 @@ export default function Sidebar({ open = false, onClose }) {
             ))}
           </div>
 
-          {/* Grup menu */}
           <div className="mt-5 space-y-1">
             {menuSections.map((section) => {
               const SectionIcon = section.icon;
               const expanded = Boolean(expandedSections[section.id]);
               const hasActiveItem = sectionHasActiveItem(pathname, section);
-
-              // Database PK hanya berisi satu halaman.
-              // Tetap ditampilkan sebagai menu utama yang sejajar.
               const isSingleItem = section.id === "database-pk";
 
               if (isSingleItem) {
