@@ -32,6 +32,7 @@ import {
   ChevronDown,
   ChevronRight,
   FileSignature,
+  TrendingUp,
   X,
 } from "lucide-react";
 
@@ -76,6 +77,21 @@ const menuSections = [
     icon: Landmark,
     items: [
       {
+        label: "Order Agunan",
+        href: "/admin/order-agunan",
+        icon: Package,
+      },
+      {
+        label: "Migrasi Agunan",
+        href: "/admin/migrasi",
+        icon: ArrowLeftRight,
+      },
+      {
+        label: "Pending Notaris",
+        href: "/admin/pending-notaris",
+        icon: FileClock,
+      },
+      {
         label: "Agunan Aktif",
         href: "/admin/agunan",
         icon: Building2,
@@ -101,21 +117,6 @@ const menuSections = [
         label: "Checklist Doc PK",
         href: "/admin/pemeriksaan",
         icon: ClipboardCheck,
-      },
-      {
-        label: "Order Agunan",
-        href: "/admin/order-agunan",
-        icon: Package,
-      },
-      {
-        label: "Migrasi Agunan",
-        href: "/admin/migrasi",
-        icon: ArrowLeftRight,
-      },
-      {
-        label: "Pending Notaris",
-        href: "/admin/pending-notaris",
-        icon: FileClock,
       },
     ],
   },
@@ -157,12 +158,18 @@ const menuSections = [
         icon: FileSpreadsheet,
       },
       {
+        label: "Laporan Upgrade",
+        href: "/admin/laporan-upgrade",
+        icon: TrendingUp,
+      },
+      {
         label: "Laporan Booking dan Aktivasi",
         href: "/admin/booking-harian",
         icon: FileText,
       },
     ],
   },
+
   {
     id: "operasional",
     label: "Operasional",
