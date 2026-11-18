@@ -50,7 +50,7 @@ const INDEX_2A = {
 };
 
 /* =========================================================
-   FORMAT HURUF
+   FORMAT HURUF DAN TEKS
 ========================================================= */
 
 function toTitleCase(value) {
@@ -66,6 +66,10 @@ function textValue(value) {
 
 /* =========================================================
    FORMAT NOMINAL
+   Format Indonesia:
+   20.000
+   240.500
+   1.250.000
 ========================================================= */
 
 function formatNominal(value) {
@@ -73,88 +77,73 @@ function formatNominal(value) {
     return "";
   }
 
-  // Jika sumber berupa angka JavaScript, titik adalah pemisah desimal.
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) return "";
+  const cleaned = String(value).replace(/[^\d,]/g, "");
+  const parts = cleaned.split(",");
 
-    return new Intl.NumberFormat("id-ID", {
-      useGrouping: true,
-      maximumFractionDigits: 10,
-    }).format(value);
-  }
+  const integerPart = (parts[0] || "").replace(/\./g, "");
+  const decimalPart =
+    parts.length > 1 ? parts.slice(1).join("").replace(/\D/g, "") : "";
 
-  let cleaned = String(value).trim();
+  const formattedInteger = integerPart
+    ? Number(integerPart).toLocaleString("id-ID")
+    : "";
 
-  if (!cleaned) return "";
-
-  // Jika berupa teks Indonesia, contoh: 9.693.994,1
-  // pertahankan koma sebagai pemisah desimal.
-  cleaned = cleaned.replace(/[^\d.,-]/g, "");
-
-  const lastComma = cleaned.lastIndexOf(",");
-
-  if (lastComma >= 0) {
-    const integerPart = cleaned.slice(0, lastComma).replace(/[.,]/g, "");
-
-    const decimalPart = cleaned.slice(lastComma + 1).replace(/\D/g, "");
-
-    const formattedInteger = integerPart
-      ? Number(integerPart).toLocaleString("id-ID")
-      : "0";
-
-    return decimalPart
-      ? `${formattedInteger},${decimalPart}`
-      : formattedInteger;
-  }
-
-  // Jika teks hanya berisi angka dan titik, anggap titik sebagai
-  // pemisah ribuan apabila polanya sesuai format Indonesia.
-  const bagian = cleaned.split(".");
-
-  if (bagian.length > 1 && bagian.slice(1).every((part) => part.length === 3)) {
-    const integer = bagian.join("");
-    return Number(integer).toLocaleString("id-ID");
-  }
-
-  // Selain itu, titik dianggap sebagai pemisah desimal.
-  const angka = Number(cleaned);
-
-  if (!Number.isFinite(angka)) return "";
-
-  return new Intl.NumberFormat("id-ID", {
-    useGrouping: true,
-    maximumFractionDigits: 10,
-  }).format(angka);
+  return parts.length > 1
+    ? `${formattedInteger},${decimalPart}`
+    : formattedInteger;
 }
 
+/* =========================================================
+   PARSING NOMINAL
+
+   Contoh:
+   "20.000"       => 20000
+   "240.500"      => 240500
+   "1.250.000"    => 1250000
+   "240.500,75"   => integer 240500
+========================================================= */
+
 function getNominalParts(value) {
-  const parts = String(value || "").split(",");
+  const parts = String(value ?? "").split(",");
+
+  const integerText = (parts[0] || "0").replace(/\./g, "");
+  const integer = Number(integerText || 0);
 
   return {
-    integer: Number((parts[0] || "0").replace(/\./g, "") || 0),
-    decimal: parts.length > 1 ? parts[1] : "",
+    integer,
+    decimal: parts.length > 1 ? parts.slice(1).join("") : "",
   };
 }
 
 /* =========================================================
-   PEMBULATAN KE ATAS KELIPATAN 1.000
+   PEMBULATAN NOMINAL KE RIBUAN
+
+   Sisa 0 - 499   => turun
+   Sisa 500 - 999 => naik
+
+   Contoh:
+   20.400  => 20.000
+   20.500  => 21.000
+   240.400 => 240.000
+   240.600 => 241.000
 ========================================================= */
 
 function bulatkanKeAtasRibuan(value) {
-  const { integer, decimal } = getNominalParts(value);
+  const nominal = String(value ?? "").trim();
+
+  if (!nominal) return null;
+
+  const { integer } = getNominalParts(nominal);
 
   if (!Number.isSafeInteger(integer) || integer < 0) {
     return null;
   }
 
-  const adaPecahanDesimal = decimal !== "" && /[1-9]/.test(decimal);
-  const adaSisaRibuan = integer % 1000 !== 0;
+  const sisaRibuan = integer % 1000;
 
-  if (!adaPecahanDesimal && !adaSisaRibuan) {
-    return integer;
-  }
-
-  return (Math.floor(integer / 1000) + 1) * 1000;
+  return sisaRibuan >= 500
+    ? Math.ceil(integer / 1000) * 1000
+    : Math.floor(integer / 1000) * 1000;
 }
 
 function formatRupiahBulat(value) {
@@ -187,7 +176,9 @@ function terbilangInteger(value) {
 
   if (!Number.isFinite(n) || n < 0) return "";
 
-  if (n < 12) return KATA_ANGKA[n];
+  if (n < 12) {
+    return KATA_ANGKA[n];
+  }
 
   if (n < 20) {
     return `${terbilangInteger(n - 10)} belas`;
@@ -240,14 +231,25 @@ function terbilangInteger(value) {
   return "";
 }
 
-function terbilangNominal(value) {
-  if (value === null || value === undefined) return "";
+/* =========================================================
+   TERBILANG NOMINAL
 
-  if (!Number.isSafeInteger(value) || value < 0) {
+   Selalu membaca angka berdasarkan format Indonesia.
+   Tidak menggunakan Number("20.000") secara langsung.
+========================================================= */
+
+function terbilangNominal(value) {
+  if (value === null || value === undefined || value === "") {
+    return "";
+  }
+
+  const { integer } = getNominalParts(value);
+
+  if (!Number.isSafeInteger(integer) || integer < 0) {
     return "Nominal tidak valid";
   }
 
-  const hasil = `${terbilangInteger(value)} rupiah`;
+  const hasil = `${terbilangInteger(integer)} rupiah`;
 
   return hasil.charAt(0).toUpperCase() + hasil.slice(1);
 }
@@ -437,6 +439,7 @@ export default function AdvisAngsuranPage() {
 
       rows.forEach((row) => {
         const namaMks = textValue(row?.[INDEX_2A.namaMks]);
+
         if (namaMks) hasil.add(namaMks);
       });
     });
@@ -473,7 +476,6 @@ export default function AdvisAngsuranPage() {
 
         const rekeningKey = item.norekPinjaman;
 
-        // Mencegah rekening yang sama tampil berulang.
         if (rekeningSudahAda.has(rekeningKey)) return;
 
         rekeningSudahAda.add(rekeningKey);
@@ -586,21 +588,34 @@ export default function AdvisAngsuranPage() {
   }
 
   /* =======================================================
-     DATA NOMINAL AKHIR DAN TERBILANG
+     HITUNG NOMINAL AKHIR DAN TERBILANG
+
+     Semua sumber nominal melewati fungsi yang sama.
+     Terbilang menggunakan nominal yang sudah dibulatkan.
   ======================================================= */
 
   const dataDenganNominal = useMemo(() => {
     return dataList.map((item) => {
       const nominalAkhir = bulatkanKeAtasRibuan(item.nominal);
 
+      const nominalDitampilkan =
+        nominalAkhir !== null ? formatRupiahBulat(nominalAkhir) : "";
+
+      const terbilang =
+        nominalAkhir !== null ? terbilangNominal(nominalDitampilkan) : "";
+
       return {
         ...item,
         nominalAkhir,
-        nominalDitampilkan: formatRupiahBulat(nominalAkhir),
-        terbilang: terbilangNominal(nominalAkhir),
+        nominalDitampilkan,
+        terbilang,
       };
     });
   }, [dataList]);
+
+  /* =======================================================
+     VALIDASI DATA
+  ======================================================= */
 
   const jumlahDataValid = dataDenganNominal.filter((item) => {
     return (
@@ -628,6 +643,7 @@ export default function AdvisAngsuranPage() {
     const id = nextId.current++;
 
     setDataList((current) => [...current, buatDataKosong(id)]);
+
     setError("");
   }
 
@@ -642,6 +658,7 @@ export default function AdvisAngsuranPage() {
     }
 
     setDataList((current) => current.filter((item) => item.id !== id));
+
     setError("");
   }
 
@@ -733,6 +750,7 @@ export default function AdvisAngsuranPage() {
       });
     } catch (err) {
       console.error("Gagal membuat Advis Angsuran:", err);
+
       setError(err?.message || "Gagal membuat PDF Advis Angsuran.");
     } finally {
       setLoading(false);
@@ -747,6 +765,7 @@ export default function AdvisAngsuranPage() {
     if (!previewUrl) return;
 
     const link = document.createElement("a");
+
     link.href = previewUrl;
     link.download = `Advis_Angsuran_${dataList.length}_Data.pdf`;
 
@@ -777,6 +796,7 @@ export default function AdvisAngsuranPage() {
 
   function resetForm() {
     setDataList([buatDataKosong(nextId.current++)]);
+
     setTanggal(tanggalHariIni());
     setError("");
     setError2A("");
@@ -830,6 +850,7 @@ export default function AdvisAngsuranPage() {
             <p className="text-sm font-semibold text-blue-900">
               Data Advis Angsuran
             </p>
+
             <p className="mt-1 text-xs text-blue-700">
               Setiap data akan menjadi satu halaman PDF.
             </p>
@@ -856,8 +877,10 @@ export default function AdvisAngsuranPage() {
               }`}
             >
               <FileText size={20} />
+
               <span>
                 <span className="block text-sm font-bold">Input Manual</span>
+
                 <span className="mt-1 block text-xs opacity-75">
                   Isi data debitur satu per satu
                 </span>
@@ -874,10 +897,12 @@ export default function AdvisAngsuranPage() {
               }`}
             >
               <Database size={20} />
+
               <span>
                 <span className="block text-sm font-bold">
                   Ambil dari Data 2A
                 </span>
+
                 <span className="mt-1 block text-xs opacity-75">
                   Pilih debitur dari data tersimpan
                 </span>
@@ -895,6 +920,7 @@ export default function AdvisAngsuranPage() {
                 <h2 className="font-bold text-gray-900">
                   Ambil Debitur dari Data 2A
                 </h2>
+
                 <p className="mt-1 text-xs text-gray-500">
                   Pilih unit, MKS, kemudian centang debitur yang akan
                   dimasukkan.
@@ -942,6 +968,7 @@ export default function AdvisAngsuranPage() {
                       className="min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
                     >
                       <option value="">Pilih Unit</option>
+
                       {UNITS.map((unit) => (
                         <option key={unit.id} value={unit.id}>
                           {unit.kode} — {unit.name}
@@ -966,6 +993,7 @@ export default function AdvisAngsuranPage() {
                       className="min-h-[48px] w-full rounded-xl border border-gray-300 bg-white px-4 text-sm text-gray-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 disabled:bg-gray-100"
                     >
                       <option value="">Pilih MKS</option>
+
                       {daftarMks.map((mks) => (
                         <option key={mks} value={mks}>
                           {mks}
@@ -999,6 +1027,7 @@ export default function AdvisAngsuranPage() {
                         size={17}
                         className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
                       />
+
                       <input
                         type="text"
                         value={kataKunci}
@@ -1067,6 +1096,7 @@ export default function AdvisAngsuranPage() {
                                         {item.norekPinjaman}
                                       </span>
                                     </p>
+
                                     <p>
                                       Rek. Tabungan:{" "}
                                       <span className="font-medium text-gray-700">
@@ -1223,6 +1253,8 @@ export default function AdvisAngsuranPage() {
                   required
                 />
 
+                {/* NOMINAL ANGSURAN */}
+
                 <div className="space-y-2 md:col-span-2">
                   <label className="block text-sm font-semibold text-gray-700">
                     Nominal Angsuran
@@ -1236,7 +1268,7 @@ export default function AdvisAngsuranPage() {
 
                     <input
                       type="text"
-                      inputMode="decimal"
+                      inputMode="numeric"
                       value={item.nominal}
                       onChange={(e) =>
                         updateData(
@@ -1250,6 +1282,8 @@ export default function AdvisAngsuranPage() {
                       required
                     />
                   </div>
+
+                  {/* PREVIEW NOMINAL DAN TERBILANG */}
 
                   <div className="rounded-xl border border-blue-100 bg-blue-50 p-4">
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-blue-600">

@@ -439,7 +439,7 @@ function BASTDocument({ form, nomorBast }) {
             <tr>
               <td>Alamat</td>
               <td>:</td>
-              <td>{addressText(form.alamatDebitur)}</td>
+              <td>Jalan {addressText(form.alamatDebitur)}</td>
             </tr>
             <tr>
               <td>KTP</td>
