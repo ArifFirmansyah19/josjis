@@ -1088,10 +1088,13 @@ export default function AdvisAsuransiJiwaPage() {
 
                     <Field
                       label="Nomor Aplikasi"
-                      value={item.nomorAplikasi}
+                      value={String(item.nomorAplikasi || "").toLocaleUpperCase(
+                        "id-ID",
+                      )}
                       onChange={(e) =>
                         updateItem(item.id, {
-                          nomorAplikasi: e.target.value,
+                          nomorAplikasi:
+                            e.target.value.toLocaleUpperCase("id-ID"),
                         })
                       }
                       placeholder="Contoh: KUR11081B202816001"

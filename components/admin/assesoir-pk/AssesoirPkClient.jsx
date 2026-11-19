@@ -14,6 +14,7 @@ import {
 import SkmAgunan from "./menus/SkmAgunan";
 import SuratAsnPolri from "./menus/SuratAsnPolri";
 import SuratPernyataanDebitur from "./menus/SuratPernyataanDebitur";
+import BastMoral from "./menus/BastMoral";
 import Gcg from "./menus/Gcg";
 import DelegasiOts from "./menus/DelegasiOts";
 import KolaseFotoOts from "./menus/KolaseFotoOts";
@@ -24,6 +25,8 @@ import OrderAsuransiKebakaran from "./menus/OrderAsuransiKebakaran";
 const MENU_COMPONENTS = {
   "surat-asn-polri": SuratAsnPolri,
   "surat-pernyataan-debitur": SuratPernyataanDebitur,
+  "skm-agunan": SkmAgunan,
+  "bast-moral": BastMoral,
   gcg: Gcg,
   "delegasi-ots": DelegasiOts,
   "kolase-foto-ots": KolaseFotoOts,
@@ -50,6 +53,12 @@ const MENUS = [
     name: "SKM Agunan",
     category: "Surat Kuasa",
     icon: ShieldCheck,
+  },
+  {
+    id: "bast-moral",
+    name: "BAST MORAL",
+    category: "Dokumen PK",
+    icon: Files,
   },
   {
     id: "gcg",
@@ -92,10 +101,6 @@ const MENUS = [
 export default function AssesoirPkClient() {
   const [selected, setSelected] = useState(null);
 
-  if (selected === "skm-agunan") {
-    return <SkmAgunan onBack={() => setSelected(null)} />;
-  }
-
   const item = MENUS.find((menu) => menu.id === selected);
   const SelectedMenu = MENU_COMPONENTS[selected];
 
@@ -112,7 +117,7 @@ export default function AssesoirPkClient() {
         </button>
 
         <div className="min-w-0">
-          <SelectedMenu />
+          <SelectedMenu onBack={() => setSelected(null)} />
         </div>
       </div>
     );
@@ -138,12 +143,15 @@ export default function AssesoirPkClient() {
         {MENUS.map((menu) => {
           const Icon = menu.icon;
 
+          const className =
+            "group flex min-h-[88px] min-w-0 items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 text-left transition hover:border-zinc-300 hover:shadow-sm active:bg-zinc-50 sm:min-h-[112px] sm:gap-4 sm:rounded-2xl sm:p-4";
+
           return (
             <button
               key={menu.id}
               type="button"
               onClick={() => setSelected(menu.id)}
-              className="group flex min-h-[88px] min-w-0 items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 text-left transition active:bg-zinc-50 hover:border-zinc-300 hover:shadow-sm sm:min-h-[112px] sm:gap-4 sm:rounded-2xl sm:p-4"
+              className={className}
             >
               <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-zinc-100 text-zinc-700 transition group-hover:bg-zinc-200 sm:size-11">
                 <Icon size={20} />
