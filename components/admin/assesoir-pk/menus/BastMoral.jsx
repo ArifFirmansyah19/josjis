@@ -71,18 +71,22 @@ const formatDDMMYYYY = (value) => {
 
 const formatAlamatLengkap = (data = {}) => {
   const parts = [];
+
   if (data.jalan?.trim()) parts.push(data.jalan.trim());
+
   const rtRw = [
     data.rt?.trim() ? `RT ${data.rt.trim()}` : "",
     data.rw?.trim() ? `RW ${data.rw.trim()}` : "",
   ]
     .filter(Boolean)
     .join(" / ");
+
   if (rtRw) parts.push(rtRw);
   if (data.desa?.trim()) parts.push(`Desa ${data.desa.trim()}`);
   if (data.kecamatan?.trim()) parts.push(`Kec. ${data.kecamatan.trim()}`);
   if (data.kabupaten?.trim()) parts.push(`Kab. ${data.kabupaten.trim()}`);
   if (data.provinsi?.trim()) parts.push(`Prov. ${data.provinsi.trim()}`);
+
   return parts.join(", ") || "-";
 };
 
@@ -102,11 +106,15 @@ const UNIT_OPTIONS = [
 
 const inputClass =
   "w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-2 focus:ring-blue-100";
+
 const labelClass = "mb-1.5 block text-xs font-semibold text-slate-600";
+
 const sectionClass =
   "overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm";
+
 const sectionHeadClass =
   "flex items-center gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5";
+
 const sectionBodyClass = "space-y-4 p-4 sm:p-5";
 
 function Field({ label, children, className = "" }) {
@@ -171,9 +179,11 @@ const dokumenKosong = () => ({
 
 export default function BastMoral({ onBack }) {
   const { activeUnit } = useUnit();
+
   const [selectedUnitCode, setSelectedUnitCode] = useState(
     activeUnit?.value || "JKK1",
   );
+
   const [pengawasList, setPengawasList] = useState([]);
   const [loadingPengawas, setLoadingPengawas] = useState(false);
   const [pengawasError, setPengawasError] = useState("");
@@ -188,6 +198,7 @@ export default function BastMoral({ onBack }) {
 
   const [pihak1, setPihak1] = useState({ ...pihakKosong });
   const [pihakLainnya, setPihakLainnya] = useState([]);
+
   const [pihak2, setPihak2] = useState({
     id: "",
     nama: "",
@@ -196,6 +207,7 @@ export default function BastMoral({ onBack }) {
   });
 
   const [dokumenList, setDokumenList] = useState([dokumenKosong()]);
+
   const [kreditInfo, setKreditInfo] = useState({
     namaDebitur: "",
     nomorPK: "",
@@ -205,11 +217,13 @@ export default function BastMoral({ onBack }) {
   const selectedUnit =
     UNIT_OPTIONS.find((unit) => unit.value === selectedUnitCode) ||
     UNIT_OPTIONS[0];
+
   const unitKerja = selectedUnit.name;
   const kodeUnit = selectedUnit.code;
 
   useEffect(() => {
     const code = activeUnit?.value;
+
     if (code && UNIT_OPTIONS.some((unit) => unit.value === code)) {
       setSelectedUnitCode(code);
     }
@@ -230,9 +244,12 @@ export default function BastMoral({ onBack }) {
           .select("id,nama_unit,kode_unit")
           .eq("kode_unit", selectedUnitCode)
           .maybeSingle();
+
         if (unitError) throw unitError;
-        if (!unit?.id)
+
+        if (!unit?.id) {
           throw new Error(`Data unit ${selectedUnitCode} tidak ditemukan.`);
+        }
 
         const { data: pegawai, error: pegawaiError } = await supabase
           .from("pegawai")
@@ -241,13 +258,16 @@ export default function BastMoral({ onBack }) {
           .eq("jenis_pegawai", "PENGAWAS")
           .eq("aktif", true)
           .order("nama", { ascending: true });
+
         if (pegawaiError) throw pegawaiError;
         if (cancelled) return;
 
         const rows = pegawai || [];
         setPengawasList(rows);
+
         if (rows.length > 0) {
           const first = rows[0];
+
           setPihak2({
             id: first.id,
             nama: first.nama || "",
@@ -260,24 +280,28 @@ export default function BastMoral({ onBack }) {
           );
         }
       } catch (error) {
-        if (!cancelled)
+        if (!cancelled) {
           setPengawasError(
             error?.message || "Gagal mengambil data Pengawas dari database.",
           );
+        }
       } finally {
         if (!cancelled) setLoadingPengawas(false);
       }
     };
 
     loadPengawas();
+
     return () => {
       cancelled = true;
     };
   }, [selectedUnitCode]);
 
   const nomorSuratFinal = useMemo(() => {
-    if (useCustomTemplate)
+    if (useCustomTemplate) {
       return customNomorSurat.trim() || "........................";
+    }
+
     return `NRF.R02.JBI.UM.JKK/${
       nomorUrut.trim() || "........"
     }/${tahunSurat || "........"}`;
@@ -371,11 +395,14 @@ export default function BastMoral({ onBack }) {
   const cetakPDF = () => {
     const judulSebelumnya = document.title;
     const namaDebitur = kreditInfo.namaDebitur.trim() || "Dokumen";
+
     document.title = `BAST MORAL - ${namaDebitur}`;
+
     const pulihkanJudul = () => {
       document.title = judulSebelumnya;
       window.removeEventListener("afterprint", pulihkanJudul);
     };
+
     window.addEventListener("afterprint", pulihkanJudul);
     window.print();
     window.setTimeout(pulihkanJudul, 1500);
@@ -386,22 +413,229 @@ export default function BastMoral({ onBack }) {
       alert("Nama Pihak Pertama harus diisi.");
       return false;
     }
+
     if (!pihak2.nama.trim() || !pihak2.nip.trim() || !pihak2.jabatan.trim()) {
       alert(
         "Data Pengawas Pihak Kedua belum tersedia. Periksa unit dan master pegawai.",
       );
       return false;
     }
+
     if (!kreditInfo.namaDebitur.trim()) {
       alert("Nama debitur harus diisi.");
       return false;
     }
+
     return true;
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (!validasiSederhana()) return;
-    cetakPDF();
+
+    const area = document.getElementById("bast-print-area");
+
+    if (!area) {
+      alert("Area dokumen BAST MORAL tidak ditemukan.");
+      return;
+    }
+
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+
+      const namaDebitur = kreditInfo.namaDebitur.trim() || "Dokumen";
+
+      const namaFile = `BAST MORAL - ${namaDebitur}`
+        .replace(/[<>:"/\\|?*]/g, "-")
+        .replace(/\s+/g, " ")
+        .trim();
+
+      if (document.fonts?.ready) {
+        await document.fonts.ready;
+      }
+
+      const canvas = await html2canvas(area, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false,
+        scrollX: 0,
+        scrollY: 0,
+        windowWidth: area.scrollWidth,
+      });
+
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const marginX = 5;
+      const marginY = 5;
+
+      const contentWidth = pageWidth - marginX * 2;
+      const contentHeight = pageHeight - marginY * 2;
+
+      // Skala mengikuti lebar area PDF yang digunakan.
+      const pixelsPerMm = canvas.width / contentWidth;
+      const maxPageHeight = Math.floor(contentHeight * pixelsPerMm);
+
+      const areaRect = area.getBoundingClientRect();
+      const scaleY = canvas.height / areaRect.height;
+
+      const getElementBounds = (element) => {
+        const rect = element.getBoundingClientRect();
+
+        return {
+          top: (rect.top - areaRect.top) * scaleY,
+          bottom: (rect.bottom - areaRect.top) * scaleY,
+        };
+      };
+
+      const protectedElements = Array.from(
+        area.querySelectorAll(
+          "p, li, tr, .signature-section, .signature-block",
+        ),
+      ).map((element) => ({
+        element,
+        ...getElementBounds(element),
+      }));
+
+      const closingParagraph = area.querySelector(".closing-paragraph");
+
+      const closingBounds = closingParagraph
+        ? getElementBounds(closingParagraph)
+        : null;
+
+      const signatureSection = area.querySelector(".signature-section");
+
+      const signatureBounds = signatureSection
+        ? getElementBounds(signatureSection)
+        : null;
+
+      const getSafePageEnd = (sourceY, targetY, pageNumber) => {
+        // Halaman pertama wajib berhenti sebelum paragraf penutup.
+        if (
+          pageNumber === 0 &&
+          closingBounds &&
+          closingBounds.top > sourceY &&
+          closingBounds.top < targetY
+        ) {
+          return Math.floor(closingBounds.top - 2);
+        }
+
+        let safeEnd = targetY;
+
+        // Jika batas halaman mengenai bagian tanda tangan,
+        // pindahkan seluruh bagian tanda tangan ke halaman berikutnya.
+        if (
+          signatureBounds &&
+          signatureBounds.top < targetY &&
+          signatureBounds.bottom > targetY &&
+          signatureBounds.top > sourceY
+        ) {
+          safeEnd = Math.min(safeEnd, signatureBounds.top - 2);
+        }
+
+        // Hindari memotong paragraf, baris tabel, dan daftar.
+        for (const item of protectedElements) {
+          if (
+            item.top < targetY &&
+            item.bottom > targetY &&
+            item.top > sourceY
+          ) {
+            safeEnd = Math.min(safeEnd, item.top - 2);
+          }
+        }
+
+        // Cari batas akhir elemen terdekat sebelum batas halaman.
+        let bestEnd = sourceY;
+
+        for (const item of protectedElements) {
+          if (
+            item.bottom > sourceY + 10 &&
+            item.bottom <= safeEnd &&
+            item.bottom > bestEnd
+          ) {
+            bestEnd = item.bottom;
+          }
+        }
+
+        // Jika tidak ditemukan batas aman, gunakan batas halaman.
+        return bestEnd > sourceY ? Math.floor(bestEnd) : Math.floor(targetY);
+      };
+
+      let sourceY = 0;
+      let pageNumber = 0;
+
+      while (sourceY < canvas.height) {
+        const targetY = Math.min(sourceY + maxPageHeight, canvas.height);
+
+        let endY = getSafePageEnd(sourceY, targetY, pageNumber);
+
+        if (endY <= sourceY) {
+          endY = targetY;
+        }
+
+        const sliceHeight = Math.min(endY - sourceY, canvas.height - sourceY);
+
+        const pageCanvas = document.createElement("canvas");
+        pageCanvas.width = canvas.width;
+        pageCanvas.height = sliceHeight;
+
+        const context = pageCanvas.getContext("2d");
+
+        if (!context) {
+          throw new Error("Gagal membuat halaman PDF.");
+        }
+
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+
+        context.drawImage(
+          canvas,
+          0,
+          sourceY,
+          canvas.width,
+          sliceHeight,
+          0,
+          0,
+          canvas.width,
+          sliceHeight,
+        );
+
+        if (pageNumber > 0) {
+          pdf.addPage();
+        }
+
+        const imageData = pageCanvas.toDataURL("image/jpeg", 0.95);
+        const imageHeight = sliceHeight / pixelsPerMm;
+
+        pdf.addImage(
+          imageData,
+          "JPEG",
+          marginX,
+          marginY,
+          contentWidth,
+          imageHeight,
+          undefined,
+          "FAST",
+        );
+
+        sourceY += sliceHeight;
+        pageNumber += 1;
+      }
+
+      pdf.save(`${namaFile}.pdf`);
+    } catch (error) {
+      console.error("Gagal mengunduh BAST MORAL:", error);
+      alert("PDF gagal dibuat. Silakan coba kembali.");
+    }
   };
 
   return (
@@ -409,8 +643,7 @@ export default function BastMoral({ onBack }) {
       <style jsx global>{`
         @page {
           size: A4 portrait;
-          /* Margin ini berlaku di setiap halaman, termasuk halaman lanjutan. */
-          margin: 18mm 18mm 20mm 18mm;
+          margin: 5mm;
         }
 
         @media print {
@@ -433,14 +666,12 @@ export default function BastMoral({ onBack }) {
           }
 
           #bast-print-area {
-            /* Jangan diposisikan absolute: biarkan browser memecah konten
-               secara normal agar margin atas/bawah konsisten di tiap halaman. */
             position: static !important;
             inset: auto !important;
             width: auto !important;
             min-height: 0 !important;
             margin: 0 !important;
-            padding: 0 !important;
+            padding: 15mm 17mm !important;
             box-shadow: none !important;
             border: 0 !important;
             background: #fff !important;
@@ -455,8 +686,11 @@ export default function BastMoral({ onBack }) {
           }
 
           #bast-print-area tr,
-          #bast-print-area .signature-block {
-            page-break-inside: avoid;
+          #bast-print-area .signature-block,
+          #bast-print-area .signature-section,
+          #bast-print-area li {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
           }
 
           .no-print {
@@ -478,6 +712,7 @@ export default function BastMoral({ onBack }) {
                 <ArrowLeft size={18} />
               </button>
             ) : null}
+
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-700">
@@ -487,6 +722,7 @@ export default function BastMoral({ onBack }) {
                   BAST MORAL
                 </h1>
               </div>
+
               <p className="mt-0.5 truncate text-xs text-slate-500">
                 {unitKerja || "Unit aktif belum terdeteksi"} · Formulir dan
                 pratinjau dokumen
@@ -561,6 +797,7 @@ export default function BastMoral({ onBack }) {
                     placeholder="Contoh: 0463"
                   />
                 </Field>
+
                 <Field label="Tahun surat">
                   <input
                     className={inputClass}
@@ -569,6 +806,7 @@ export default function BastMoral({ onBack }) {
                     placeholder="2026"
                   />
                 </Field>
+
                 <div className="col-span-2 rounded-lg bg-slate-50 px-3 py-2">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                     Preview nomor surat
@@ -607,6 +845,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="Nama sesuai KTP"
                 />
               </Field>
+
               <Field label="NIK" className="sm:col-span-2">
                 <input
                   className={inputClass}
@@ -616,6 +855,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="Masukkan NIK"
                 />
               </Field>
+
               <Field label="Jalan / dusun" className="sm:col-span-2">
                 <input
                   className={inputClass}
@@ -626,6 +866,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="Jalan atau dusun"
                 />
               </Field>
+
               <Field label="RT">
                 <input
                   className={inputClass}
@@ -634,6 +875,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="001"
                 />
               </Field>
+
               <Field label="RW">
                 <input
                   className={inputClass}
@@ -642,6 +884,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="002"
                 />
               </Field>
+
               <Field label="Desa / kelurahan">
                 <input
                   className={inputClass}
@@ -652,6 +895,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="Nama desa"
                 />
               </Field>
+
               <Field label="Kecamatan">
                 <input
                   className={inputClass}
@@ -662,6 +906,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="Nama kecamatan"
                 />
               </Field>
+
               <Field label="Kabupaten / kota">
                 <input
                   className={inputClass}
@@ -672,6 +917,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="Nama kabupaten"
                 />
               </Field>
+
               <Field label="Provinsi" className="sm:col-span-2">
                 <input
                   className={inputClass}
@@ -715,6 +961,7 @@ export default function BastMoral({ onBack }) {
                   <p className="text-xs font-bold text-slate-700">
                     Pihak persetujuan {index + 1}
                   </p>
+
                   <button
                     type="button"
                     onClick={() => hapusPihakLainnya(item.id)}
@@ -773,6 +1020,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="Nama sesuai KTP"
                     />
                   </Field>
+
                   <Field label="NIK" className="sm:col-span-2">
                     <input
                       className={inputClass}
@@ -783,6 +1031,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="Masukkan NIK"
                     />
                   </Field>
+
                   <Field label="Jalan / dusun" className="sm:col-span-2">
                     <input
                       className={inputClass}
@@ -798,6 +1047,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="Jalan atau dusun"
                     />
                   </Field>
+
                   <Field label="RT">
                     <input
                       className={inputClass}
@@ -809,6 +1059,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="001"
                     />
                   </Field>
+
                   <Field label="RW">
                     <input
                       className={inputClass}
@@ -820,6 +1071,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="002"
                     />
                   </Field>
+
                   <Field label="Desa / kelurahan">
                     <input
                       className={inputClass}
@@ -835,6 +1087,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="Nama desa"
                     />
                   </Field>
+
                   <Field label="Kecamatan">
                     <input
                       className={inputClass}
@@ -852,6 +1105,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="Nama kecamatan"
                     />
                   </Field>
+
                   <Field label="Kabupaten / kota">
                     <input
                       className={inputClass}
@@ -869,6 +1123,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="Nama kabupaten"
                     />
                   </Field>
+
                   <Field label="Provinsi" className="sm:col-span-2">
                     <input
                       className={inputClass}
@@ -893,9 +1148,11 @@ export default function BastMoral({ onBack }) {
                     type="checkbox"
                     checked={Boolean(item.samakanAlamat)}
                     onChange={(event) => {
-                      if (event.target.checked)
+                      if (event.target.checked) {
                         samakanAlamatDenganPihak1(item.id);
-                      else updatePihakLainnya(item.id, "samakanAlamat", false);
+                      } else {
+                        updatePihakLainnya(item.id, "samakanAlamat", false);
+                      }
                     }}
                     className="size-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
                   />
@@ -935,11 +1192,13 @@ export default function BastMoral({ onBack }) {
               <p className="mt-0.5 text-xs text-blue-700">
                 Kode unit: {kodeUnit}
               </p>
+
               {loadingPengawas ? (
                 <p className="mt-2 text-xs text-blue-800">
                   Mengambil data Pengawas...
                 </p>
               ) : null}
+
               {pengawasError ? (
                 <p className="mt-2 text-xs font-medium text-amber-800">
                   {pengawasError}
@@ -956,13 +1215,15 @@ export default function BastMoral({ onBack }) {
                     const selected = pengawasList.find(
                       (item) => item.id === event.target.value,
                     );
-                    if (selected)
+
+                    if (selected) {
                       setPihak2({
                         id: selected.id,
                         nama: selected.nama || "",
                         nip: selected.nip || "",
                         jabatan: selected.jabatan || "",
                       });
+                    }
                   }}
                 >
                   {pengawasList.map((item) => (
@@ -983,6 +1244,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="Otomatis dari master pegawai"
                 />
               </Field>
+
               <Field label="NIP">
                 <input
                   className={inputClass}
@@ -991,6 +1253,7 @@ export default function BastMoral({ onBack }) {
                   placeholder="Otomatis dari master pegawai"
                 />
               </Field>
+
               <Field label="Jabatan">
                 <input
                   className={inputClass}
@@ -1000,6 +1263,7 @@ export default function BastMoral({ onBack }) {
                 />
               </Field>
             </div>
+
             <p className="text-xs leading-relaxed text-slate-500">
               Data Pengawas diambil dari tabel pegawai dengan status aktif dan
               jenis pegawai PENGAWAS. Mengganti unit di atas akan memperbarui
@@ -1031,6 +1295,7 @@ export default function BastMoral({ onBack }) {
                   <p className="text-xs font-bold text-slate-700">
                     Dokumen {index + 1}
                   </p>
+
                   {dokumenList.length > 1 ? (
                     <button
                       type="button"
@@ -1057,6 +1322,7 @@ export default function BastMoral({ onBack }) {
                       <option value="Lainnya">Lainnya</option>
                     </select>
                   </Field>
+
                   <Field label="Nomor dokumen">
                     <input
                       className={inputClass}
@@ -1067,6 +1333,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="Nomor sertifikat"
                     />
                   </Field>
+
                   {doc.jenis === "Lainnya" ? (
                     <Field
                       label="Jenis dokumen lainnya"
@@ -1086,6 +1353,7 @@ export default function BastMoral({ onBack }) {
                       />
                     </Field>
                   ) : null}
+
                   <Field label="Tanggal terbit">
                     <input
                       type="date"
@@ -1100,6 +1368,7 @@ export default function BastMoral({ onBack }) {
                       }
                     />
                   </Field>
+
                   <Field label="Nama kepemilikan">
                     <input
                       className={inputClass}
@@ -1114,6 +1383,7 @@ export default function BastMoral({ onBack }) {
                       placeholder="Nama pada dokumen"
                     />
                   </Field>
+
                   <Field label="Objek dokumen" className="sm:col-span-2">
                     <select
                       className={inputClass}
@@ -1130,6 +1400,7 @@ export default function BastMoral({ onBack }) {
                       <option value="Lainnya">Lainnya (isi sendiri)</option>
                     </select>
                   </Field>
+
                   {doc.objek === "Lainnya" ? (
                     <Field label="Objek lainnya" className="sm:col-span-2">
                       <input
@@ -1146,6 +1417,7 @@ export default function BastMoral({ onBack }) {
                       />
                     </Field>
                   ) : null}
+
                   <Field
                     label="Hubungan pemilik dengan debitur"
                     className="sm:col-span-2"
@@ -1171,6 +1443,7 @@ export default function BastMoral({ onBack }) {
                       <option value="Lainnya">Lainnya (isi sendiri)</option>
                     </select>
                   </Field>
+
                   {doc.hubungan === "Lainnya" ? (
                     <Field label="Hubungan lainnya" className="sm:col-span-2">
                       <input
@@ -1211,6 +1484,7 @@ export default function BastMoral({ onBack }) {
                 placeholder="Nama lengkap debitur"
               />
             </Field>
+
             <Field label="Nomor perjanjian kredit (PK)">
               <input
                 className={inputClass}
@@ -1224,6 +1498,7 @@ export default function BastMoral({ onBack }) {
                 placeholder="Nomor PK"
               />
             </Field>
+
             <Field label="Tanggal PK">
               <input
                 type="date"
@@ -1259,6 +1534,7 @@ export default function BastMoral({ onBack }) {
                 Tampilan A4 · Hasil ini yang akan dicetak / disimpan sebagai PDF
               </p>
             </div>
+
             <button
               type="button"
               onClick={handleDownload}
@@ -1314,12 +1590,14 @@ export default function BastMoral({ onBack }) {
                   item.status === "Lainnya"
                     ? item.statusCustom || "pihak terkait"
                     : item.status;
+
                 return (
                   <div key={item.id} className="mb-1">
                     <p className="mb-1 text-justify">
                       Dalam hal ini telah memperoleh persetujuan dari {status},
                       yaitu:
                     </p>
+
                     <table className="w-full">
                       <tbody>
                         <tr>
@@ -1355,6 +1633,7 @@ export default function BastMoral({ onBack }) {
                 untuk selanjutnya disebut sebagai <strong>PIHAK PERTAMA</strong>
                 .
               </p>
+
               <p className="mb-1">Kepada</p>
 
               <table className="mb-2 w-full">
@@ -1414,16 +1693,20 @@ export default function BastMoral({ onBack }) {
                     </th>
                   </tr>
                 </thead>
+
                 <tbody>
                   {dokumenList.map((doc) => {
                     const jenis =
                       doc.jenis === "Lainnya" ? doc.jenisCustom : doc.jenis;
+
                     const objek =
                       doc.objek === "Lainnya" ? doc.objekCustom : doc.objek;
+
                     const hubungan =
                       doc.hubungan === "Lainnya"
                         ? doc.hubunganCustom
                         : doc.hubungan;
+
                     return (
                       <tr key={doc.id} className="text-center">
                         <td className="border border-black px-1.5 py-1.5">
@@ -1461,6 +1744,7 @@ export default function BastMoral({ onBack }) {
                   Bahwa PIHAK PERTAMA merupakan pemilik yang sah dari objek
                   sesuai Dokumen yang tercantum di atas.
                 </li>
+
                 <li>
                   Bahwa penyerahan Dokumen ini dilakukan sehubungan dengan
                   fasilitas kredit yang diterima oleh{" "}
@@ -1469,6 +1753,7 @@ export default function BastMoral({ onBack }) {
                   tanggal {formatTanggalBiasa(kreditInfo.tanggalPK)} dari Bank
                   Mandiri.
                 </li>
+
                 <li>
                   Bahwa sehubungan dengan penyerahan Dokumen tersebut, PIHAK
                   PERTAMA dengan ini memberikan kuasa dan kewenangan sepenuhnya
@@ -1477,12 +1762,14 @@ export default function BastMoral({ onBack }) {
                   kepentingan PIHAK KEDUA sehubungan dengan pemenuhan kewajiban
                   pelunasan fasilitas kredit yang diterima oleh Debitur.
                 </li>
+
                 <li>
                   Bahwa PIHAK PERTAMA dengan ini membebaskan PIHAK KEDUA dari
                   segala risiko ataupun kerugian yang timbul akibat dari
                   tuntutan pihak ketiga lainnya sehubungan dengan pemberian
                   kuasa dan kewenangan dari PIHAK PERTAMA kepada PIHAK KEDUA.
                 </li>
+
                 <li>
                   Bahwa pemberian kuasa sesuai butir 3 di atas diberikan dengan
                   Hak Substitusi dan tidak dapat ditarik kembali, diubah,
@@ -1491,6 +1778,7 @@ export default function BastMoral({ onBack }) {
                   Hukum Perdata atau dikarenakan sebab apapun juga tanpa
                   persetujuan tertulis terlebih dahulu dari PIHAK KEDUA.
                 </li>
+
                 <li>
                   Bahwa PIHAK PERTAMA telah mengetahui dan memahami atas segala
                   risiko yang akan terkait dengan penyerahan objek sesuai
@@ -1501,7 +1789,8 @@ export default function BastMoral({ onBack }) {
                 </li>
               </ol>
 
-              <p className="mb-6 text-justify">
+              {/* Paragraf penutup selalu dimulai di halaman 2 */}
+              <p className="closing-paragraph mb-6 text-justify">
                 Demikian Berita Acara Serah Terima Dokumen ini dibuat dengan
                 sebenarnya dan akan berakhir setelah adanya pemberitahuan dari
                 PIHAK KEDUA yang menyatakan bahwa seluruh kewajiban Debitur
@@ -1509,9 +1798,10 @@ export default function BastMoral({ onBack }) {
                 berakhir/dinyatakan selesai/lunas.
               </p>
 
-              <div className="grid grid-cols-2 gap-8 pt-2">
+              <div className="signature-section grid grid-cols-2 gap-8 pt-2">
                 <div className="signature-block">
                   <div className="mb-16 font-bold">PIHAK PERTAMA</div>
+
                   <div className="w-full max-w-[220px] border-t border-black pt-1 font-bold">
                     {pihak1.nama || "........................"}
                   </div>
@@ -1523,6 +1813,7 @@ export default function BastMoral({ onBack }) {
                         : item.status === "istri/suami"
                           ? "Pasangan PIHAK PERTAMA"
                           : `${item.status} PIHAK PERTAMA`;
+
                     return (
                       <div key={item.id} className="mt-5">
                         <div>Menyetujui</div>
@@ -1537,9 +1828,11 @@ export default function BastMoral({ onBack }) {
 
                 <div className="signature-block pl-4">
                   <div className="mb-16 font-bold">PIHAK KEDUA</div>
+
                   <div className="w-full max-w-[220px] border-t border-black pt-1 font-bold">
                     {pihak2.nama || "........................"}
                   </div>
+
                   <div>{pihak2.jabatan || ""}</div>
                   <div>{unitKerja}</div>
                 </div>
