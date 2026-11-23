@@ -451,8 +451,8 @@ function createSkmPdf({ form, kind }) {
     y += 1.5;
   }
   const pointTwoText = isInventory
-    ? `2. Bahwa PEMBERI KUASA telah mengetahui bahwa Debitur telah memperoleh fasilitas kredit ${facility} atas nama ${debtor} berdasarkan ${agreement} selanjutnya disebut "Perjanjian Kredit".`
-    : `2. Bahwa PEMBERI KUASA telah memperoleh fasilitas kredit ${facility} atas nama ${debtor} berdasarkan ${agreement} selanjutnya disebut "Perjanjian Kredit".`;
+    ? `2. Bahwa PEMBERI KUASA telah memperoleh fasilitas kredit ${facility} atas nama ${debtor} berdasarkan ${agreement} selanjutnya disebut "Perjanjian Kredit".`
+    : `2. Bahwa PEMBERI KUASA telah mengetahui pemberian fasilitas kredit ${facility} atas nama ${debtor} berdasarkan ${agreement} selanjutnya disebut "Perjanjian Kredit".`;
 
   paragraph(pointTwoText, { indent: 3, gap: 2.2 });
   paragraph(
