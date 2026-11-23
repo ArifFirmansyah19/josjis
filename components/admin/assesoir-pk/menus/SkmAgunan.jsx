@@ -450,10 +450,11 @@ function createSkmPdf({ form, kind }) {
     });
     y += 1.5;
   }
-  paragraph(
-    `2. Bahwa PEMBERI KUASA telah mengetahui pemberian fasilitas kredit ${facility} atas nama ${debtor} berdasarkan ${agreement} selanjutnya disebut "Perjanjian Kredit".`,
-    { indent: 3, gap: 2.2 },
-  );
+  const pointTwoText = isInventory
+    ? `2. Bahwa PEMBERI KUASA telah mengetahui bahwa Debitur telah memperoleh fasilitas kredit ${facility} atas nama ${debtor} berdasarkan ${agreement} selanjutnya disebut "Perjanjian Kredit".`
+    : `2. Bahwa PEMBERI KUASA telah memperoleh fasilitas kredit ${facility} atas nama ${debtor} berdasarkan ${agreement} selanjutnya disebut "Perjanjian Kredit".`;
+
+  paragraph(pointTwoText, { indent: 3, gap: 2.2 });
   paragraph(
     "3. Kuasa yang diberikan oleh PEMBERI KUASA baru dapat digunakan apabila PEMBERI KUASA telah wanprestasi/ingkar janji/lalai berdasarkan Perjanjian Kredit.",
     { indent: 3, gap: 5 },
