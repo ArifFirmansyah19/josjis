@@ -34,6 +34,7 @@ import {
   FileSignature,
   TrendingUp,
   X,
+  ListTodo,
 } from "lucide-react";
 
 // ======================================================
@@ -43,6 +44,7 @@ import {
 const mainMenus = [
   { label: "Dashboard", href: "/admin/dashboard", icon: Home },
   { label: "My Work", href: "/admin/my-work", icon: BriefcaseBusiness },
+  { label: "CatatanQu", href: "/admin/catatan-qu", icon: ListTodo },
   { label: "Request Buka Blokir", href: "/admin/blokiran", icon: LockKeyhole },
   { label: "Account", href: "/admin/account", icon: KeyRound },
   { label: "Advis", href: "/admin/advis", icon: FileText },
@@ -77,15 +79,11 @@ const menuSections = [
     icon: Landmark,
     items: [
       {
-        label: "Order Agunan",
+        label: "Siatomic & Order Agunan",
         href: "/admin/order-agunan",
         icon: Package,
       },
-      {
-        label: "Migrasi Agunan",
-        href: "/admin/migrasi",
-        icon: ArrowLeftRight,
-      },
+      { label: "Migrasi Agunan", href: "/admin/migrasi", icon: ArrowLeftRight },
       {
         label: "Daftar Migrasi Legal",
         href: "/admin/daftar-migrasi-legal",
@@ -96,16 +94,8 @@ const menuSections = [
         href: "/admin/pending-notaris",
         icon: FileClock,
       },
-      {
-        label: "Agunan Aktif",
-        href: "/admin/agunan",
-        icon: Building2,
-      },
-      {
-        label: "Agunan Lunas",
-        href: "/admin/agunan-lunas",
-        icon: Archive,
-      },
+      { label: "Agunan Aktif", href: "/admin/agunan", icon: Building2 },
+      { label: "Agunan Lunas", href: "/admin/agunan-lunas", icon: Archive },
       {
         label: "Serah Terima Agunan Lunas",
         href: "/admin/penyerahan-agunan-lunas",
@@ -125,10 +115,6 @@ const menuSections = [
       },
     ],
   },
-
-  // ====================================================
-  // MENU BARU: SURAT
-  // ====================================================
   {
     id: "surat",
     label: "Surat & BAST",
@@ -151,7 +137,6 @@ const menuSections = [
       },
     ],
   },
-
   {
     id: "laporan",
     label: "Laporan",
@@ -174,7 +159,6 @@ const menuSections = [
       },
     ],
   },
-
   {
     id: "operasional",
     label: "Operasional",
@@ -207,26 +191,10 @@ const menuSections = [
     label: "Master Data",
     icon: Database,
     items: [
-      {
-        label: "Unit",
-        href: "/admin/master-unit",
-        icon: Building2,
-      },
-      {
-        label: "Pegawai Unit",
-        href: "/admin/pegawai-unit",
-        icon: Users,
-      },
-      {
-        label: "Notaris",
-        href: "/admin/notaris",
-        icon: Landmark,
-      },
-      {
-        label: "Asuradur",
-        href: "/admin/asuradur",
-        icon: Landmark,
-      },
+      { label: "Unit", href: "/admin/master-unit", icon: Building2 },
+      { label: "Pegawai Unit", href: "/admin/pegawai-unit", icon: Users },
+      { label: "Notaris", href: "/admin/notaris", icon: Landmark },
+      { label: "Asuradur", href: "/admin/asuradur", icon: Landmark },
     ],
   },
   {
@@ -251,36 +219,16 @@ const menuSections = [
     label: "Pengaturan Sistem",
     icon: Settings,
     items: [
-      {
-        label: "Pengguna",
-        href: "/admin/pengguna",
-        icon: Users,
-      },
-      {
-        label: "Audit Log",
-        href: "/admin/audit-log",
-        icon: FileClock,
-      },
-      {
-        label: "Backup & Export",
-        href: "/admin/backup",
-        icon: Archive,
-      },
-      {
-        label: "Template & Import",
-        href: "/admin/import-data",
-        icon: Files,
-      },
+      { label: "Pengguna", href: "/admin/pengguna", icon: Users },
+      { label: "Audit Log", href: "/admin/audit-log", icon: FileClock },
+      { label: "Backup & Export", href: "/admin/backup", icon: Archive },
+      { label: "Template & Import", href: "/admin/import-data", icon: Files },
       {
         label: "Pindah Cabang",
         href: "/admin/pindah-cabang",
         icon: ArrowLeftRight,
       },
-      {
-        label: "Pengaturan",
-        href: "/admin/pengaturan",
-        icon: Settings,
-      },
+      { label: "Pengaturan", href: "/admin/pengaturan", icon: Settings },
     ],
   },
 ];
@@ -307,11 +255,9 @@ export default function Sidebar({ open = false, onClose }) {
 
   const [expandedSections, setExpandedSections] = useState(() => {
     const initial = {};
-
     menuSections.forEach((section) => {
       initial[section.id] = false;
     });
-
     return initial;
   });
 
@@ -323,11 +269,9 @@ export default function Sidebar({ open = false, onClose }) {
 
     setExpandedSections(() => {
       const next = {};
-
       menuSections.forEach((section) => {
         next[section.id] = section.id === activeSection?.id;
       });
-
       return next;
     });
   }, [pathname]);
