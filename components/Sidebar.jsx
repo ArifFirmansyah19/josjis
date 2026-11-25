@@ -87,6 +87,11 @@ const menuSections = [
         icon: ArrowLeftRight,
       },
       {
+        label: "Daftar Migrasi Legal",
+        href: "/admin/daftar-migrasi-legal",
+        icon: FileText,
+      },
+      {
         label: "Pending Notaris",
         href: "/admin/pending-notaris",
         icon: FileClock,
